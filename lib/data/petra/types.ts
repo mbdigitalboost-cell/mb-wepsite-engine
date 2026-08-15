@@ -52,7 +52,13 @@ export interface PetraProcessStep {
 export interface PetraProject {
   id: string;
   title: string;
-  category: string;
+  /**
+   * Null when the source has no category (e.g. a CMS-sourced project —
+   * the customer-template `projects` table has no `category` column
+   * today, see PHASE_9_2_RAPOR.md §"Planlanan migration"). Components
+   * must render nothing (not a made-up label) when this is null.
+   */
+  category: string | null;
   image: string | null;
 }
 

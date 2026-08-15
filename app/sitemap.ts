@@ -1,17 +1,26 @@
 import type { MetadataRoute } from "next";
 import { publicEnv } from "@/lib/config/env";
-import { petraSolutions } from "@/lib/data/petra/solutions";
+import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 
 const staticRoutes = ["/", "/cozumler", "/hizmetler", "/projeler", "/kampanyalar", "/hakkimizda", "/iletisim"];
 
 /**
  * Covers every public Petra route, including the dynamic /cozumler/[slug]
- * pages (generated from the same `petraSolutions` data the pages
- * themselves use — adding a solution automatically adds it here too).
+ * pages.
+ *
+ * Phase 9.3: now CMS-first via the same `resolvePetraSolutions()` helper
+ * app/(public)/cozumler/[slug]/page.tsx uses (lib/cms/petra/resolve-
+ * solutions.ts) — a solution published through the dashboard shows up
+ * here automatically, no code change needed; without a CMS connection
+ * (or with nothing published yet), this resolves to the exact same
+ * static `petraSolutions` list as before Phase 9.3, so the sitemap is
+ * unchanged for today's actual (still-draft) data.
+ *
  * Dashboard routes are intentionally excluded (see app/robots.ts).
  */
-export default function sitemap(): MetadataRoute.Sitemap {
-  const solutionRoutes = petraSolutions.map((solution) => `/cozumler/${solution.slug}`);
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const solutions = await resolvePetraSolutions();
+  const solutionRoutes = solutions.map((solution) => `/cozumler/${solution.slug}`);
 
   return [...staticRoutes, ...solutionRoutes].map((path) => ({
     url: `${publicEnv.siteUrl}${path}`,

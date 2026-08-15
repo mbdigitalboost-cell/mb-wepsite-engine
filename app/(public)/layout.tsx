@@ -4,18 +4,18 @@ import { petraTheme } from "@/lib/theme/petra-theme";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileStickyCta } from "@/components/navigation/mobile-sticky-cta";
+import { TrackingScripts } from "@/lib/tracking/tracking-scripts";
 import { petraNavLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
+import { getTrackingPublicSettings } from "@/lib/cms/adapters";
+import { resolveSiteWideSeo, applyLayoutSeoOverrides } from "@/lib/seo/build-metadata";
 
 const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
+const PETRA_CONNECTION_KEY = "PETRA";
 
-// Resets the title template for this subtree (root layout's is the
-// engine-neutral "%s | MB Digital Boost") to Petra's own branding. Child
-// pages that set a plain string `title` are wrapped by this template;
-// the homepage relies on `default` instead of repeating it.
-export const metadata: Metadata = {
+const staticMetadata: Metadata = {
   title: {
     default: "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven",
     template: "%s | Petra Mühendislik",
@@ -23,6 +23,19 @@ export const metadata: Metadata = {
   description:
     "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.",
 };
+
+// Resets the title template for this subtree (root layout's is the
+// engine-neutral "%s | MB Digital Boost") to Petra's own branding. Child
+// pages that set a plain string `title` are wrapped by this template;
+// the homepage relies on `default` instead of repeating it.
+//
+// Phase 9.3: CMS-first, static `staticMetadata` as fallback — see
+// lib/seo/build-metadata.ts's `applyLayoutSeoOverrides` for exactly
+// which fields a site-wide `seo_settings` row can and cannot touch here.
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await resolveSiteWideSeo(PETRA_CONNECTION_KEY);
+  return applyLayoutSeoOverrides(staticMetadata, seo);
+}
 
 /**
  * Layout for Petra Mühendislik's public site (route group `(public)` —
@@ -32,7 +45,14 @@ export const metadata: Metadata = {
  * change to the theme mechanism itself. This is also the pattern the next
  * customer's `(public)` layout will follow with their own theme object.
  */
-export default function PublicLayout({ children }: LayoutProps<"/">) {
+export default async function PublicLayout({ children }: LayoutProps<"/">) {
+  // Phase 9.3: CMS-first, static env-var fallback (see
+  // lib/tracking/tracking-scripts.tsx's default props). Only reads the
+  // public-safe `tracking_public_settings` view — never the
+  // `tracking_settings` base table, never `meta_capi_token` (that field
+  // doesn't even exist on this view — see lib/cms/adapters/tracking.ts).
+  const trackingResult = await getTrackingPublicSettings(PETRA_CONNECTION_KEY, null);
+
   return (
     <ThemeProvider theme={petraTheme}>
       <div className="flex min-h-full flex-1 flex-col bg-brand-background text-brand-foreground">
@@ -73,6 +93,11 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
           phone={petraContactInfo.phone}
           whatsapp={whatsappHref}
           quoteHref="/iletisim"
+        />
+        <TrackingScripts
+          gtmId={trackingResult?.gtm_id ?? undefined}
+          ga4Id={trackingResult?.ga4_id ?? undefined}
+          metaPixelId={trackingResult?.meta_pixel_id ?? undefined}
         />
       </div>
     </ThemeProvider>

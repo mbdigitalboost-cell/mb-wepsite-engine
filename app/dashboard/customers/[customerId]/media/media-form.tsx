@@ -2,73 +2,64 @@
 
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { createMediaAssetAction } from "./actions";
+import { uploadMediaAssetAction } from "./actions";
 import { initialMediaFormState } from "./form-state";
+import { MEDIA_FOLDERS, ALLOWED_MEDIA_MIME_TYPES, MAX_MEDIA_FILE_SIZE_BYTES } from "@/lib/media/constants";
 
 const inputClasses =
   "w-full rounded-md border border-black/15 bg-transparent px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus-visible:border-foreground/40 focus-visible:outline-none";
 
+/**
+ * Phase 9.4: real file upload, replacing Phase 6's URL-typing form.
+ * `<input type="file">` + a folder dropdown (MEDIA_FOLDERS, shared with
+ * the server action and the Storage bucket's own allow-list) + optional
+ * alt text — everything else (file_name, file_url, storage_path, type)
+ * is derived server-side from the uploaded file itself, never typed by
+ * hand, so it can never drift from what was actually uploaded.
+ */
 export function MediaForm({ customerId }: { customerId: string }) {
-  const action = createMediaAssetAction.bind(null, customerId);
+  const action = uploadMediaAssetAction.bind(null, customerId);
   const [state, formAction, pending] = useActionState(action, initialMediaFormState);
   const formId = useId();
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
       <div>
-        <label htmlFor={`${formId}-fileName`} className="mb-1.5 block text-sm font-medium text-foreground">
-          Dosya Adı
+        <label htmlFor={`${formId}-file`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Dosya
         </label>
-        <input id={`${formId}-fileName`} name="fileName" type="text" required placeholder="petra-logo.svg" className={inputClasses} />
-      </div>
-      <div>
-        <label htmlFor={`${formId}-fileUrl`} className="mb-1.5 block text-sm font-medium text-foreground">
-          Dosya URL
-        </label>
-        <input id={`${formId}-fileUrl`} name="fileUrl" type="text" required placeholder="https://..." className={inputClasses} />
+        <input
+          id={`${formId}-file`}
+          name="file"
+          type="file"
+          required
+          accept={ALLOWED_MEDIA_MIME_TYPES.join(",")}
+          className={inputClasses}
+        />
         <p className="mt-1 text-xs text-foreground/50">
-          Gerçek dosya yükleme bu fazın kapsamında değil — burada mevcut/erişilebilir bir URL kaydedilir.
+          JPEG, PNG, WebP, SVG veya GIF — en fazla {MAX_MEDIA_FILE_SIZE_BYTES / 1024 / 1024} MB.
         </p>
       </div>
       <div>
-        <label htmlFor={`${formId}-storagePath`} className="mb-1.5 block text-sm font-medium text-foreground">
-          Klasör Yolu
+        <label htmlFor={`${formId}-folder`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Klasör
         </label>
-        <input
-          id={`${formId}-storagePath`}
-          name="storagePath"
-          type="text"
-          required
-          placeholder="brand/petra-logo.svg"
-          className={inputClasses}
-        />
-        <p className="mt-1 text-xs text-foreground/50">brand/, hero/, solutions/, services/, projects/, campaigns/ veya banners/ ile başlamalı.</p>
+        <select id={`${formId}-folder`} name="folder" required defaultValue="" className={inputClasses}>
+          <option value="" disabled>
+            Klasör seçin
+          </option>
+          {MEDIA_FOLDERS.map((folder) => (
+            <option key={folder} value={folder}>
+              {folder}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <label htmlFor={`${formId}-altText`} className="mb-1.5 block text-sm font-medium text-foreground">
           Alt Metin
         </label>
         <input id={`${formId}-altText`} name="altText" type="text" className={inputClasses} />
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label htmlFor={`${formId}-type`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Tür
-          </label>
-          <input id={`${formId}-type`} name="type" type="text" placeholder="image/svg+xml" className={inputClasses} />
-        </div>
-        <div>
-          <label htmlFor={`${formId}-width`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Genişlik
-          </label>
-          <input id={`${formId}-width`} name="width" type="number" min={0} className={inputClasses} />
-        </div>
-        <div>
-          <label htmlFor={`${formId}-height`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Yükseklik
-          </label>
-          <input id={`${formId}-height`} name="height" type="number" min={0} className={inputClasses} />
-        </div>
       </div>
 
       {state.error ? (
@@ -78,7 +69,7 @@ export function MediaForm({ customerId }: { customerId: string }) {
       ) : null}
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Kaydediliyor..." : "Ekle"}
+        {pending ? "Yükleniyor..." : "Yükle"}
       </Button>
     </form>
   );

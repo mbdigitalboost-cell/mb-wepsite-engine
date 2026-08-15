@@ -3,7 +3,7 @@ import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-con
 import { CmsUnavailableNotice } from "@/components/cms/cms-unavailable-notice";
 import { CustomerCmsNav } from "@/components/navigation/customer-cms-nav";
 import { MediaForm } from "./media-form";
-import { deleteMediaAssetAction } from "./actions";
+import { MediaAssetRow } from "./media-asset-row";
 
 const IMAGE_COLUMN_TABLES = [
   { table: "site_settings" as const, columns: ["logo", "logo_white", "favicon"] },
@@ -88,33 +88,20 @@ async function MediaContent({ customerId }: { customerId: string }) {
           <p className="mt-3 text-sm text-foreground/60">Henüz kayıtlı medya yok.</p>
         ) : (
           <ul className="mt-3 divide-y divide-black/10 rounded-lg border border-black/10">
-            {assets.map((asset) => {
-              const inUse = usedUrls.has(asset.file_url);
-              const deleteAction = deleteMediaAssetAction.bind(null, customerId, asset.id);
-              return (
-                <li key={asset.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-                  <div>
-                    <p className="font-medium text-foreground">{asset.file_name}</p>
-                    <p className="text-xs text-foreground/50">{asset.storage_path}</p>
-                    {asset.width && asset.height ? (
-                      <p className="text-xs text-foreground/40">
-                        {asset.width}×{asset.height}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={inUse ? "text-xs text-green-700" : "text-xs text-foreground/40"}>
-                      {inUse ? "Kullanımda" : "Kullanılmıyor"}
-                    </span>
-                    <form action={deleteAction}>
-                      <button type="submit" className="text-xs text-red-600 underline-offset-2 hover:underline">
-                        Sil
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
+            {assets.map((asset) => (
+              <MediaAssetRow
+                key={asset.id}
+                customerId={customerId}
+                assetId={asset.id}
+                fileName={asset.file_name}
+                storagePath={asset.storage_path}
+                fileUrl={asset.file_url}
+                altText={asset.alt_text}
+                width={asset.width}
+                height={asset.height}
+                inUse={usedUrls.has(asset.file_url)}
+              />
+            ))}
           </ul>
         )}
       </div>

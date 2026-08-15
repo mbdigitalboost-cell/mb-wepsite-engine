@@ -4,6 +4,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/ui/reveal";
 import { Campaigns } from "@/components/sections/campaigns";
 import { petraCampaigns } from "@/lib/data/petra/campaigns";
+import { getCampaigns } from "@/lib/cms/adapters";
+import { isCmsRow, mapCampaignRows } from "@/lib/cms/petra/mappers";
+import type { NamedContentRow } from "@/lib/cms/customer-types";
+
+const PETRA_CONNECTION_KEY = "PETRA";
 
 export const metadata: Metadata = {
   title: "Kampanyalar",
@@ -11,8 +16,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/kampanyalar" },
 };
 
-export default function CampaignsPage() {
-  if (petraCampaigns.length === 0) {
+// Phase 9.2: CMS-first, static petraCampaigns (empty by design) as
+// fallback — same pattern as app/(public)/page.tsx (Phase 6 §20).
+export default async function CampaignsPage() {
+  const campaignsResult = await getCampaigns(PETRA_CONNECTION_KEY, petraCampaigns);
+  const campaigns = isCmsRow((campaignsResult as unknown[])[0])
+    ? mapCampaignRows(campaignsResult as NamedContentRow[])
+    : petraCampaigns;
+
+  if (campaigns.length === 0) {
     return (
       <>
         <PageHeader eyebrow="Kampanyalar" title="Kampanyalar" />
@@ -29,5 +41,5 @@ export default function CampaignsPage() {
     );
   }
 
-  return <Campaigns headingLevel="h1" />;
+  return <Campaigns headingLevel="h1" campaigns={campaigns} />;
 }

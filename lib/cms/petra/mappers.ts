@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { NamedContentRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
-import type { PetraSolution, PetraTestimonial, PetraFaq } from "@/lib/data/petra/types";
+import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign } from "@/lib/data/petra/types";
 
 /**
  * Maps CUSTOMER CMS rows into the exact static Petra types the existing
@@ -10,15 +10,15 @@ import type { PetraSolution, PetraTestimonial, PetraFaq } from "@/lib/data/petra
  * to the CMS adapter WITHOUT rewriting any section component's
  * rendering logic. Every mapper here only runs when the adapter
  * genuinely returned CMS rows (not the static fallback) — see
- * `isCmsRow` below, used at each call site in app/(public)/page.tsx.
+ * `isCmsRow` below, used at each call site.
  *
- * Only wired for content types whose CMS schema shape actually matches
- * what the existing components need one-to-one: solutions, testimonials,
- * faqs, hero, and site_settings (whatsapp only, for the homepage's
- * WhatsApp CTA). Services/Projects/Campaigns are deliberately NOT mapped
- * here yet — see the Phase 6 report for why (schema/page-scope
- * mismatches), this is a controlled, documented scope cut, not an
- * oversight.
+ * Phase 6 wired solutions, testimonials, faqs, hero, and site_settings
+ * (whatsapp only). Phase 9.2 adds services/projects/campaigns for the
+ * `/hizmetler`, `/projeler`, `/kampanyalar` and `/cozumler/[slug]`
+ * routes — see mapServiceRows/mapProjectRows/mapCampaignRows below for
+ * the schema-gap notes on projects (`category`) and campaigns
+ * (`priceLabel`/`ctaLabel`/`ctaHref`), and PHASE_9_2_RAPOR.md for the
+ * full audit + planned migration.
  */
 
 /** True only for a real CMS row (has `status`) — the adapter's fallback value never has this shape. */
@@ -32,6 +32,62 @@ export function mapSolutionRows(rows: NamedContentRow[]): PetraSolution[] {
     title: row.title,
     shortDescription: row.description ?? "",
     longDescription: row.description ?? "",
+    image: row.image,
+  }));
+}
+
+/**
+ * `services` has the same shared shape as `solutions` (NamedContentRow),
+ * but `PetraService` only ever rendered `title`/`description` on
+ * `/hizmetler` — `slug`/`image`/`sort_order` exist on the CMS row but
+ * have no static-type equivalent to map into, so they're simply unused
+ * here (not a gap, `/hizmetler` never needed them).
+ */
+export function mapServiceRows(rows: NamedContentRow[]): PetraService[] {
+  return rows.map((row) => ({
+    title: row.title,
+    description: row.description ?? "",
+  }));
+}
+
+/**
+ * `projects` (customer-template migration 0002) has NO `category`
+ * column — only title/slug/description/image/sort_order/status. The
+ * static `PetraProject.category` field genuinely has no CMS source
+ * today, so this maps it to `null` (never an invented label) and
+ * `components/sections/projects.tsx` renders no category badge when
+ * `category` is null. A `category` column is proposed as a planned,
+ * NOT-YET-APPLIED migration — see PHASE_9_2_RAPOR.md.
+ */
+export function mapProjectRows(rows: NamedContentRow[]): PetraProject[] {
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    category: null,
+    image: row.image,
+  }));
+}
+
+/**
+ * `campaigns` (customer-template migration 0002) has NO
+ * `price_label`/`cta_label`/`cta_href` columns. `priceLabel` maps to
+ * `null` (the component already renders nothing when it's null — same
+ * "never invent pricing" rule as the static petraCampaigns data).
+ * `ctaLabel`/`ctaHref` are NOT customer-specific facts — they're the
+ * same generic "go talk to us" UI affordance used elsewhere on this site
+ * (e.g. the solution detail page's "Keşif Talep Et" → /iletisim button),
+ * so a fixed engine-level default is used rather than leaving the button
+ * broken. Per-campaign CTA override is proposed as a planned,
+ * NOT-YET-APPLIED migration — see PHASE_9_2_RAPOR.md.
+ */
+export function mapCampaignRows(rows: NamedContentRow[]): PetraCampaign[] {
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description ?? "",
+    priceLabel: null,
+    ctaLabel: "İletişime Geç",
+    ctaHref: "/iletisim",
     image: row.image,
   }));
 }

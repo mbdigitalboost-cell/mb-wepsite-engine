@@ -2,13 +2,20 @@ import Image from "next/image";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { petraProjects } from "@/lib/data/petra/projects";
+import type { PetraProject } from "@/lib/data/petra/types";
+
+interface ProjectsProps {
+  headingLevel?: "h1" | "h2";
+  /** Optional CMS-sourced override — defaults to the static `petraProjects` import. See components/sections/hero.tsx for the same pattern. */
+  projects?: PetraProject[];
+}
 
 /**
- * Renders a controlled empty state (no fake case studies) when
- * `petraProjects` is empty — which it is until the customer provides
- * real project photos. See lib/data/petra/projects.ts.
+ * Renders a controlled empty state (no fake case studies) when the
+ * resolved project list is empty — true by default until the customer
+ * provides real project photos. See lib/data/petra/projects.ts.
  */
-export function Projects({ headingLevel = "h2" }: { headingLevel?: "h1" | "h2" }) {
+export function Projects({ headingLevel = "h2", projects = petraProjects }: ProjectsProps) {
   const Heading = headingLevel;
 
   return (
@@ -20,9 +27,9 @@ export function Projects({ headingLevel = "h2" }: { headingLevel?: "h1" | "h2" }
           </Heading>
         </Reveal>
 
-        {petraProjects.length > 0 ? (
+        {projects.length > 0 ? (
           <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {petraProjects.map((project, index) => (
+            {projects.map((project, index) => (
               <Reveal key={project.id} index={index}>
                 <div className="group relative aspect-[4/5] overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
                   {project.image ? (
@@ -34,9 +41,11 @@ export function Projects({ headingLevel = "h2" }: { headingLevel?: "h1" | "h2" }
                     />
                   ) : null}
                   <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-brand-background via-brand-background/30 to-transparent p-6">
-                    <span className="text-xs font-medium tracking-[0.2em] text-brand-primary uppercase">
-                      {project.category}
-                    </span>
+                    {project.category ? (
+                      <span className="text-xs font-medium tracking-[0.2em] text-brand-primary uppercase">
+                        {project.category}
+                      </span>
+                    ) : null}
                     <h3 className="mt-1 text-lg font-semibold text-white">{project.title}</h3>
                   </div>
                 </div>

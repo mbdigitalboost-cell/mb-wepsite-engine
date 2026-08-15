@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CONTENT_TYPES, type ContentTypeKey } from "@/lib/cms/dashboard/content-types";
+import { MEDIA_FOLDERS } from "@/lib/media/constants";
 
 const slugRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -94,19 +95,21 @@ export const trackingFormSchema = z.object({
   metaCapiToken: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
-export const mediaAssetFormSchema = z.object({
-  fileName: z.string().trim().min(1, "Dosya adı zorunlu.").max(200),
-  fileUrl: z.string().trim().min(1, "Dosya URL'si zorunlu.").max(1000).url("Geçerli bir URL olmalı."),
-  storagePath: z
-    .string()
-    .trim()
-    .min(1, "Klasör yolu zorunlu.")
-    .max(300)
-    .regex(/^(brand|hero|solutions|services|projects|campaigns|banners)\/.+/, "Yol brand/, hero/, solutions/, services/, projects/, campaigns/ veya banners/ ile başlamalı."),
+/**
+ * Phase 9.4: the non-file fields of a real upload — the file itself
+ * (name, MIME type, size) is validated separately in actions.ts against
+ * lib/media/constants.ts, since Zod's FormData handling here only deals
+ * with plain string fields, not File-specific rules like MIME allow-list.
+ */
+export const mediaUploadFormSchema = z.object({
+  folder: z.enum(MEDIA_FOLDERS, { message: "Geçerli bir klasör seçin." }),
   altText: z.string().trim().max(300).optional().or(z.literal("")),
-  type: z.string().trim().max(50).optional().or(z.literal("")),
-  width: z.coerce.number().int().min(0).max(20000).optional(),
-  height: z.coerce.number().int().min(0).max(20000).optional(),
+});
+
+/** Phase 9.4: editing an existing asset's metadata — never re-uploads the file itself. */
+export const mediaAssetUpdateFormSchema = z.object({
+  fileName: z.string().trim().min(1, "Dosya adı zorunlu.").max(200),
+  altText: z.string().trim().max(300).optional().or(z.literal("")),
 });
 
 export const leadStatusSchema = z.enum(["new", "contacted", "closed"]);

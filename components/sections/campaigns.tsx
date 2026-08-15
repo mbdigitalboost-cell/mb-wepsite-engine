@@ -3,6 +3,13 @@ import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
 import { petraCampaigns } from "@/lib/data/petra/campaigns";
+import type { PetraCampaign } from "@/lib/data/petra/types";
+
+interface CampaignsProps {
+  headingLevel?: "h1" | "h2";
+  /** Optional CMS-sourced override — defaults to the static `petraCampaigns` import. See components/sections/hero.tsx for the same pattern. */
+  campaigns?: PetraCampaign[];
+}
 
 /**
  * Empty by design until real, customer-confirmed campaigns exist — the
@@ -10,8 +17,8 @@ import { petraCampaigns } from "@/lib/data/petra/campaigns";
  * real content. Section renders nothing at all (not even a heading) when
  * there's no active campaign, rather than an empty-looking promo block.
  */
-export function Campaigns({ headingLevel = "h2" }: { headingLevel?: "h1" | "h2" }) {
-  if (petraCampaigns.length === 0) return null;
+export function Campaigns({ headingLevel = "h2", campaigns = petraCampaigns }: CampaignsProps) {
+  if (campaigns.length === 0) return null;
   const Heading = headingLevel;
 
   return (
@@ -24,7 +31,7 @@ export function Campaigns({ headingLevel = "h2" }: { headingLevel?: "h1" | "h2" 
         </Reveal>
 
         <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {petraCampaigns.map((campaign, index) => (
+          {campaigns.map((campaign, index) => (
             <Reveal key={campaign.id} index={index}>
               <div className="relative flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-[var(--radius-brand)] border border-white/10 p-8">
                 {campaign.image ? (

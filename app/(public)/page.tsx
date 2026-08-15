@@ -20,13 +20,25 @@ import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { petraFaqStructuredData } from "@/lib/seo/structured-data";
 import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings } from "@/lib/cms/adapters";
 import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp } from "@/lib/cms/petra/mappers";
+import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
 import type { NamedContentRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
-// No `title` here — inherits the `default` set in app/(public)/layout.tsx
-// (avoids duplicating the brand name via the layout's title.template).
-export const metadata: Metadata = {
+// `title.absolute` — Phase 9.3 finding, verified directly against the
+// prerendered `.next/server/app/index.html` output (not just a running
+// `next start`, to rule out a stale-process artifact skewing the test —
+// see PHASE_9_3_RAPOR.md §"Title double-wrap"): omitting `title` here to
+// "inherit app/(public)/layout.tsx's default" does NOT stop at that
+// layout's own template. Next 16's title resolution also threads the
+// ROOT layout's template ("%s | MB Digital Boost") through, producing
+// "...Güven | MB Digital Boost" for a title that should render with no
+// suffix at all. `title.absolute` is the documented mechanism that
+// ignores every ancestor template unconditionally, giving the homepage
+// exactly its own title — which was always the intent (the code
+// previously omitted `title` specifically to avoid a suffix).
+const staticMetadata: Metadata = {
+  title: { absolute: "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven" },
   description:
     "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.",
   alternates: { canonical: "/" },
@@ -37,6 +49,15 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
+
+// Phase 9.3: the homepage is the closest CMS-editable equivalent of
+// "home page SEO" (site-wide seo_settings, page_id IS NULL — no
+// dedicated `pages` row for "/" exists today, see PHASE_9_3_RAPOR.md).
+// CMS-first, static `staticMetadata` as fallback for every field.
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await resolveSiteWideSeo(PETRA_CONNECTION_KEY);
+  return applyHomeSeoOverrides(staticMetadata, seo);
+}
 
 /**
  * Phase 6 §20 — data layer connected to the CMS adapter, components

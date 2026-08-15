@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import { Solutions } from "@/components/sections/solutions";
+import { petraSolutions } from "@/lib/data/petra/solutions";
+import { getSolutions } from "@/lib/cms/adapters";
+import { isCmsRow, mapSolutionRows } from "@/lib/cms/petra/mappers";
+import type { NamedContentRow } from "@/lib/cms/customer-types";
+
+const PETRA_CONNECTION_KEY = "PETRA";
 
 export const metadata: Metadata = {
   title: "Çözümler",
@@ -12,6 +18,14 @@ export const metadata: Metadata = {
 // Çözümleri") — no separate PageHeader here to avoid a duplicate title.
 // headingLevel="h1" because it's this page's single main heading (on the
 // homepage, where Hero's h1 already exists, Solutions defaults to h2).
-export default function SolutionsPage() {
-  return <Solutions headingLevel="h1" />;
+//
+// Phase 9.2: CMS-first, static petraSolutions as fallback — same pattern
+// as app/(public)/page.tsx (Phase 6 §20).
+export default async function SolutionsPage() {
+  const solutionsResult = await getSolutions(PETRA_CONNECTION_KEY, petraSolutions);
+  const solutions = isCmsRow((solutionsResult as unknown[])[0])
+    ? mapSolutionRows(solutionsResult as NamedContentRow[])
+    : petraSolutions;
+
+  return <Solutions headingLevel="h1" solutions={solutions} />;
 }

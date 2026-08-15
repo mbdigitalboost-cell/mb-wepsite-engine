@@ -19,7 +19,8 @@ export default async function LeadsPage({
       <CustomerCmsNav customerId={customerId} />
       <h1 className="text-xl font-semibold tracking-tight">Talepler (Leads)</h1>
       <p className="mt-1 text-sm text-foreground/60">
-        Public keşif formu bu tabloya henüz bağlı değil — mevcut console.log davranışı korunuyor (bkz. Phase 6 raporu).
+        Public keşif formu bu tabloya kaydediyor (app/api/forms/discovery-request/route.ts →
+        lib/leads/submit-discovery-request.ts, service-role client ile) — bkz. PHASE_9_5_RAPOR.md.
       </p>
 
       {!connection ? (
