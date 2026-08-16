@@ -17,9 +17,9 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
  * (cross-checked with the company reference doc's PENDING list):
  * - `phone`: confirmed as 0535 791 11 96. This is the number visible on
  *   the customer's Instagram profile — treated as the primary phone.
- * - `whatsapp`: still `null`. A phone number appearing on Instagram does
- *   NOT confirm it's also the WhatsApp number — that requires separate
- *   verification and must not be inferred by copying `phone`.
+ * - `whatsapp`: confirmed by the customer/agency (2026-08-16) to be the
+ *   same number as `phone` — this is an explicit confirmation, not an
+ *   inferred copy of `phone`.
  * - `email`, `workingHours`: still `null` — not visible/confirmed in the
  *   Instagram source.
  * - `address`: still `null` — a candidate address IS visible in the
@@ -35,7 +35,7 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
 export const petraContactInfo: PetraContactInfo = {
   phone: "0535 791 11 96",
   phoneDisplay: "0535 791 11 96",
-  whatsapp: null,
+  whatsapp: "0535 791 11 96",
   email: null,
   address: null,
   serviceArea: "Onikişubat, Kahramanmaraş",

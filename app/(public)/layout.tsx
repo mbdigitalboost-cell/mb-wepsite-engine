@@ -5,6 +5,7 @@ import { petraTheme } from "@/lib/theme/petra-theme";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileStickyCta } from "@/components/navigation/mobile-sticky-cta";
+import { FloatingWhatsappButton } from "@/components/navigation/floating-whatsapp-button";
 import { TrackingScripts } from "@/lib/tracking/tracking-scripts";
 import { petraNavLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
@@ -120,6 +121,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           whatsapp={whatsappHref}
           quoteHref="/iletisim"
         />
+        <FloatingWhatsappButton whatsappHref={whatsappHref} />
         <TrackingScripts
           gtmId={trackingResult?.gtm_id ?? undefined}
           ga4Id={trackingResult?.ga4_id ?? undefined}

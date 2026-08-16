@@ -124,6 +124,13 @@ export interface MappedHero {
    * already-textified static fallback image) where it's `true`.
    */
   backgroundHasEmbeddedHeadline: boolean;
+  /**
+   * CMS-uploaded hero photos are plain, centered photography (see the
+   * `backgroundHasEmbeddedHeadline` doc above) — always "center" here.
+   * Only the static fallback image in lib/data/petra/hero.ts needs an
+   * off-center crop (its baked-in content sits left-of-center).
+   */
+  backgroundObjectPosition: string;
   trustInfo: string[];
 }
 
@@ -145,6 +152,7 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     ctaSecondaryLabel: row.cta_secondary_label ?? "",
     backgroundImage: row.background_image,
     backgroundHasEmbeddedHeadline: false,
+    backgroundObjectPosition: "center",
     trustInfo: fallbackTrustInfo,
   };
 }

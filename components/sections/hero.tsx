@@ -21,7 +21,11 @@ interface HeroProps {
 export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
   return (
     <section className="relative -mt-20 flex min-h-[92vh] items-end overflow-hidden pb-16 lg:min-h-screen lg:items-center lg:pb-0">
-      <HeroBackground image={hero.backgroundImage} alt={petraSiteName} />
+      <HeroBackground
+        image={hero.backgroundImage}
+        alt={petraSiteName}
+        objectPosition={hero.backgroundObjectPosition}
+      />
 
       <Container className="relative z-10">
         {/*

@@ -7,16 +7,28 @@ export const petraHero = {
   ctaPrimaryHref: "/iletisim",
   ctaSecondaryLabel: "WhatsApp'tan Ulaş",
   /**
-   * Faz 9.9 revizyon: customer-provided AI-generated visual pack (see
-   * public/images/petra/README.md's "Faz 9.9" note). This crop's own
-   * left half already has a baked-in headline/subtext/badge/logo overlay
-   * — `backgroundHasEmbeddedHeadline` tells <Hero> to suppress its own
-   * H1/subtext block on top of it (avoids duplicate/clashing text) while
-   * keeping the real, functional CTA buttons and trust-info line, which
-   * are NOT baked into the image and must stay interactive.
+   * Faz 12 revizyon: customer-provided AI-generated hero banner (source:
+   * ChatGPT_Image_16_A_u_2026_18_59_30.png, provided 2026-08-16). Same
+   * pattern as the v2 crop it replaces — left half has a baked-in
+   * headline/subtext/logo/trust-icon overlay, so `backgroundHasEmbeddedHeadline`
+   * suppresses <Hero>'s own H1/subtext on top of it. The source image
+   * also had two baked-in, non-functional button graphics ("KEŞİF TALEP
+   * ET" / "WHATSAPP") — these were removed (background-gradient-matched
+   * fill, no content-aware guessing beyond extending the existing flat
+   * gradient) so the real, functional CTA buttons rendered below by
+   * <Hero> are the only clickable buttons in that area, with nothing
+   * baked-in to visually clash with them.
    */
-  backgroundImage: "/images/petra/hero/09_hero_main_v2.jpg" as string | null,
+  backgroundImage: "/images/petra/hero/10_hero_main_v3.jpg" as string | null,
   backgroundHasEmbeddedHeadline: true,
+  /**
+   * This image's baked-in content (logo/headline/buttons area) sits in
+   * the left ~45% — object-cover's default centered crop clips it on
+   * narrower viewports, so this shifts the visible crop left instead of
+   * cropping evenly from both sides. See components/sections/
+   * hero-background.tsx's `objectPosition` prop doc.
+   */
+  backgroundObjectPosition: "22% center",
   /** Confirmed by the customer's stated service scope — see brief §4. */
   trustInfo: ["Satış", "Kurulum", "Servis"],
 };
