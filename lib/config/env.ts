@@ -51,7 +51,29 @@ export const serverEnv = {
   get metaConversionsApiToken() {
     return readServerEnv("META_CAPI_ACCESS_TOKEN");
   },
+  /**
+   * Platform-level Resend API key — one Resend account serves every
+   * customer's transactional lead-notification emails. Optional: a
+   * customer with no key configured (or, before Phase "lead notify", no
+   * key at all) simply gets no email, exactly like the Supabase
+   * connection's fail-soft pattern in lib/cms/connection.ts.
+   */
+  get resendApiKey() {
+    return readServerEnv("RESEND_API_KEY");
+  },
 };
+
+/**
+ * Per-customer lead-notification recipient, e.g. LEAD_NOTIFICATION_EMAIL_PETRA.
+ * Follows the same "_<CONNECTION_KEY>" suffix convention as the customer
+ * Supabase vars (SUPABASE_URL_PETRA, etc.) so a future second customer
+ * needs only its own env var, no code change. Never hardcode a real
+ * business email here — this project's data must always come from a real,
+ * confirmed source (env var set by the user), never invented.
+ */
+export function readLeadNotificationEmail(connectionKey: string): string | undefined {
+  return readServerEnv(`LEAD_NOTIFICATION_EMAIL_${connectionKey}`);
+}
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(publicEnv.supabaseUrl && publicEnv.supabaseAnonKey);

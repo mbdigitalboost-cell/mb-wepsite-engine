@@ -1,6 +1,7 @@
 import "server-only";
 import type { DiscoveryRequestInput } from "@/lib/validation/discovery-request";
 import { getCustomerSupabaseClient } from "@/lib/cms/connection";
+import { sendLeadNotificationEmail } from "@/lib/notifications/send-lead-notification";
 
 export interface SubmitDiscoveryRequestResult {
   ok: boolean;
@@ -59,6 +60,11 @@ export async function submitDiscoveryRequest(
   } catch (err) {
     console.error("[petra:discovery-request] unexpected error writing to leads:", err);
   }
+
+  // Best-effort, independent of the Supabase insert above — see
+  // lib/notifications/send-lead-notification.ts's file doc for exactly
+  // what has to be configured before this actually sends anything.
+  await sendLeadNotificationEmail("PETRA", input);
 
   return { ok: true };
 }
