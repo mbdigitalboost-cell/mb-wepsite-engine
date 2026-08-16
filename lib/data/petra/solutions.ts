@@ -2,42 +2,40 @@ import type { PetraSolution } from "@/lib/data/petra/types";
 
 /**
  * These 6 categories come from the customer's own material (confirmed in
- * the brief). Images are `null` — real photography/renders needed before
- * these can ship; see public/images/petra/README.md. Expected filenames
- * (authoritative per the Final Asset Implementation Brief), all under
- * /images/petra/solutions/: split-klima.webp, multi-split-klima.webp,
- * profesyonel-klima.webp, vrf-sistemleri.webp, isi-pompasi.webp,
- * sicak-su-sistemleri.webp.
+ * the brief). `profesyonel-klimalar` stays `image: null` — no candidate
+ * image has been supplied for it yet.
  *
- * Faz 9.9 + revizyon: customer-provided AI-generated design/stock-style
- * visual packs (see public/images/petra/README.md's "Faz 9.9" notes for
- * the policy exception this required, and exactly which images were
- * excluded and why). `split-klimalar`, `vrf-sistemleri`, and
- * `sicak-su-sistemleri` got real images. `multi-split-klimalar` and
- * `isi-pompalari` stay `image: null` — every supplied candidate for
- * those two showed a real, unverified third-party equipment-brand logo
- * (Mitsubishi-style / Panasonic-style marks) and was excluded rather
- * than shipped with an unlicensed brand visible. `profesyonel-klimalar`
- * stays `null` too — no candidate image was ever supplied for it.
+ * Faz 12 revizyon: customer-provided high-resolution photo pack
+ * (PETRA_Iklimlendirme_Gorselleri.zip, 2026-08-16) replaced the old
+ * low-res v2 pack for split-klimalar/vrf-sistemleri/sicak-su-sistemleri
+ * and filled in multi-split-klimalar (previously null — the earlier v2
+ * pack's multi-split candidate showed a third-party equipment-brand logo
+ * and was excluded; this new photo doesn't). `isi-pompalari` also stays
+ * excluded from this note going forward since it now has a real image
+ * too. Each source photo had its own baked-in title/caption text (meant
+ * for a different composite layout) — removed via inpainting (same
+ * approach as the hero banner's baked-in buttons) since this card
+ * component (components/sections/solutions.tsx) already renders its own
+ * real title/description on top of the image; titles/descriptions below
+ * were updated to match the wording from each photo's original caption
+ * per the customer's direction, not invented.
  */
 export const petraSolutions: PetraSolution[] = [
   {
     slug: "split-klimalar",
     title: "Split Klimalar",
-    shortDescription: "Konut ve küçük ticari alanlar için verimli iklimlendirme.",
+    shortDescription: "Yüksek performans ve sessiz çalışma ile ideal konfor.",
     longDescription:
       "Split klima sistemleri, tek bir iç ve dış üniteden oluşan, konut ve küçük ölçekli ticari mekanlar için uygun iklimlendirme çözümüdür.",
-    // Faz 9.9 revizyon: customer-provided visual pack v2, no third-party branding visible — safe to use.
-    image: "/images/petra/solutions/09_split_klimalar_v2.jpg",
+    image: "/images/petra/solutions/10_split_klimalar_v3.jpg",
   },
   {
     slug: "multi-split-klimalar",
-    title: "Multi-Split Klimalar",
-    shortDescription: "Tek dış üniteyle birden fazla odayı iklimlendirin.",
+    title: "Multi-Split Sistemler",
+    shortDescription: "Tek dış ünite ile birden fazla alanı iklimlendirin.",
     longDescription:
       "Multi-split sistemler, tek bir dış üniteye bağlı birden fazla iç ünite ile farklı odaların bağımsız şekilde iklimlendirilmesini sağlar.",
-    // Expected: /images/petra/solutions/multi-split-klima.webp
-    image: null,
+    image: "/images/petra/solutions/10_multi_split_sistemler_v1.jpg",
   },
   {
     slug: "profesyonel-klimalar",
@@ -45,37 +43,32 @@ export const petraSolutions: PetraSolution[] = [
     shortDescription: "Ticari ve endüstriyel alanlar için yüksek kapasiteli çözümler.",
     longDescription:
       "Ofis, mağaza ve endüstriyel alanlar gibi daha büyük mekanlar için tasarlanmış, yüksek kapasiteli profesyonel klima sistemleri.",
-    // Expected: /images/petra/solutions/profesyonel-klima.webp
+    // No candidate image supplied yet.
     image: null,
   },
   {
     slug: "vrf-sistemleri",
     title: "VRF Sistemleri",
-    shortDescription: "Büyük yapılar için değişken soğutucu akışkan debili sistemler.",
+    shortDescription: "Büyük yapılara akıllı, esnek ve verimli çözümler.",
     longDescription:
       "VRF (Variable Refrigerant Flow) sistemleri, büyük binalarda farklı bölgelerin bağımsız ve verimli şekilde iklimlendirilmesini sağlayan gelişmiş bir teknolojidir.",
-    // Faz 9.9 revizyon: customer-provided visual pack v2, no third-party branding visible — safe to use.
-    image: "/images/petra/solutions/09_vrf_sistemleri_v2.jpg",
+    image: "/images/petra/solutions/10_vrf_sistemleri_v3.jpg",
   },
   {
     slug: "isi-pompalari",
     title: "Isı Pompaları",
-    shortDescription: "Enerji verimli ısıtma ve soğutma çözümü.",
+    shortDescription: "Doğadan enerji alarak yüksek verimlilik sağlayın.",
     longDescription:
       "Isı pompaları, çevredeki havadan ısı enerjisi transfer ederek hem ısıtma hem soğutma yapabilen, enerji verimliliği yüksek sistemlerdir.",
-    // Expected: /images/petra/solutions/isi-pompasi.webp
-    image: null,
+    image: "/images/petra/solutions/10_isi_pompalari_v1.jpg",
   },
   {
     slug: "sicak-su-sistemleri",
     title: "Sıcak Su Sistemleri",
-    shortDescription: "Konut ve ticari kullanım için sıcak su üretim sistemleri.",
+    shortDescription: "Güvenilir ve kesintisiz sıcak su çözümleri.",
     longDescription:
       "Konut ve ticari yapılar için verimli ve sürdürülebilir sıcak su üretim çözümleri.",
-    // Faz 9.9 revizyon: customer-provided visual pack v2 — nameplates on the
-    // tanks are illegible at this resolution, no identifiable third-party
-    // logo (unlike the excluded multi-split/heat-pump candidates).
-    image: "/images/petra/solutions/09_sicak_su_sistemleri_v2.jpg",
+    image: "/images/petra/solutions/10_sicak_su_sistemleri_v3.jpg",
   },
 ];
 
