@@ -19,7 +19,12 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
  *   the customer's Instagram profile — treated as the primary phone.
  * - `whatsapp`: confirmed by the customer/agency (2026-08-16) to be the
  *   same number as `phone` — this is an explicit confirmation, not an
- *   inferred copy of `phone`.
+ *   inferred copy of `phone`. Stored in full international format
+ *   (+90 535 791 11 96, confirmed by the customer 2026-08-16) because
+ *   `buildWhatsappHref` (lib/data/petra/whatsapp.ts) only strips
+ *   non-digit characters — it does NOT add a country code. A local-format
+ *   "0535..." value would have produced an invalid `wa.me/05357911196`
+ *   link (leading 0 instead of the 90 country code); this fixes that.
  * - `email`, `workingHours`: still `null` — not visible/confirmed in the
  *   Instagram source.
  * - `address`: still `null` — a candidate address IS visible in the
@@ -35,7 +40,7 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
 export const petraContactInfo: PetraContactInfo = {
   phone: "0535 791 11 96",
   phoneDisplay: "0535 791 11 96",
-  whatsapp: "0535 791 11 96",
+  whatsapp: "+90 535 791 11 96",
   email: null,
   address: null,
   serviceArea: "Onikişubat, Kahramanmaraş",
