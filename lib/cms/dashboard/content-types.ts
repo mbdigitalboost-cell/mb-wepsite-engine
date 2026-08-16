@@ -45,11 +45,48 @@ const namedContentFields: ContentFieldConfig[] = [
   { key: "image", label: "Görsel URL", kind: "url", required: false },
 ];
 
+/**
+ * Phase 9.6 (migration 0007): `solutions.short_description` — shown on
+ * the /cozumler list card, while the shared `description` field above
+ * remains the long/detail-page text. Field keys must match the DB
+ * column name exactly (see app/dashboard/customers/[customerId]/content/
+ * [type]/actions.ts's toRow(), which uses field.key as the row key
+ * directly — no camelCase mapping layer exists).
+ */
+const solutionFields: ContentFieldConfig[] = [
+  { key: "title", label: "Başlık", kind: "text", required: true },
+  { key: "slug", label: "Slug", kind: "slug", required: true },
+  { key: "short_description", label: "Kısa Açıklama (liste kartında gösterilir)", kind: "textarea", required: false },
+  { key: "description", label: "Uzun Açıklama (detay sayfasında gösterilir)", kind: "textarea", required: false },
+  { key: "image", label: "Görsel URL", kind: "url", required: false },
+];
+
+/** Phase 9.6 (migration 0007): `projects.category`, optional badge on /projeler. */
+const projectFields: ContentFieldConfig[] = [
+  ...namedContentFields,
+  { key: "category", label: "Kategori", kind: "text", required: false },
+];
+
+/**
+ * Phase 9.6 (migration 0007): `campaigns.price_label`/`cta_label`/
+ * `cta_href`. `cta_href` is deliberately `kind: "text"`, not `"url"` —
+ * the engine-wide default it falls back to ("/iletisim") is a relative
+ * in-site path, and `"url"` fields are Zod-validated as an absolute URL
+ * (see lib/validation/content.ts's buildContentFormSchema), which would
+ * reject that. Same pattern as hero_sections.cta_primary_href.
+ */
+const campaignFields: ContentFieldConfig[] = [
+  ...namedContentFields,
+  { key: "price_label", label: "Fiyat Etiketi", kind: "text", required: false },
+  { key: "cta_label", label: "Buton Metni", kind: "text", required: false },
+  { key: "cta_href", label: "Buton Linki", kind: "text", required: false },
+];
+
 export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
   services: { key: "services", label: "Hizmetler", titleField: "title", fields: namedContentFields, auditPrefix: "service" },
-  solutions: { key: "solutions", label: "Çözümler", titleField: "title", fields: namedContentFields, auditPrefix: "solution" },
-  projects: { key: "projects", label: "Projeler", titleField: "title", fields: namedContentFields, auditPrefix: "project" },
-  campaigns: { key: "campaigns", label: "Kampanyalar", titleField: "title", fields: namedContentFields, auditPrefix: "campaign" },
+  solutions: { key: "solutions", label: "Çözümler", titleField: "title", fields: solutionFields, auditPrefix: "solution" },
+  projects: { key: "projects", label: "Projeler", titleField: "title", fields: projectFields, auditPrefix: "project" },
+  campaigns: { key: "campaigns", label: "Kampanyalar", titleField: "title", fields: campaignFields, auditPrefix: "campaign" },
   testimonials: {
     key: "testimonials",
     label: "Referanslar",

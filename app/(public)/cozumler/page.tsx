@@ -3,7 +3,7 @@ import { Solutions } from "@/components/sections/solutions";
 import { petraSolutions } from "@/lib/data/petra/solutions";
 import { getSolutions } from "@/lib/cms/adapters";
 import { isCmsRow, mapSolutionRows } from "@/lib/cms/petra/mappers";
-import type { NamedContentRow } from "@/lib/cms/customer-types";
+import type { SolutionRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export default async function SolutionsPage() {
   const solutionsResult = await getSolutions(PETRA_CONNECTION_KEY, petraSolutions);
   const solutions = isCmsRow((solutionsResult as unknown[])[0])
-    ? mapSolutionRows(solutionsResult as NamedContentRow[])
+    ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
 
   return <Solutions headingLevel="h1" solutions={solutions} />;

@@ -5,6 +5,7 @@ import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Icon } from "@/components/ui/icon";
 import { petraSolutions } from "@/lib/data/petra/solutions";
+import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
 import type { PetraSolution } from "@/lib/data/petra/types";
 
 interface SolutionsProps {
@@ -38,10 +39,17 @@ export function Solutions({ headingLevel = "h2", solutions = petraSolutions }: S
                       src={solution.image}
                       alt={solution.title}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 ease-[var(--motion-easing)] group-hover:scale-[1.04]"
                     />
                   ) : (
-                    <div className="h-full w-full bg-[linear-gradient(160deg,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_100%)]" />
+                    <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_100%)]">
+                      <Icon
+                        icon={petraSolutionIcons[solution.slug] ?? petraSolutionIconFallback}
+                        className="h-16 w-16 text-white/10"
+                        strokeWidth={1.25}
+                      />
+                    </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-brand-background via-brand-background/40 to-transparent transition-opacity duration-300 group-hover:from-brand-background/95" />
                 </div>

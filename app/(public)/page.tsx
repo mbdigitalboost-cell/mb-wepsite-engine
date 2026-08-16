@@ -17,11 +17,11 @@ import { petraSolutions } from "@/lib/data/petra/solutions";
 import { petraTestimonials } from "@/lib/data/petra/testimonials";
 import { petraFaqs } from "@/lib/data/petra/faqs";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
-import { petraFaqStructuredData } from "@/lib/seo/structured-data";
+import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
 import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings } from "@/lib/cms/adapters";
 import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
-import type { NamedContentRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
+import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -47,6 +47,12 @@ const staticMetadata: Metadata = {
     description:
       "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven",
+    description:
+      "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.",
   },
 };
 
@@ -86,7 +92,7 @@ export default async function HomePage() {
 
   const hero = isCmsRow(heroResult) ? mapHeroRow(heroResult as HeroSectionRow, petraHero.trustInfo) : petraHero;
   const solutions = isCmsRow((solutionsResult as unknown[])[0])
-    ? mapSolutionRows(solutionsResult as NamedContentRow[])
+    ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
   const testimonials = isCmsRow((testimonialsResult as unknown[])[0])
     ? mapTestimonialRows(testimonialsResult as TestimonialRow[])
@@ -98,12 +104,23 @@ export default async function HomePage() {
 
   const whatsappHref = buildWhatsappHref(whatsapp);
   const faqJsonLd = petraFaqStructuredData();
+  // Faz 10: adres henüz onaylanmadığı için bu şu an her zaman `null`
+  // döner (bkz. lib/seo/structured-data.ts) — sahte bir işletme beyanı
+  // riski yok, gerçek adres onaylandığında kod değişikliği gerekmeden
+  // otomatik olarak render olacak.
+  const localBusinessJsonLd = petraLocalBusinessStructuredData();
 
   return (
     <>
       {faqJsonLd ? (
         // Static JSON-LD we generate ourselves — no user input reaches this.
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      ) : null}
+      {localBusinessJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        />
       ) : null}
       <Hero whatsappHref={whatsappHref} hero={hero} />
       <TrustBar />

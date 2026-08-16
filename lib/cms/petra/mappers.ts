@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { NamedContentRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
+import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
 import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign } from "@/lib/data/petra/types";
 
 /**
@@ -26,12 +26,20 @@ export function isCmsRow(value: unknown): value is { status: string } {
   return typeof value === "object" && value !== null && "status" in value;
 }
 
-export function mapSolutionRows(rows: NamedContentRow[]): PetraSolution[] {
+/**
+ * Phase 9.6 (migration 0007) added `solutions.short_description`.
+ * `shortDescription` now prefers it, falling back to `description` when
+ * null (a CMS solution that hasn't had its short text filled in yet
+ * shows the same text in both places — the pre-9.6 behavior — rather
+ * than an empty card). `longDescription` is unchanged: `description`
+ * remains the detail-page text.
+ */
+export function mapSolutionRows(rows: SolutionRow[]): PetraSolution[] {
   return rows.map((row) => ({
     slug: row.slug,
     title: row.title,
-    shortDescription: row.description ?? "",
-    longDescription: row.description ?? "",
+    shortDescription: row.short_description ?? row.description ?? "",
+    longDescription: row.description ?? row.short_description ?? "",
     image: row.image,
   }));
 }
@@ -51,43 +59,38 @@ export function mapServiceRows(rows: NamedContentRow[]): PetraService[] {
 }
 
 /**
- * `projects` (customer-template migration 0002) has NO `category`
- * column — only title/slug/description/image/sort_order/status. The
- * static `PetraProject.category` field genuinely has no CMS source
- * today, so this maps it to `null` (never an invented label) and
- * `components/sections/projects.tsx` renders no category badge when
- * `category` is null. A `category` column is proposed as a planned,
- * NOT-YET-APPLIED migration — see PHASE_9_2_RAPOR.md.
+ * Phase 9.6 (migration 0007) added `projects.category` — this now maps
+ * straight through (still `null` when the customer hasn't set one;
+ * `components/sections/projects.tsx` renders no badge in that case,
+ * same as before, just no longer unconditionally null).
  */
-export function mapProjectRows(rows: NamedContentRow[]): PetraProject[] {
+export function mapProjectRows(rows: ProjectRow[]): PetraProject[] {
   return rows.map((row) => ({
     id: row.id,
     title: row.title,
-    category: null,
+    category: row.category,
     image: row.image,
   }));
 }
 
 /**
- * `campaigns` (customer-template migration 0002) has NO
- * `price_label`/`cta_label`/`cta_href` columns. `priceLabel` maps to
- * `null` (the component already renders nothing when it's null — same
- * "never invent pricing" rule as the static petraCampaigns data).
- * `ctaLabel`/`ctaHref` are NOT customer-specific facts — they're the
- * same generic "go talk to us" UI affordance used elsewhere on this site
- * (e.g. the solution detail page's "Keşif Talep Et" → /iletisim button),
- * so a fixed engine-level default is used rather than leaving the button
- * broken. Per-campaign CTA override is proposed as a planned,
- * NOT-YET-APPLIED migration — see PHASE_9_2_RAPOR.md.
+ * Phase 9.6 (migration 0007) added `campaigns.price_label`/`cta_label`/
+ * `cta_href`. `priceLabel` maps straight through (still `null` = no
+ * price shown, same "never invent pricing" rule as before). `ctaLabel`/
+ * `ctaHref` now prefer the per-campaign column but fall back to the
+ * same engine-wide generic default used before this migration
+ * ("İletişime Geç" → /iletisim) when the customer hasn't set an
+ * override — so an existing/unedited campaign renders identically to
+ * before.
  */
-export function mapCampaignRows(rows: NamedContentRow[]): PetraCampaign[] {
+export function mapCampaignRows(rows: CampaignRow[]): PetraCampaign[] {
   return rows.map((row) => ({
     id: row.id,
     title: row.title,
     description: row.description ?? "",
-    priceLabel: null,
-    ctaLabel: "İletişime Geç",
-    ctaHref: "/iletisim",
+    priceLabel: row.price_label,
+    ctaLabel: row.cta_label ?? "İletişime Geç",
+    ctaHref: row.cta_href ?? "/iletisim",
     image: row.image,
   }));
 }
@@ -113,6 +116,14 @@ export interface MappedHero {
   ctaPrimaryHref: string;
   ctaSecondaryLabel: string;
   backgroundImage: string | null;
+  /**
+   * Faz 9.9: CMS-uploaded hero images (via the Media/Storage system) are
+   * expected to be clean photography, never pre-composed marketing
+   * banners with baked-in text — so this is always `false` here. See
+   * lib/data/petra/hero.ts for the one case (a customer-provided,
+   * already-textified static fallback image) where it's `true`.
+   */
+  backgroundHasEmbeddedHeadline: boolean;
   trustInfo: string[];
 }
 
@@ -133,6 +144,7 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     ctaPrimaryHref: row.cta_primary_href ?? "/iletisim",
     ctaSecondaryLabel: row.cta_secondary_label ?? "",
     backgroundImage: row.background_image,
+    backgroundHasEmbeddedHeadline: false,
     trustInfo: fallbackTrustInfo,
   };
 }

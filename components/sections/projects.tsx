@@ -11,11 +11,17 @@ interface ProjectsProps {
 }
 
 /**
- * Renders a controlled empty state (no fake case studies) when the
- * resolved project list is empty — true by default until the customer
- * provides real project photos. See lib/data/petra/projects.ts.
+ * Faz 9.9: renders nothing at all when the resolved project list is
+ * empty — same rule as Statistics/Testimonials/Campaigns (all four
+ * homepage sections must behave identically when their data is empty,
+ * see PHASE_9_9_RAPOR.md's "Empty state tutarlılığı" section). This used
+ * to render its own "yakında" box here; that's moved to
+ * app/(public)/projeler/page.tsx (a page-level `EmptyState`, same
+ * pattern `/kampanyalar` already used) so the homepage stays clean while
+ * the dedicated /projeler page still tells a visitor something is coming.
  */
 export function Projects({ headingLevel = "h2", projects = petraProjects }: ProjectsProps) {
+  if (projects.length === 0) return null;
   const Heading = headingLevel;
 
   return (
@@ -27,40 +33,31 @@ export function Projects({ headingLevel = "h2", projects = petraProjects }: Proj
           </Heading>
         </Reveal>
 
-        {projects.length > 0 ? (
-          <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project, index) => (
-              <Reveal key={project.id} index={index}>
-                <div className="group relative aspect-[4/5] overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
-                  {project.image ? (
-                    <Image
-                      src={project.image}
-                      alt={project.title}
-                      fill
-                      className="object-cover transition-transform duration-500 ease-[var(--motion-easing)] group-hover:scale-[1.04]"
-                    />
+        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project, index) => (
+            <Reveal key={project.id} index={index}>
+              <div className="group relative aspect-[4/5] overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
+                {project.image ? (
+                  <Image
+                    src={project.image}
+                    alt={project.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 ease-[var(--motion-easing)] group-hover:scale-[1.04]"
+                  />
+                ) : null}
+                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-brand-background via-brand-background/30 to-transparent p-6">
+                  {project.category ? (
+                    <span className="text-xs font-medium tracking-[0.2em] text-brand-primary uppercase">
+                      {project.category}
+                    </span>
                   ) : null}
-                  <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-brand-background via-brand-background/30 to-transparent p-6">
-                    {project.category ? (
-                      <span className="text-xs font-medium tracking-[0.2em] text-brand-primary uppercase">
-                        {project.category}
-                      </span>
-                    ) : null}
-                    <h3 className="mt-1 text-lg font-semibold text-white">{project.title}</h3>
-                  </div>
+                  <h3 className="mt-1 text-lg font-semibold text-white">{project.title}</h3>
                 </div>
-              </Reveal>
-            ))}
-          </div>
-        ) : (
-          <Reveal index={1}>
-            <div className="mt-14 rounded-[var(--radius-brand)] border border-dashed border-white/15 p-12 text-center">
-              <p className="text-sm text-brand-muted">
-                Tamamlanan projelerimiz yakında burada yer alacak.
-              </p>
-            </div>
-          </Reveal>
-        )}
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </Container>
     </section>
   );

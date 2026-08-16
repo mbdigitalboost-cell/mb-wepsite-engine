@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./petra-fonts.css";
 import { ThemeProvider } from "@/lib/theme/theme-provider";
 import { petraTheme } from "@/lib/theme/petra-theme";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -15,13 +16,38 @@ import { resolveSiteWideSeo, applyLayoutSeoOverrides } from "@/lib/seo/build-met
 const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
 const PETRA_CONNECTION_KEY = "PETRA";
 
+const petraDefaultTitle = "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven";
+const petraDefaultDescription =
+  "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.";
+
+/**
+ * Faz 10: sayfa bazlı `openGraph`/`twitter` tanımlamayan route'lar
+ * (hizmetler, projeler, kampanyalar, hakkımızda, iletişim, cozumler
+ * listesi) bu layout seviyesindeki varsayılanı miras alır — hiçbiri
+ * uydurulmuş içerik değil, zaten onaylı başlık/açıklama metninin
+ * tekrarı. Homepage ve `/cozumler/[slug]` kendi `openGraph`'ını
+ * tanımlayarak bunun üzerine yazıyor (Next.js metadata birleştirme
+ * kuralı: child'da tanımlı openGraph, parent'ınkini bütünüyle
+ * override eder).
+ */
 const staticMetadata: Metadata = {
   title: {
-    default: "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven",
+    default: petraDefaultTitle,
     template: "%s | Petra Mühendislik",
   },
-  description:
-    "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri: split, multi-split, VRF, ısı pompası ve sıcak su sistemleri.",
+  description: petraDefaultDescription,
+  openGraph: {
+    siteName: petraSiteName,
+    locale: "tr_TR",
+    type: "website",
+    title: petraDefaultTitle,
+    description: petraDefaultDescription,
+  },
+  twitter: {
+    card: "summary",
+    title: petraDefaultTitle,
+    description: petraDefaultDescription,
+  },
 };
 
 // Resets the title template for this subtree (root layout's is the
@@ -55,7 +81,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
 
   return (
     <ThemeProvider theme={petraTheme}>
-      <div className="flex min-h-full flex-1 flex-col bg-brand-background text-brand-foreground">
+      <div className="petra-poppins flex min-h-full flex-1 flex-col bg-brand-background text-brand-foreground">
         <SiteHeader
           siteName={petraSiteName}
           logoSrcDark={petraBrandAssets.logoSrcDark}

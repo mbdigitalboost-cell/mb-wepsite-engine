@@ -4,7 +4,7 @@ import { petraSolutions } from "@/lib/data/petra/solutions";
 import type { PetraSolution } from "@/lib/data/petra/types";
 import { getSolutions } from "@/lib/cms/adapters";
 import { isCmsRow, mapSolutionRows } from "@/lib/cms/petra/mappers";
-import type { NamedContentRow } from "@/lib/cms/customer-types";
+import type { SolutionRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -21,6 +21,6 @@ const PETRA_CONNECTION_KEY = "PETRA";
 export async function resolvePetraSolutions(): Promise<PetraSolution[]> {
   const solutionsResult = await getSolutions(PETRA_CONNECTION_KEY, petraSolutions);
   return isCmsRow((solutionsResult as unknown[])[0])
-    ? mapSolutionRows(solutionsResult as NamedContentRow[])
+    ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
 }

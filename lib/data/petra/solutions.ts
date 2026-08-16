@@ -8,6 +8,17 @@ import type { PetraSolution } from "@/lib/data/petra/types";
  * /images/petra/solutions/: split-klima.webp, multi-split-klima.webp,
  * profesyonel-klima.webp, vrf-sistemleri.webp, isi-pompasi.webp,
  * sicak-su-sistemleri.webp.
+ *
+ * Faz 9.9 + revizyon: customer-provided AI-generated design/stock-style
+ * visual packs (see public/images/petra/README.md's "Faz 9.9" notes for
+ * the policy exception this required, and exactly which images were
+ * excluded and why). `split-klimalar`, `vrf-sistemleri`, and
+ * `sicak-su-sistemleri` got real images. `multi-split-klimalar` and
+ * `isi-pompalari` stay `image: null` — every supplied candidate for
+ * those two showed a real, unverified third-party equipment-brand logo
+ * (Mitsubishi-style / Panasonic-style marks) and was excluded rather
+ * than shipped with an unlicensed brand visible. `profesyonel-klimalar`
+ * stays `null` too — no candidate image was ever supplied for it.
  */
 export const petraSolutions: PetraSolution[] = [
   {
@@ -16,8 +27,8 @@ export const petraSolutions: PetraSolution[] = [
     shortDescription: "Konut ve küçük ticari alanlar için verimli iklimlendirme.",
     longDescription:
       "Split klima sistemleri, tek bir iç ve dış üniteden oluşan, konut ve küçük ölçekli ticari mekanlar için uygun iklimlendirme çözümüdür.",
-    // Expected: /images/petra/solutions/split-klima.webp
-    image: null,
+    // Faz 9.9 revizyon: customer-provided visual pack v2, no third-party branding visible — safe to use.
+    image: "/images/petra/solutions/09_split_klimalar_v2.jpg",
   },
   {
     slug: "multi-split-klimalar",
@@ -43,8 +54,8 @@ export const petraSolutions: PetraSolution[] = [
     shortDescription: "Büyük yapılar için değişken soğutucu akışkan debili sistemler.",
     longDescription:
       "VRF (Variable Refrigerant Flow) sistemleri, büyük binalarda farklı bölgelerin bağımsız ve verimli şekilde iklimlendirilmesini sağlayan gelişmiş bir teknolojidir.",
-    // Expected: /images/petra/solutions/vrf-sistemleri.webp
-    image: null,
+    // Faz 9.9 revizyon: customer-provided visual pack v2, no third-party branding visible — safe to use.
+    image: "/images/petra/solutions/09_vrf_sistemleri_v2.jpg",
   },
   {
     slug: "isi-pompalari",
@@ -61,8 +72,10 @@ export const petraSolutions: PetraSolution[] = [
     shortDescription: "Konut ve ticari kullanım için sıcak su üretim sistemleri.",
     longDescription:
       "Konut ve ticari yapılar için verimli ve sürdürülebilir sıcak su üretim çözümleri.",
-    // Expected: /images/petra/solutions/sicak-su-sistemleri.webp
-    image: null,
+    // Faz 9.9 revizyon: customer-provided visual pack v2 — nameplates on the
+    // tanks are illegible at this resolution, no identifiable third-party
+    // logo (unlike the excluded multi-split/heat-pump candidates).
+    image: "/images/petra/solutions/09_sicak_su_sistemleri_v2.jpg",
   },
 ];
 

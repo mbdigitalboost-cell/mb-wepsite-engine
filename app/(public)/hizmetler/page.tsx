@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/ui/reveal";
-import { petraServices } from "@/lib/data/petra/services";
+import { petraServices, petraServicesBannerImage } from "@/lib/data/petra/services";
 import { getServices } from "@/lib/cms/adapters";
 import { isCmsRow, mapServiceRows } from "@/lib/cms/petra/mappers";
 import type { NamedContentRow } from "@/lib/cms/customer-types";
@@ -32,6 +33,29 @@ export default async function ServicesPage() {
         title="Uçtan Uca İklimlendirme Hizmeti"
         description="Satıştan teknik servise, sürecin her aşamasında yanınızdayız."
       />
+      {/*
+        Faz 9.9: decorative banner from the customer-provided visual pack —
+        deliberately kept OUT of the shared PageHeader (used by 6+ other
+        routes) so this page-specific addition can't affect any other page.
+        `fill` + a fixed-aspect wrapper + `object-cover` keeps it crop-free
+        across breakpoints (no distortion/overflow on mobile/tablet/desktop).
+      */}
+      {petraServicesBannerImage ? (
+        <section className="pt-4">
+          <Container>
+            <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[var(--radius-brand)] sm:aspect-[21/9]">
+              <Image
+                src={petraServicesBannerImage}
+                alt="Petra Mühendislik teknik servis ve bakım"
+                fill
+                sizes="(min-width: 1024px) 1024px, 100vw"
+                className="object-cover"
+                priority={false}
+              />
+            </div>
+          </Container>
+        </section>
+      ) : null}
       <section className="py-24 lg:py-32">
         <Container>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">

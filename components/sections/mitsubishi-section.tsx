@@ -41,7 +41,13 @@ export function MitsubishiSection() {
         <Reveal index={1}>
           <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
             {petraMitsubishi.image ? (
-              <Image src={petraMitsubishi.image} alt={petraMitsubishi.brandName} fill className="object-cover" />
+              <Image
+                src={petraMitsubishi.image}
+                alt={petraMitsubishi.brandName}
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
             ) : (
               <div className="h-full w-full bg-[linear-gradient(160deg,_var(--color-brand-background)_0%,_var(--color-brand-secondary)_100%)]" />
             )}

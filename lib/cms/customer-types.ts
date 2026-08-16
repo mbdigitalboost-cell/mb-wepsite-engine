@@ -92,6 +92,37 @@ export type NamedContentRow = ContentRow & {
   sort_order: number;
 };
 
+/**
+ * `solutions` only, since Phase 9.6 (migration 0007): adds
+ * `short_description`, used by /cozumler's list card. `description`
+ * (from NamedContentRow) is unchanged and continues to serve as the
+ * long/detail-page text — see lib/cms/petra/mappers.ts's
+ * mapSolutionRows().
+ */
+export type SolutionRow = NamedContentRow & {
+  short_description: string | null;
+};
+
+/**
+ * `projects` only, since Phase 9.6 (migration 0007): adds `category`,
+ * rendered as an optional badge by components/sections/projects.tsx.
+ */
+export type ProjectRow = NamedContentRow & {
+  category: string | null;
+};
+
+/**
+ * `campaigns` only, since Phase 9.6 (migration 0007): adds
+ * `price_label` (optional pricing text) and `cta_label`/`cta_href`
+ * (optional per-campaign CTA override — null falls back to the
+ * engine-wide default in lib/cms/petra/mappers.ts's mapCampaignRows()).
+ */
+export type CampaignRow = NamedContentRow & {
+  price_label: string | null;
+  cta_label: string | null;
+  cta_href: string | null;
+};
+
 export type TestimonialRow = ContentRow & {
   name: string;
   role: string | null;
@@ -184,9 +215,9 @@ export type CustomerDatabase = {
       pages: TableDef<PageRow, Partial<PageRow>, Partial<PageRow>>;
       hero_sections: TableDef<HeroSectionRow, Partial<HeroSectionRow>, Partial<HeroSectionRow>>;
       services: TableDef<NamedContentRow, Partial<NamedContentRow>, Partial<NamedContentRow>>;
-      solutions: TableDef<NamedContentRow, Partial<NamedContentRow>, Partial<NamedContentRow>>;
-      projects: TableDef<NamedContentRow, Partial<NamedContentRow>, Partial<NamedContentRow>>;
-      campaigns: TableDef<NamedContentRow, Partial<NamedContentRow>, Partial<NamedContentRow>>;
+      solutions: TableDef<SolutionRow, Partial<SolutionRow>, Partial<SolutionRow>>;
+      projects: TableDef<ProjectRow, Partial<ProjectRow>, Partial<ProjectRow>>;
+      campaigns: TableDef<CampaignRow, Partial<CampaignRow>, Partial<CampaignRow>>;
       testimonials: TableDef<TestimonialRow, Partial<TestimonialRow>, Partial<TestimonialRow>>;
       faqs: TableDef<FaqRow, Partial<FaqRow>, Partial<FaqRow>>;
       navigation_items: TableDef<NavigationItemRow, Partial<NavigationItemRow>, Partial<NavigationItemRow>>;

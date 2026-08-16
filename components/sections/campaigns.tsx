@@ -35,7 +35,13 @@ export function Campaigns({ headingLevel = "h2", campaigns = petraCampaigns }: C
             <Reveal key={campaign.id} index={index}>
               <div className="relative flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-[var(--radius-brand)] border border-white/10 p-8">
                 {campaign.image ? (
-                  <Image src={campaign.image} alt={campaign.title} fill className="-z-10 object-cover" />
+                  <Image
+                    src={campaign.image}
+                    alt={campaign.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="-z-10 object-cover"
+                  />
                 ) : (
                   <div className="absolute inset-0 -z-10 bg-[linear-gradient(160deg,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_100%)]" />
                 )}

@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
+import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
 
 /**
  * Phase 9.2: `resolvePetraSolutions()` (lib/cms/petra/resolve-solutions.ts,
  * shared with app/sitemap.ts as of Phase 9.3) is the single resolution
  * helper used by generateStaticParams, generateMetadata, and the page
  * body below — same CMS-first/static-fallback rule as
- * app/(public)/page.tsx (Phase 6 §20). NOTE: the CMS `solutions` table
- * has one `description` column, not separate short/long fields (see
- * PHASE_9_2_RAPOR.md), so a CMS-sourced solution shows the same text in
- * both the /cozumler card and this detail page — a real but cosmetic
- * limitation, not fabricated content.
+ * app/(public)/page.tsx (Phase 6 §20). Phase 9.6 (migration 0007) added
+ * `solutions.short_description`, so a CMS-sourced solution can now show
+ * different text on the /cozumler list card vs this detail page — a
+ * solution that hasn't had its short text filled in yet still falls
+ * back to showing `description` in both places (see
+ * lib/cms/petra/mappers.ts's mapSolutionRows), never a blank card.
  *
  * generateStaticParams calling this means a build with real CMS access
  * (Vercel) will prerender any published solution the CMS has, including
@@ -89,6 +93,33 @@ export default async function SolutionDetailPage({
             >
               Keşif Talep Et
             </Button>
+          </Reveal>
+        </Container>
+      </section>
+
+      {/*
+        Faz 9.9: this page had no visual element at all before (flagged as
+        "too thin/bare" in PHASE_9_7_AUDIT.md §1) — a real photo when the
+        solution has one, otherwise the same icon-over-gradient treatment
+        used on the /cozumler cards (components/sections/solutions.tsx),
+        never a fabricated photo.
+      */}
+      <section className="py-16 lg:py-20">
+        <Container>
+          <Reveal>
+            <div className="relative aspect-[21/9] w-full overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
+              {solution.image ? (
+                <Image src={solution.image} alt={solution.title} fill sizes="100vw" className="object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_100%)]">
+                  <Icon
+                    icon={petraSolutionIcons[solution.slug] ?? petraSolutionIconFallback}
+                    className="h-20 w-20 text-white/10"
+                    strokeWidth={1.25}
+                  />
+                </div>
+              )}
+            </div>
           </Reveal>
         </Container>
       </section>

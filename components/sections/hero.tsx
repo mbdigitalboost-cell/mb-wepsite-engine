@@ -24,22 +24,40 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
       <HeroBackground image={hero.backgroundImage} alt={petraSiteName} />
 
       <Container className="relative z-10">
-        <Reveal variant="fade-up" index={0}>
-          <h1 className="max-w-3xl font-[family-name:var(--font-brand-heading)] text-[38px] leading-[1.05] font-semibold tracking-tight text-white sm:text-[46px] md:text-[64px] lg:text-[84px]">
-            {hero.headingLines.map((line, index) => (
-              <span
-                key={line}
-                className={index === hero.accentLineIndex ? "block text-brand-primary" : "block"}
-              >
-                {line}
-              </span>
-            ))}
-          </h1>
-        </Reveal>
+        {/*
+          Faz 9.9: when the background image already has its own baked-in
+          headline/subtext (see lib/data/petra/hero.ts's
+          `backgroundHasEmbeddedHeadline`), rendering this H1/subtext on
+          top of it would duplicate/clash with the image's own text. The
+          real, functional CTA buttons and trust-info line below are
+          NEVER baked into an image (they're interactive — tracked links,
+          WhatsApp deep link) so they always render regardless.
+        */}
+        {!hero.backgroundHasEmbeddedHeadline ? (
+          <>
+            <Reveal variant="fade-up" index={0}>
+              <h1 className="max-w-3xl font-[family-name:var(--font-brand-heading)] text-[38px] leading-[1.05] font-semibold tracking-tight text-white sm:text-[46px] md:text-[64px] lg:text-[84px]">
+                {hero.headingLines.map((line, index) => (
+                  <span
+                    key={line}
+                    className={index === hero.accentLineIndex ? "block text-brand-primary" : "block"}
+                  >
+                    {line}
+                  </span>
+                ))}
+              </h1>
+            </Reveal>
 
-        <Reveal variant="fade-up" index={1}>
-          <p className="mt-6 max-w-lg text-base text-white/80 sm:text-lg">{hero.subtext}</p>
-        </Reveal>
+            <Reveal variant="fade-up" index={1}>
+              <p className="mt-6 max-w-lg text-base text-white/80 sm:text-lg">{hero.subtext}</p>
+            </Reveal>
+          </>
+        ) : (
+          // Screen-reader-only heading: the visual headline lives inside the
+          // background image itself — a real <h1> must still exist for
+          // accessibility/SEO structure even though it isn't shown visually.
+          <h1 className="sr-only">{hero.headingLines.join(" ")}</h1>
+        )}
 
         <Reveal variant="fade-up" index={2}>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
