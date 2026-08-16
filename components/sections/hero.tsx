@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
@@ -91,7 +92,17 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         </Reveal>
 
         <Reveal variant="fade-up" index={3}>
-          <div className="mt-14 flex items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase">
+          {/*
+            trustInfoOffset only ever needs to clear a baked-in image row
+            that itself only appears at desktop widths (see
+            lib/data/petra/hero.ts's doc) — scoped to lg: so mobile, where
+            there's no collision to avoid, keeps its normal left-aligned
+            position instead of being pushed off-screen.
+          */}
+          <div
+            className="mt-14 flex items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:ml-[var(--trust-offset)]"
+            style={hero.trustInfoOffset ? ({ "--trust-offset": hero.trustInfoOffset } as CSSProperties) : undefined}
+          >
             {hero.trustInfo.map((item, i) => (
               <span key={item} className="flex items-center gap-6">
                 {i > 0 ? <span aria-hidden="true" className="h-1 w-1 rounded-full bg-white/30" /> : null}

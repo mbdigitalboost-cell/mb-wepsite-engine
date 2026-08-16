@@ -131,6 +131,13 @@ export interface MappedHero {
    * off-center crop (its baked-in content sits left-of-center).
    */
   backgroundObjectPosition: string;
+  /**
+   * CMS-uploaded hero photos never have a baked-in icon-caption row to
+   * collide with (see `backgroundHasEmbeddedHeadline` doc above) — always
+   * `undefined` here. Only the static fallback image in
+   * lib/data/petra/hero.ts needs this.
+   */
+  trustInfoOffset: string | undefined;
   trustInfo: string[];
 }
 
@@ -153,6 +160,7 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     backgroundImage: row.background_image,
     backgroundHasEmbeddedHeadline: false,
     backgroundObjectPosition: "center",
+    trustInfoOffset: undefined,
     trustInfo: fallbackTrustInfo,
   };
 }

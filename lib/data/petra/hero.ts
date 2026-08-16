@@ -31,4 +31,13 @@ export const petraHero = {
   backgroundObjectPosition: "22% center",
   /** Confirmed by the customer's stated service scope — see brief §4. */
   trustInfo: ["Satış", "Kurulum", "Servis"],
+  /**
+   * This image's baked-in icon-caption row ("Mühendislik Yaklaşımı" /
+   * "Yüksek Verimlilik" / ...) sits at the exact same height as the real
+   * trustInfo line below the CTA buttons, so without an offset the two
+   * directly overlap. Shifts the real line right, clear of that row, on
+   * desktop widths (lg+) where both are visible at once — see
+   * components/sections/hero.tsx's `trustInfoOffset` usage.
+   */
+  trustInfoOffset: "38%" as string | undefined,
 };
