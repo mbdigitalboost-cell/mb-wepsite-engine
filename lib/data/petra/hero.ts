@@ -39,5 +39,15 @@ export const petraHero = {
    * desktop widths (lg+) where both are visible at once — see
    * components/sections/hero.tsx's `trustInfoOffset` usage.
    */
-  trustInfoOffset: "38%" as string | undefined,
+  trustInfoOffset: "44%" as string | undefined,
+  /**
+   * With `backgroundHasEmbeddedHeadline` true, the real (visible) H1/
+   * subtext block is replaced by a zero-height `sr-only` heading (see
+   * components/sections/hero.tsx), so the CTA buttons' normal `mt-10`
+   * — sized to sit below that visible block — leaves them riding up over
+   * this image's own baked-in subtext ("...çözümler üretiyoruz." gets
+   * covered by the "Keşif Talep Et" button). This replaces that spacing
+   * with enough room to clear the baked text instead.
+   */
+  ctaTopOffset: "8.5rem" as string | undefined,
 };

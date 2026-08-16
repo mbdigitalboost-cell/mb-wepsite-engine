@@ -138,6 +138,8 @@ export interface MappedHero {
    * lib/data/petra/hero.ts needs this.
    */
   trustInfoOffset: string | undefined;
+  /** Same reasoning as `trustInfoOffset` above — CMS hero photos never need this. */
+  ctaTopOffset: string | undefined;
   trustInfo: string[];
 }
 
@@ -161,6 +163,7 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     backgroundHasEmbeddedHeadline: false,
     backgroundObjectPosition: "center",
     trustInfoOffset: undefined,
+    ctaTopOffset: undefined,
     trustInfo: fallbackTrustInfo,
   };
 }

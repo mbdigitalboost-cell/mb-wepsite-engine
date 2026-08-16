@@ -65,7 +65,10 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         )}
 
         <Reveal variant="fade-up" index={2}>
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <div
+            className="mt-10 flex flex-col gap-4 sm:flex-row"
+            style={hero.ctaTopOffset ? { marginTop: hero.ctaTopOffset } : undefined}
+          >
             <Button
               href={hero.ctaPrimaryHref}
               size="lg"
