@@ -4,6 +4,10 @@ import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 
 const staticRoutes = ["/", "/cozumler", "/hizmetler", "/projeler", "/kampanyalar", "/hakkimizda", "/iletisim"];
 
+// Faz 12: legal/policy pages — low priority (0.3), not in changeFrequency
+// "monthly" tier with the main content pages since they change rarely.
+const legalRoutes = ["/gizlilik-politikasi", "/kvkk-aydinlatma-metni", "/cerez-politikasi", "/kullanim-sartlari"];
+
 /**
  * Covers every public Petra route, including the dynamic /cozumler/[slug]
  * pages.
@@ -22,10 +26,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const solutions = await resolvePetraSolutions();
   const solutionRoutes = solutions.map((solution) => `/cozumler/${solution.slug}`);
 
-  return [...staticRoutes, ...solutionRoutes].map((path) => ({
-    url: `${publicEnv.siteUrl}${path}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: path === "/" ? 1 : 0.7,
-  }));
+  return [
+    ...[...staticRoutes, ...solutionRoutes].map((path) => ({
+      url: `${publicEnv.siteUrl}${path}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: path === "/" ? 1 : 0.7,
+    })),
+    ...legalRoutes.map((path) => ({
+      url: `${publicEnv.siteUrl}${path}`,
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    })),
+  ];
 }

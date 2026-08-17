@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileStickyCta } from "@/components/navigation/mobile-sticky-cta";
 import { FloatingWhatsappButton } from "@/components/navigation/floating-whatsapp-button";
 import { TrackingScripts } from "@/lib/tracking/tracking-scripts";
-import { petraNavLinks } from "@/lib/data/petra/navigation";
+import { petraNavLinks, petraLegalLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
@@ -107,6 +107,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           logoSrcDark={petraBrandAssets.logoSrcDark}
           logoSrcLight={petraBrandAssets.logoSrcLight}
           navLinks={petraNavLinks}
+          legalLinks={petraLegalLinks}
           phone={petraContactInfo.phone}
           phoneDisplay={petraContactInfo.phoneDisplay}
           whatsappHref={whatsappHref}

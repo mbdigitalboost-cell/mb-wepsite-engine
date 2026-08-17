@@ -14,6 +14,8 @@ export interface SiteFooterProps {
   logoSrcDark: string | null;
   logoSrcLight: string | null;
   navLinks: PetraNavLink[];
+  /** Optional — omit for a customer that doesn't have legal/policy pages yet. */
+  legalLinks?: PetraNavLink[];
   phone: string | null;
   phoneDisplay: string | null;
   whatsappHref: string | null;
@@ -36,6 +38,7 @@ export function SiteFooter({
   logoSrcDark,
   logoSrcLight,
   navLinks,
+  legalLinks = [],
   phone,
   phoneDisplay,
   whatsappHref,
@@ -49,8 +52,8 @@ export function SiteFooter({
 
   return (
     <footer className="border-t border-white/10 bg-brand-background text-brand-foreground">
-      <Container className="grid gap-12 py-16 md:grid-cols-4">
-        <div className="md:col-span-2">
+      <Container className="grid gap-12 sm:grid-cols-2 md:grid-cols-5 py-16">
+        <div className="sm:col-span-2 md:col-span-2">
           <Logo
             background="dark"
             srcDark={logoSrcDark}
@@ -139,13 +142,38 @@ export function SiteFooter({
             ) : null}
           </ul>
         </div>
+
+        {legalLinks.length > 0 ? (
+          <nav aria-label="Yasal">
+            <h2 className="text-sm font-semibold text-white">Yasal</h2>
+            <ul className="mt-4 space-y-3">
+              {legalLinks.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} className="text-sm text-brand-muted hover:text-white">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
       </Container>
 
       <div className="border-t border-white/10 py-6">
-        <Container className="flex flex-col items-center justify-between gap-2 text-xs text-brand-muted sm:flex-row">
+        <Container className="flex flex-col items-center justify-between gap-2 text-center text-xs text-brand-muted sm:flex-row sm:text-left">
           <p>
             © {year} {siteName}
           </p>
+          {/*
+            Faz 12: small, low-contrast developer credit — deliberately far
+            below the brand's own contrast/weight (siteName above is
+            brand-muted too, this is the same size, not louder) so it never
+            competes with Petra's own branding. Text-only per instruction —
+            no MB Digital Boost logo asset exists to use here, and inventing
+            one would violate the same anti-fabrication rule this whole
+            project runs on.
+          */}
+          <p className="text-brand-muted/70">Web sitesi MB Digital Boost tarafından geliştirilmiştir.</p>
         </Container>
       </div>
     </footer>

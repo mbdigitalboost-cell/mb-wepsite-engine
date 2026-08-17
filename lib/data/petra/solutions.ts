@@ -43,8 +43,13 @@ export const petraSolutions: PetraSolution[] = [
     shortDescription: "Ticari ve endüstriyel alanlar için yüksek kapasiteli çözümler.",
     longDescription:
       "Ofis, mağaza ve endüstriyel alanlar gibi daha büyük mekanlar için tasarlanmış, yüksek kapasiteli profesyonel klima sistemleri.",
-    // No candidate image supplied yet.
-    image: null,
+    // Faz 12: AI-generated generic commercial-office/cassette-AC photo
+    // (customer-provided, 2026-08-17) — no baked-in text, no logos, no
+    // third-party equipment branding visible. Same category of asset as
+    // the earlier Faz 9.9 AI-generated visual-pack exception (decorative
+    // stock-style photography, not real Petra job-site photography, used
+    // only because no real photo exists yet for this specific category).
+    image: "/images/petra/solutions/professional-klimalar.jpg",
   },
   {
     slug: "vrf-sistemleri",

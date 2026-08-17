@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileStickyCta } from "@/components/navigation/mobile-sticky-cta";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
-import { petraNavLinks } from "@/lib/data/petra/navigation";
+import { petraNavLinks, petraLegalLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
@@ -89,6 +89,7 @@ export default function NotFound() {
           logoSrcDark={petraBrandAssets.logoSrcDark}
           logoSrcLight={petraBrandAssets.logoSrcLight}
           navLinks={petraNavLinks}
+          legalLinks={petraLegalLinks}
           phone={petraContactInfo.phone}
           phoneDisplay={petraContactInfo.phoneDisplay}
           whatsappHref={whatsappHref}
