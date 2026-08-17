@@ -97,6 +97,7 @@ export default function NotFound() {
           address={petraContactInfo.address}
           serviceArea={petraContactInfo.serviceArea}
           workingHours={petraContactInfo.workingHours}
+          mapUrl={petraContactInfo.mapUrl}
           socialLinks={petraSocialLinks}
         />
         <MobileStickyCta phone={petraContactInfo.phone} whatsapp={whatsappHref} quoteHref="/iletisim" />

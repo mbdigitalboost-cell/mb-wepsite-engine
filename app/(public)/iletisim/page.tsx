@@ -21,7 +21,8 @@ export default function ContactPage() {
     petraContactInfo.email ||
     petraContactInfo.address ||
     petraContactInfo.serviceArea ||
-    petraContactInfo.workingHours;
+    petraContactInfo.workingHours ||
+    petraContactInfo.mapUrl;
 
   return (
     <>
@@ -46,6 +47,7 @@ export default function ContactPage() {
                 address={petraContactInfo.address}
                 serviceArea={petraContactInfo.serviceArea}
                 workingHours={petraContactInfo.workingHours}
+                mapUrl={petraContactInfo.mapUrl}
               />
             </Reveal>
           ) : null}

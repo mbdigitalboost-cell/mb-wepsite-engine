@@ -12,6 +12,7 @@ export interface ContactDetailsProps {
   address: string | null;
   serviceArea: string | null;
   workingHours: string | null;
+  mapUrl: string | null;
 }
 
 /**
@@ -27,6 +28,7 @@ export function ContactDetails({
   address,
   serviceArea,
   workingHours,
+  mapUrl,
 }: ContactDetailsProps) {
   return (
     <div className="rounded-[var(--radius-brand)] border border-white/10 bg-brand-secondary/40 p-8">
@@ -70,6 +72,30 @@ export function ContactDetails({
           <li className="flex items-center gap-3">
             <Icon icon={MapPin} />
             {address ?? serviceArea}
+            {mapUrl ? (
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track("contact", { source: "contact_page_map" })}
+                className="text-brand-primary hover:text-white"
+              >
+                Konumu Görüntüle
+              </a>
+            ) : null}
+          </li>
+        ) : mapUrl ? (
+          <li>
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track("contact", { source: "contact_page_map" })}
+              className="flex items-center gap-3 hover:text-white"
+            >
+              <Icon icon={MapPin} />
+              Konumu Görüntüle
+            </a>
           </li>
         ) : null}
         {workingHours ? (

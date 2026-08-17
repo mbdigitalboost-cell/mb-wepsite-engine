@@ -33,6 +33,10 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
  *   No:29/A) as unresolved. Per instruction, this stays pending/unset
  *   rather than being written into contact info or structured data until
  *   the customer confirms one canonical format.
+ * - `mapUrl`: customer directly supplied GPS coordinates (2026-08-17,
+ *   37.58518° K, 36.92165° D) to use in place of resolving the
+ *   ambiguous street-address text above — a plain Google Maps
+ *   coordinate link, not a typed/guessed address string.
  * - Do NOT use: 0850 203 76 44 / 0344 503 00 90 / 0531 193 03 02 — these
  *   only ever appeared in AI-generated design mockups, not in the
  *   customer's real Instagram material.
@@ -45,6 +49,7 @@ export const petraContactInfo: PetraContactInfo = {
   address: null,
   serviceArea: "Onikişubat, Kahramanmaraş",
   workingHours: null,
+  mapUrl: "https://www.google.com/maps?q=37.58518,36.92165",
 };
 
 /**

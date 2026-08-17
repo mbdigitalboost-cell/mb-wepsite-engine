@@ -1,6 +1,7 @@
 "use client";
 
 // Client Component: phone/WhatsApp links fire tracking events on click.
+import Image from "next/image";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Icon } from "@/components/ui/icon";
@@ -23,6 +24,7 @@ export interface SiteFooterProps {
   address: string | null;
   serviceArea: string | null;
   workingHours: string | null;
+  mapUrl: string | null;
   socialLinks: { platform: string; url: string; label: string }[];
 }
 
@@ -46,6 +48,7 @@ export function SiteFooter({
   address,
   serviceArea,
   workingHours,
+  mapUrl,
   socialLinks,
 }: SiteFooterProps) {
   const year = new Date().getFullYear();
@@ -132,6 +135,23 @@ export function SiteFooter({
               <li className="flex items-center gap-2">
                 <Icon icon={MapPin} size="sm" />
                 {address ?? serviceArea}
+                {mapUrl ? (
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-primary hover:text-white"
+                  >
+                    Konumu Görüntüle
+                  </a>
+                ) : null}
+              </li>
+            ) : mapUrl ? (
+              <li>
+                <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white">
+                  <Icon icon={MapPin} size="sm" />
+                  Konumu Görüntüle
+                </a>
               </li>
             ) : null}
             {workingHours ? (
@@ -165,15 +185,25 @@ export function SiteFooter({
             © {year} {siteName}
           </p>
           {/*
-            Faz 12: small, low-contrast developer credit — deliberately far
-            below the brand's own contrast/weight (siteName above is
-            brand-muted too, this is the same size, not louder) so it never
-            competes with Petra's own branding. Text-only per instruction —
-            no MB Digital Boost logo asset exists to use here, and inventing
-            one would violate the same anti-fabrication rule this whole
-            project runs on.
+            Faz 12 revizyon 2: small, low-contrast developer credit —
+            deliberately far below the brand's own contrast/weight
+            (siteName above is brand-muted too, this is the same size, not
+            louder) so it never competes with Petra's own branding. The
+            small "MB" mark is a real MB Digital Boost asset the customer
+            supplied (cropped from their own promotional graphic, not
+            fabricated) — kept tiny (16px) and low-opacity, bottom-right,
+            per "en altta sağda küçücük olabilir".
           */}
-          <p className="text-brand-muted/70">Web sitesi MB Digital Boost tarafından geliştirilmiştir.</p>
+          <p className="flex items-center gap-1.5 text-brand-muted/70">
+            <span>Web sitesi MB Digital Boost tarafından geliştirilmiştir.</span>
+            <Image
+              src="/images/mb-digital-boost/mb-mark.png"
+              alt=""
+              width={16}
+              height={16}
+              className="opacity-70"
+            />
+          </p>
         </Container>
       </div>
     </footer>

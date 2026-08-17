@@ -115,6 +115,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           address={petraContactInfo.address}
           serviceArea={petraContactInfo.serviceArea}
           workingHours={petraContactInfo.workingHours}
+          mapUrl={petraContactInfo.mapUrl}
           socialLinks={petraSocialLinks}
         />
         <MobileStickyCta

@@ -16,6 +16,14 @@ export interface PetraContactInfo {
   /** Broad service area, confirmed via the customer's Instagram profile. */
   serviceArea: string | null;
   workingHours: string | null;
+  /**
+   * Google Maps link built directly from customer-supplied GPS
+   * coordinates (not a resolved/typed street address — see
+   * `site-config.ts` for why `address` stays `null`). Renders as a
+   * "Konumu Görüntüle" link wherever contact details show, instead of
+   * inventing or guessing street-address text.
+   */
+  mapUrl: string | null;
 }
 
 export interface PetraSocialLink {
