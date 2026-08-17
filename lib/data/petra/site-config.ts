@@ -68,8 +68,18 @@ export const petraContactInfo: PetraContactInfo = {
 export const petraWebsite: string | null = null;
 
 /**
- * Empty until the customer confirms their active social profiles/URLs.
- * The Instagram *presence* is known, but not confirmed enough to hardcode
- * a URL without checking it's current and correct.
+ * Instagram confirmed directly by the customer in chat (2026-08-17):
+ * https://www.instagram.com/petraamuhendislik — stored without the
+ * `?igsh=...` share-tracking query param (that's an ephemeral share-link
+ * artifact, not part of the canonical profile URL). Username is
+ * "petraamuhendislik" (double "a") exactly as the customer typed it —
+ * not "corrected" to the single-"a" spelling guessed from an earlier
+ * screenshot.
  */
-export const petraSocialLinks: PetraSocialLink[] = [];
+export const petraSocialLinks: PetraSocialLink[] = [
+  {
+    platform: "instagram",
+    url: "https://www.instagram.com/petraamuhendislik",
+    label: "Instagram",
+  },
+];
