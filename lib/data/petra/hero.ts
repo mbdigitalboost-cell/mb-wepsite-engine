@@ -25,27 +25,39 @@ export const petraHero = {
    * This image's baked-in content (logo/headline/buttons area) sits in
    * the left ~45% — object-cover's default centered crop clips it on
    * narrower viewports, so this shifts the visible crop left instead of
-   * cropping evenly from both sides. Only actually applied at `lg`+ — see
-   * `backgroundObjectPositionMobile` below and components/sections/
+   * cropping evenly from both sides. Only actually applied at `lg`+ (a
+   * separate, purpose-built portrait image is used below `lg` — see
+   * `backgroundImageMobile`) — see components/sections/
    * hero-background.tsx's `objectPosition` prop doc.
    */
   backgroundObjectPosition: "22% center",
   /**
-   * Faz 13 (mobil düzeltme): this banner's baked-in text (logo, headline,
-   * subtext, 4 trust icons, 6-icon category row) is spread across its
-   * FULL width — on a narrow portrait phone, object-cover's horizontal
-   * sliver can only ever show a fraction of that width, so no crop value
-   * keeps the baked text legible on mobile (verified: every candidate
-   * position cuts the headline mid-word). Below `lg`, this image is
-   * treated as pure atmospheric background instead — cropped to the
-   * rooftop AC units on the right side (the most visually interesting,
-   * text-free part of the frame) — and the REAL, properly-sized H1/
-   * subtext render on top instead of relying on the baked text (see
-   * components/sections/hero.tsx). `backgroundObjectPosition` above is
-   * only applied at `lg`+, where the wide desktop crop keeps the baked
-   * text intact and legible.
+   * Faz 13 revizyon 2: dedicated portrait hero banner for below `lg`
+   * (source: ChatGPT_Image_18_A_u_2026_15_16_48.png, customer-provided
+   * 2026-08-18) — replaces the earlier fix's approach of cropping the
+   * wide desktop banner and overlaying real text on mobile. This image
+   * was actually composed for a phone aspect ratio (864×1821 ≈ most
+   * phones' portrait ratio, so object-cover only trims a few px off each
+   * side, no meaningful crop) with its own legible baked-in headline/
+   * subtext/logo + a 4-item "why us" icon row, so `backgroundHasEmbeddedHeadlineMobile`
+   * suppresses the real H1/subtext/trustInfo below `lg` the same way
+   * `backgroundHasEmbeddedHeadline` does at `lg`+ for the desktop image
+   * — see components/sections/hero.tsx. `null` falls back to
+   * `backgroundImage` at every width (any hero without a dedicated
+   * mobile crop).
    */
-  backgroundObjectPositionMobile: "75% center" as string | undefined,
+  backgroundImageMobile: "/images/petra/hero/10_hero_mobile_v1.jpg" as string | null,
+  backgroundHasEmbeddedHeadlineMobile: true,
+  /**
+   * On narrow phones this crops almost nothing (image's ratio is already
+   * close to a phone screen's). Wider portrait viewports still under
+   * `lg` (tablets, ~768-1023px) DO need real vertical cropping though —
+   * "top" makes sure that crop always comes off the BOTTOM (the icon
+   * row, least critical) instead of the top (logo + headline, most
+   * critical) — verified at 820px width: centered cropping there cut the
+   * baked-in logo off entirely.
+   */
+  backgroundObjectPositionMobile: "center top" as string | undefined,
   /** Confirmed by the customer's stated service scope — see brief §4. */
   trustInfo: ["Satış", "Kurulum", "Servis"],
   /**
@@ -58,14 +70,25 @@ export const petraHero = {
    */
   trustInfoOffset: "44%" as string | undefined,
   /**
-   * With `backgroundHasEmbeddedHeadline` true, the real H1/subtext is
-   * visually hidden (`lg:sr-only` / `lg:hidden`) only at `lg`+, where the
-   * baked-in image text is legible and takes its place — the CTA buttons'
-   * normal `mt-10` there would ride up over that baked-in subtext, so
-   * this replaces the gap with enough room to clear it. Scoped to `lg`+
-   * only (see components/sections/hero.tsx) — below `lg` the real,
-   * visible subtext renders normally above the buttons with the plain
-   * `mt-10` gap, same as any other page.
+   * With `backgroundHasEmbeddedHeadline` true, the real H1/subtext/
+   * trustInfo are visually hidden (`lg:sr-only` / `lg:hidden`) only at
+   * `lg`+, where the baked-in image text is legible and takes its place
+   * — the CTA buttons' normal `mt-10` there would ride up over that
+   * baked-in subtext, so this replaces the gap with enough room to clear
+   * it. Scoped to `lg`+ only (see components/sections/hero.tsx) — below
+   * `lg`, `ctaTopOffsetMobile` (next) does the equivalent job for the
+   * mobile image instead.
    */
   ctaTopOffset: "8.5rem" as string | undefined,
+  /**
+   * Unlike `ctaTopOffset` above, this stays `undefined` for now: this
+   * mobile image's baked-in text block ends around 36% down the frame
+   * and its icon row only starts around 87% — the CTA buttons' natural
+   * vertically-centered position (~50%, see hero.tsx's `items-center`
+   * for `backgroundHasEmbeddedHeadlineMobile`) already lands comfortably
+   * inside that gap without needing an extra push. Kept as a field (same
+   * mechanism as `ctaTopOffset`) in case a future mobile image needs
+   * fine-tuning.
+   */
+  ctaTopOffsetMobile: undefined as string | undefined,
 };

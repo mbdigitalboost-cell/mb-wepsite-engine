@@ -139,6 +139,15 @@ export interface MappedHero {
    */
   backgroundObjectPositionMobile: string | undefined;
   /**
+   * CMS-uploaded hero images never have a separate mobile-specific crop
+   * (see `backgroundImageMobile` on the static fallback for the one case
+   * that does) — always `null` here, so `<HeroBackground>` falls back to
+   * `backgroundImage` at every width.
+   */
+  backgroundImageMobile: string | null;
+  /** Same reasoning as `backgroundHasEmbeddedHeadline` above — always `false` here. */
+  backgroundHasEmbeddedHeadlineMobile: boolean;
+  /**
    * CMS-uploaded hero photos never have a baked-in icon-caption row to
    * collide with (see `backgroundHasEmbeddedHeadline` doc above) — always
    * `undefined` here. Only the static fallback image in
@@ -147,6 +156,8 @@ export interface MappedHero {
   trustInfoOffset: string | undefined;
   /** Same reasoning as `trustInfoOffset` above — CMS hero photos never need this. */
   ctaTopOffset: string | undefined;
+  /** Same reasoning as `ctaTopOffset` above — CMS hero photos never need this. */
+  ctaTopOffsetMobile: string | undefined;
   trustInfo: string[];
 }
 
@@ -170,8 +181,11 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     backgroundHasEmbeddedHeadline: false,
     backgroundObjectPosition: "center",
     backgroundObjectPositionMobile: undefined,
+    backgroundImageMobile: null,
+    backgroundHasEmbeddedHeadlineMobile: false,
     trustInfoOffset: undefined,
     ctaTopOffset: undefined,
+    ctaTopOffsetMobile: undefined,
     trustInfo: fallbackTrustInfo,
   };
 }

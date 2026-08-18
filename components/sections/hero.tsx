@@ -21,10 +21,51 @@ interface HeroProps {
 }
 
 export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
+  const hideMobile = hero.backgroundHasEmbeddedHeadlineMobile;
+  const hideDesktop = hero.backgroundHasEmbeddedHeadline;
+
   return (
-    <section className="relative -mt-20 flex min-h-[92vh] items-end overflow-hidden pb-16 lg:min-h-screen lg:items-center lg:pb-0">
+    <section
+      className={cn(
+        "relative -mt-20 flex overflow-hidden pb-16 lg:min-h-screen lg:aspect-auto lg:pb-0",
+        // Faz 13 revizyon 2: `min-h-[92vh]` (a fixed viewport-height box)
+        // made the visible object-cover crop fraction of the mobile image
+        // vary with viewport width — verified broken at 820px (a portrait
+        // tablet): the crop shifted enough that the vertically-centered
+        // CTA buttons landed on top of the image's own baked-in subtext.
+        // Locking the SECTION's own aspect ratio to the mobile image's
+        // (864:1821) instead means the visible crop fraction stays ~constant
+        // across every width below `lg` (little to no cropping at all,
+        // any width), so a single vertically-centered position works
+        // everywhere. Only applied while `hideMobile` (a dedicated mobile
+        // image is actually active) — any other hero keeps the previous
+        // fixed-viewport-height behavior.
+        // w-full is required alongside aspect-ratio here: as a flex item
+        // in the root layout's column flex container, aspect-ratio alone
+        // can make the browser derive WIDTH from the ratio too (shrinking
+        // the whole hero into a narrow column instead of spanning full
+        // width) — verified broken without this. No max-height cap: any
+        // cap that activates on a wide-but-short mobile-tier viewport
+        // (e.g. a portrait tablet) reintroduces cropping and undoes the
+        // whole point of this aspect-ratio fix (see the comment above) —
+        // a portrait tablet visitor scrolling slightly further through a
+        // correctly-legible hero beats a shorter hero with text/buttons
+        // overlapping.
+        hideMobile ? "aspect-[864/1821] w-full" : "min-h-[92vh]",
+        // Faz 13 revizyon 2: a bottom-anchored mobile layout (items-end)
+        // made sense when mobile always showed the real, always-visible
+        // heading/CTA stack clustered low. With a dedicated mobile image
+        // that has its own baked-in headline block (see hero.ts's
+        // `backgroundImageMobile` doc), the real CTA buttons are the
+        // ONLY visible element left below `lg` and need to land in that
+        // image's empty middle gap instead — items-center does that.
+        hideMobile ? "items-center" : "items-end",
+        "lg:items-center",
+      )}
+    >
       <HeroBackground
         image={hero.backgroundImage}
+        imageMobile={hero.backgroundImageMobile}
         alt={petraSiteName}
         objectPosition={hero.backgroundObjectPosition}
         objectPositionMobile={hero.backgroundObjectPositionMobile}
@@ -33,15 +74,14 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
       <Container className="relative z-10">
         {/*
           Faz 13 (mobil düzeltme): a background image with baked-in text
-          (backgroundHasEmbeddedHeadline) can only ever keep that text
-          legible at the crop/aspect-ratio it was designed for — for this
-          hero that's a wide desktop banner (see hero.ts's
-          `backgroundObjectPositionMobile` doc). So below `lg` this always
-          renders the REAL, properly-sized heading/subtext — same as any
-          hero without an embedded headline — and only visually hides it
-          at `lg`+ (`lg:sr-only` / `lg:hidden`) once the desktop crop
-          actually shows the baked-in text in full. The `<h1>` itself
-          always stays in the DOM either way for accessibility/SEO.
+          only keeps that text legible at the crop/aspect-ratio it was
+          designed for. This hero has two purpose-built images — a wide
+          desktop banner (`backgroundHasEmbeddedHeadline`, `lg`+) and a
+          portrait mobile banner (`backgroundHasEmbeddedHeadlineMobile`,
+          below `lg`) — each hides the real H1/subtext/trustInfo only at
+          the width where ITS OWN baked-in text is legible. The `<h1>`
+          itself always stays in the DOM (via `sr-only`, never `hidden`)
+          for accessibility/SEO regardless of which image is active.
         */}
         <Reveal variant="fade-up" index={0}>
           <h1
@@ -52,7 +92,9 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
               // güvenlik önlemi: herhangi bir tek uzun kelime yine de
               // sığmazsa, yatay taşma yerine satır içinde kırılır.
               "max-w-3xl font-[family-name:var(--font-brand-heading)] text-[30px] leading-[1.05] font-semibold tracking-tight text-white break-words sm:text-[46px] md:text-[64px]",
-              hero.backgroundHasEmbeddedHeadline ? "lg:sr-only" : "lg:text-[84px]",
+              hideMobile && "sr-only",
+              hideDesktop ? "lg:sr-only" : hideMobile && "lg:not-sr-only",
+              !hideDesktop && "lg:text-[84px]",
             )}
           >
             {hero.headingLines.map((line, index) => (
@@ -70,7 +112,8 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
           <p
             className={cn(
               "mt-6 max-w-lg text-base text-white/80 sm:text-lg",
-              hero.backgroundHasEmbeddedHeadline && "lg:hidden",
+              hideMobile && "hidden",
+              hideDesktop ? "lg:hidden" : hideMobile && "lg:block",
             )}
           >
             {hero.subtext}
@@ -81,12 +124,16 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
           <div
             className={cn(
               "mt-10 flex flex-col gap-4 sm:flex-row",
-              hero.backgroundHasEmbeddedHeadline && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
+              hideMobile && hero.ctaTopOffsetMobile && "mt-[var(--cta-offset-mobile)]",
+              hideDesktop && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
             )}
             style={
-              hero.backgroundHasEmbeddedHeadline && hero.ctaTopOffset
-                ? ({ "--cta-offset": hero.ctaTopOffset } as CSSProperties)
-                : undefined
+              {
+                ...(hideMobile && hero.ctaTopOffsetMobile
+                  ? { "--cta-offset-mobile": hero.ctaTopOffsetMobile }
+                  : {}),
+                ...(hideDesktop && hero.ctaTopOffset ? { "--cta-offset": hero.ctaTopOffset } : {}),
+              } as CSSProperties
             }
           >
             <Button
@@ -120,10 +167,20 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
             that itself only appears at desktop widths (see
             lib/data/petra/hero.ts's doc) — scoped to lg: so mobile, where
             there's no collision to avoid, keeps its normal left-aligned
-            position instead of being pushed off-screen.
+            position instead of being pushed off-screen. When the mobile
+            image has its own baked-in "why us" icon row (`hideMobile`),
+            this real trustInfo line would duplicate it, so it's hidden
+            below `lg` the same way the heading/subtext are.
           */}
           <div
-            className="mt-14 flex items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:ml-[var(--trust-offset)]"
+            className={cn(
+              "mt-14 items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:ml-[var(--trust-offset)]",
+              // trustInfo is never hidden at `lg`+ — even when the desktop
+              // image has its own baked icon row, the real line stays
+              // visible there and just shifts via `trustInfoOffset`
+              // instead (unchanged, pre-existing behavior).
+              hideMobile ? "hidden lg:flex" : "flex",
+            )}
             style={hero.trustInfoOffset ? ({ "--trust-offset": hero.trustInfoOffset } as CSSProperties) : undefined}
           >
             {hero.trustInfo.map((item, i) => (
