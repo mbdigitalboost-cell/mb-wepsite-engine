@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { DashboardNav } from "@/components/navigation/dashboard-nav";
 import { signOutAction } from "@/lib/auth/sign-out-action";
 
@@ -29,15 +30,24 @@ interface DashboardShellProps {
 export function DashboardShell({ children, userEmail, isAdmin }: DashboardShellProps) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 px-4 md:px-6">
-        <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
-          MB Digital Boost
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-background px-4 shadow-[0_1px_0_rgba(0,0,0,0.02)] md:px-6">
+        <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Image
+            src="/images/mb-digital-boost/mb-mark.png"
+            alt=""
+            width={22}
+            height={22}
+            className="shrink-0"
+          />
+          <span>MB Digital Boost</span>
         </Link>
         <div className="flex items-center gap-3 text-xs text-foreground/60">
           {userEmail ? (
             <span className="hidden truncate sm:inline" title={userEmail}>
               {userEmail}
-              <span className="ml-1 text-foreground/40">· {isAdmin ? "Admin" : "Müşteri"}</span>
+              <span className="ml-1.5 rounded-full bg-brand-accent/10 px-2 py-0.5 font-medium text-brand-accent">
+                {isAdmin ? "Admin" : "Müşteri"}
+              </span>
             </span>
           ) : null}
           <form action={signOutAction}>

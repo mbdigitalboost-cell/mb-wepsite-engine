@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Users, Globe, CheckCircle2 } from "lucide-react";
 import { loadRoleContext } from "@/lib/auth/require-role";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/ui/stat-card";
@@ -45,14 +46,14 @@ export default async function DashboardOverviewPage() {
         </p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="Müşteri" value={customerCount.count ?? 0} />
-          <StatCard label="Website" value={websiteCount.count ?? 0} />
-          <StatCard label="Aktif Website" value={activeWebsiteCount.count ?? 0} />
+          <StatCard label="Müşteri" value={customerCount.count ?? 0} icon={Users} />
+          <StatCard label="Website" value={websiteCount.count ?? 0} icon={Globe} />
+          <StatCard label="Aktif Website" value={activeWebsiteCount.count ?? 0} icon={CheckCircle2} />
         </div>
 
         <Link
           href="/dashboard/customers"
-          className="mt-6 inline-block text-sm text-foreground/60 underline-offset-2 hover:text-foreground hover:underline"
+          className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-brand-accent underline-offset-2 hover:underline"
         >
           Tüm müşterileri görüntüle →
         </Link>

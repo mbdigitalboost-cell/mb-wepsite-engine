@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getOptionalUser } from "@/lib/auth/get-optional-user";
 import { isSupabaseConfigured } from "@/lib/config/env";
@@ -33,7 +34,15 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <p className="text-sm font-semibold tracking-tight text-foreground">MB Digital Boost</p>
+          <Image
+            src="/images/mb-digital-boost/mb-mark.png"
+            alt="MB Digital Boost"
+            width={40}
+            height={40}
+            className="mx-auto"
+            priority
+          />
+          <p className="mt-3 text-sm font-semibold tracking-tight text-foreground">MB Digital Boost</p>
           <h1 className="mt-2 text-xl font-semibold text-foreground">Panele giriş yapın</h1>
         </div>
 
@@ -43,7 +52,7 @@ export default async function LoginPage({
           </p>
         ) : null}
 
-        <div className="rounded-lg border border-black/10 p-6">
+        <div className="rounded-lg border border-black/10 p-6 shadow-sm">
           <LoginForm />
         </div>
 

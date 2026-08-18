@@ -2,24 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, Users, Globe, UserCog, Settings } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { Icon } from "@/components/ui/icon";
 
 interface DashboardNavProps {
   isAdmin: boolean;
   className?: string;
 }
 
-const adminLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/customers", label: "Müşteriler" },
-  { href: "/dashboard/websites", label: "Web Siteleri" },
-  { href: "/dashboard/users", label: "Kullanıcılar" },
-  { href: "/dashboard/settings", label: "Ayarlar" },
+interface NavLink {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const adminLinks: NavLink[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/customers", label: "Müşteriler", icon: Users },
+  { href: "/dashboard/websites", label: "Web Siteleri", icon: Globe },
+  { href: "/dashboard/users", label: "Kullanıcılar", icon: UserCog },
+  { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
 ];
 
-const customerLinks = [
-  { href: "/dashboard", label: "Genel Bakış" },
-  { href: "/dashboard/settings", label: "Ayarlar" },
+const customerLinks: NavLink[] = [
+  { href: "/dashboard", label: "Genel Bakış", icon: LayoutDashboard },
+  { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
 ];
 
 /**
@@ -57,12 +66,13 @@ export function DashboardNav({ isAdmin, className }: DashboardNavProps) {
             href={link.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-2.5 rounded-md border-l-2 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
               isActive
-                ? "bg-black/5 text-foreground"
-                : "text-foreground/60 hover:bg-black/5 hover:text-foreground",
+                ? "border-brand-accent bg-brand-accent/10 text-brand-accent"
+                : "border-transparent text-foreground/60 hover:bg-black/5 hover:text-foreground",
             )}
           >
+            <Icon icon={link.icon} size="sm" className={isActive ? "text-brand-accent" : "text-foreground/40"} />
             {link.label}
           </Link>
         );
