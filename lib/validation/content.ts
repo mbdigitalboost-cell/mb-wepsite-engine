@@ -18,7 +18,7 @@ export function buildContentFormSchema(type: ContentTypeKey) {
     let base: z.ZodString;
     if (field.kind === "slug") {
       base = z.string().trim().toLowerCase().max(150).regex(slugRegex, `${field.label} yalnızca küçük harf, rakam ve tire (-) içerebilir.`);
-    } else if (field.kind === "url") {
+    } else if (field.kind === "url" || field.kind === "image") {
       base = z.string().trim().max(500).url(`${field.label} geçerli bir URL olmalı.`);
     } else if (field.kind === "textarea") {
       base = z.string().trim().max(5000);

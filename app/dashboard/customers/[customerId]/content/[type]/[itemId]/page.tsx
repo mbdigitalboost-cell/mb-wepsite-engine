@@ -57,6 +57,8 @@ export default async function EditContentItemPage({
 
       <div className="mt-6">
         <ContentForm
+          customerId={customerId}
+          imageFolder={config.imageFolder}
           fields={config.fields}
           initialValues={initialValues}
           initialSortOrder={Number(record.sort_order ?? 0)}

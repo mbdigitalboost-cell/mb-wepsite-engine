@@ -32,6 +32,7 @@ export const MEDIA_FOLDERS = [
   "services",
   "projects",
   "campaigns",
+  "testimonials",
   "banners",
 ] as const;
 

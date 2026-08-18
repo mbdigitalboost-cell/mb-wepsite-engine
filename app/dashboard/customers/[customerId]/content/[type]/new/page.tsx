@@ -31,6 +31,8 @@ export default async function NewContentItemPage({
       ) : (
         <div className="mt-6">
           <ContentForm
+            customerId={customerId}
+            imageFolder={config.imageFolder}
             fields={config.fields}
             action={createContentItemAction.bind(null, customerId, type)}
             submitLabel="Taslak Olarak Oluştur"

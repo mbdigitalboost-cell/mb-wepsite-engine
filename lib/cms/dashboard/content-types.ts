@@ -13,6 +13,8 @@
  * get their own dedicated routes, not this generic engine.
  */
 
+import type { MediaFolder } from "@/lib/media/constants";
+
 export type ContentTypeKey =
   | "services"
   | "solutions"
@@ -24,7 +26,15 @@ export type ContentTypeKey =
 export interface ContentFieldConfig {
   key: string;
   label: string;
-  kind: "text" | "textarea" | "slug" | "url";
+  /**
+   * Faz 14: "image" renders as a direct-upload widget
+   * (components/dashboard/image-upload-field.tsx) instead of a plain
+   * text input — the customer picks a file, it uploads immediately, no
+   * more "copy the URL from Medya Kütüphanesi and paste it here" round
+   * trip. Still validated and stored as a URL string underneath (see
+   * lib/validation/content.ts), so this is a rendering change only.
+   */
+  kind: "text" | "textarea" | "slug" | "url" | "image";
   required: boolean;
 }
 
@@ -36,13 +46,15 @@ export interface ContentTypeConfig {
   fields: ContentFieldConfig[];
   /** Prefix used to build audit_logs action codes, e.g. "service" → "service.create". */
   auditPrefix: string;
+  /** Storage folder (lib/media/constants.ts's MEDIA_FOLDERS) this type's "image"-kind field(s) upload into. */
+  imageFolder: MediaFolder;
 }
 
 const namedContentFields: ContentFieldConfig[] = [
   { key: "title", label: "Başlık", kind: "text", required: true },
   { key: "slug", label: "Slug", kind: "slug", required: true },
   { key: "description", label: "Açıklama", kind: "textarea", required: false },
-  { key: "image", label: "Görsel URL", kind: "url", required: false },
+  { key: "image", label: "Görsel", kind: "image", required: false },
 ];
 
 /**
@@ -58,7 +70,7 @@ const solutionFields: ContentFieldConfig[] = [
   { key: "slug", label: "Slug", kind: "slug", required: true },
   { key: "short_description", label: "Kısa Açıklama (liste kartında gösterilir)", kind: "textarea", required: false },
   { key: "description", label: "Uzun Açıklama (detay sayfasında gösterilir)", kind: "textarea", required: false },
-  { key: "image", label: "Görsel URL", kind: "url", required: false },
+  { key: "image", label: "Görsel", kind: "image", required: false },
 ];
 
 /** Phase 9.6 (migration 0007): `projects.category`, optional badge on /projeler. */
@@ -83,21 +95,50 @@ const campaignFields: ContentFieldConfig[] = [
 ];
 
 export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
-  services: { key: "services", label: "Hizmetler", titleField: "title", fields: namedContentFields, auditPrefix: "service" },
-  solutions: { key: "solutions", label: "Çözümler", titleField: "title", fields: solutionFields, auditPrefix: "solution" },
-  projects: { key: "projects", label: "Projeler", titleField: "title", fields: projectFields, auditPrefix: "project" },
-  campaigns: { key: "campaigns", label: "Kampanyalar", titleField: "title", fields: campaignFields, auditPrefix: "campaign" },
+  services: {
+    key: "services",
+    label: "Hizmetler",
+    titleField: "title",
+    fields: namedContentFields,
+    auditPrefix: "service",
+    imageFolder: "services",
+  },
+  solutions: {
+    key: "solutions",
+    label: "Çözümler",
+    titleField: "title",
+    fields: solutionFields,
+    auditPrefix: "solution",
+    imageFolder: "solutions",
+  },
+  projects: {
+    key: "projects",
+    label: "Projeler",
+    titleField: "title",
+    fields: projectFields,
+    auditPrefix: "project",
+    imageFolder: "projects",
+  },
+  campaigns: {
+    key: "campaigns",
+    label: "Kampanyalar",
+    titleField: "title",
+    fields: campaignFields,
+    auditPrefix: "campaign",
+    imageFolder: "campaigns",
+  },
   testimonials: {
     key: "testimonials",
     label: "Referanslar",
     titleField: "name",
     auditPrefix: "testimonial",
+    imageFolder: "testimonials",
     fields: [
       { key: "name", label: "Ad", kind: "text", required: true },
       { key: "role", label: "Ünvan", kind: "text", required: false },
       { key: "company", label: "Şirket", kind: "text", required: false },
       { key: "quote", label: "Yorum", kind: "textarea", required: true },
-      { key: "image", label: "Görsel URL", kind: "url", required: false },
+      { key: "image", label: "Görsel", kind: "image", required: false },
     ],
   },
   faqs: {
@@ -105,6 +146,7 @@ export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
     label: "SSS",
     titleField: "question",
     auditPrefix: "faq",
+    imageFolder: "brand",
     fields: [
       { key: "question", label: "Soru", kind: "text", required: true },
       { key: "answer", label: "Cevap", kind: "textarea", required: true },

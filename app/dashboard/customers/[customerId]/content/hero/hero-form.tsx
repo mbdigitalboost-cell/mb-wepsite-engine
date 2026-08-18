@@ -2,6 +2,7 @@
 
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
+import { ImageUploadField } from "@/components/dashboard/image-upload-field";
 import { saveHeroAction } from "./actions";
 import { initialHeroFormState } from "./form-state";
 import { inputClasses } from "@/lib/utils/input-classes";
@@ -53,24 +54,13 @@ export function HeroForm({ customerId, heroId, initialValues }: HeroFormProps) {
       {field("ctaSecondaryLabel", "İkincil CTA etiketi")}
       {field("ctaSecondaryHref", "İkincil CTA linki")}
 
-      <div>
-        <label htmlFor={`${formId}-backgroundImage`} className="mb-1.5 block text-sm font-medium text-foreground">
-          Arka plan görseli
-        </label>
-        <input
-          id={`${formId}-backgroundImage`}
-          name="backgroundImage"
-          type="text"
-          placeholder="Medya Kütüphanesi'nden bir dosya URL'si girin"
-          defaultValue={initialValues.backgroundImage}
-          className={inputClasses}
-        />
-        <p className="mt-1 text-xs text-foreground/50">
-          Şimdilik doğrudan URL girilir — Medya Kütüphanesi&apos;nden seçim
-          altyapısı hazırlanıyor, gerçek dosya yükleme ayrı bir bölümde
-          yapılacak.
-        </p>
-      </div>
+      <ImageUploadField
+        customerId={customerId}
+        folder="hero"
+        name="backgroundImage"
+        label="Arka plan görseli"
+        defaultValue={initialValues.backgroundImage}
+      />
 
       {state.error ? (
         <p role="alert" className="text-sm text-red-600">
