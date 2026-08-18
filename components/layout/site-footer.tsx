@@ -54,7 +54,13 @@ export function SiteFooter({
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-white/10 bg-brand-background text-brand-foreground">
+    // Faz 13 (mobil düzeltme): `<main>`'in kendi `pb-16 lg:pb-0` boşluğu
+    // (app/(public)/layout.tsx) sadece kendi içeriğini `<MobileStickyCta>`
+    // ile çakışmaktan korur — footer, main'in DIŞINDA, sayfanın en
+    // altında render olduğu için aynı korumaya sahip değildi ve footer'ın
+    // en alt satırı (telif hakkı/geliştirici ibaresi) sabit alt çubuğun
+    // arkasında kalıyordu. Aynı pb-16 değeri burada da uygulanıyor.
+    <footer className="border-t border-white/10 bg-brand-background pb-16 text-brand-foreground lg:pb-0">
       <Container className="grid gap-12 sm:grid-cols-2 md:grid-cols-5 py-16">
         <div className="sm:col-span-2 md:col-span-2">
           <Logo

@@ -132,6 +132,13 @@ export interface MappedHero {
    */
   backgroundObjectPosition: string;
   /**
+   * Same reasoning as `backgroundObjectPosition` above — CMS hero photos
+   * are plain centered photography with nothing that needs a distinct
+   * mobile crop, so always `undefined` here (HeroBackground falls back
+   * to `objectPosition`, i.e. "center", when this is omitted).
+   */
+  backgroundObjectPositionMobile: string | undefined;
+  /**
    * CMS-uploaded hero photos never have a baked-in icon-caption row to
    * collide with (see `backgroundHasEmbeddedHeadline` doc above) — always
    * `undefined` here. Only the static fallback image in
@@ -162,6 +169,7 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     backgroundImage: row.background_image,
     backgroundHasEmbeddedHeadline: false,
     backgroundObjectPosition: "center",
+    backgroundObjectPositionMobile: undefined,
     trustInfoOffset: undefined,
     ctaTopOffset: undefined,
     trustInfo: fallbackTrustInfo,

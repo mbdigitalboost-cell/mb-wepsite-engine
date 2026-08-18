@@ -1,7 +1,9 @@
 import Image from "next/image";
+import { Snowflake } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { petraMitsubishi } from "@/lib/data/petra/mitsubishi";
 
 /**
@@ -49,7 +51,20 @@ export function MitsubishiSection() {
                 className="object-cover"
               />
             ) : (
-              <div className="h-full w-full bg-[linear-gradient(160deg,_var(--color-brand-background)_0%,_var(--color-brand-secondary)_100%)]" />
+              // Faz 13 (mobil düzeltme): önceki düz gradyan, bu bölümün
+              // arka planıyla (bg-brand-secondary) neredeyse birebir
+              // aynı renkte olduğu için özellikle mobilde tek başına
+              // dururken "bozuk/boş kutu" gibi görünüyordu — gerçek bir
+              // Mitsubishi Heavy görseli onaylanana kadar (bkz.
+              // lib/data/petra/mitsubishi.ts, `image: null`) bunun yerine
+              // "içerik hazırlanıyor" olduğunu açıkça belli eden, kesikli
+              // çerçeveli bir yer tutucu — uydurma bir görsel değil.
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 border border-dashed border-white/15 bg-[linear-gradient(160deg,_var(--color-brand-background)_0%,_var(--color-brand-secondary)_100%)] text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-brand-background/60">
+                  <Icon icon={Snowflake} size="lg" className="text-brand-primary" />
+                </div>
+                <p className="max-w-[220px] text-xs text-brand-muted">Görsel hazırlanıyor</p>
+              </div>
             )}
           </div>
         </Reveal>

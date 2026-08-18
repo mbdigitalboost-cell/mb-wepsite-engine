@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import { useReducedMotion } from "@/lib/motion/use-reduced-motion";
 import { cn } from "@/lib/utils/cn";
@@ -16,18 +17,33 @@ interface HeroBackgroundProps {
   image: string | null;
   alt: string;
   /**
-   * CSS object-position for the background image, e.g. "22% center".
-   * Defaults to "center" (plain object-cover). Needed when the image has
-   * important baked-in content (logo/headline/text) off-center — object-
-   * cover's default centered crop would clip it on narrower viewports.
+   * CSS object-position for the background image at `lg`+, e.g.
+   * "22% center". Defaults to "center" (plain object-cover). Needed when
+   * the image has important baked-in content (logo/headline/text)
+   * off-center — object-cover's default centered crop would clip it.
    * See lib/data/petra/hero.ts's current image: its content sits in the
    * left ~45%, so the homepage passes an off-center value here instead
    * of this component guessing/hardcoding one image's specific framing.
    */
   objectPosition?: string;
+  /**
+   * CSS object-position below `lg`. Defaults to the same value as
+   * `objectPosition` when omitted (unchanged behavior for any hero that
+   * doesn't set this). A wide desktop-oriented banner's crop rarely
+   * still makes sense on a narrow portrait phone (see hero.ts's
+   * `backgroundObjectPositionMobile` doc) — this lets a customer's hero
+   * data pass a distinct mobile framing instead of forcing one crop to
+   * serve both aspect ratios.
+   */
+  objectPositionMobile?: string;
 }
 
-export function HeroBackground({ image, alt, objectPosition = "center" }: HeroBackgroundProps) {
+export function HeroBackground({
+  image,
+  alt,
+  objectPosition = "center",
+  objectPositionMobile = objectPosition,
+}: HeroBackgroundProps) {
   const prefersReducedMotion = useReducedMotion();
   const [loaded, setLoaded] = useState(prefersReducedMotion);
 
@@ -51,8 +67,13 @@ export function HeroBackground({ image, alt, objectPosition = "center" }: HeroBa
             alt={alt}
             fill
             priority
-            className="object-cover"
-            style={{ objectPosition }}
+            className="object-cover object-[var(--hero-op-mobile)] lg:object-[var(--hero-op-desktop)]"
+            style={
+              {
+                "--hero-op-mobile": objectPositionMobile,
+                "--hero-op-desktop": objectPosition,
+              } as CSSProperties
+            }
           />
         ) : (
           <div className="h-full w-full bg-[radial-gradient(ellipse_at_top_right,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_60%)]" />
@@ -60,6 +81,17 @@ export function HeroBackground({ image, alt, objectPosition = "center" }: HeroBa
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-brand-background via-brand-background/70 to-brand-background/20" />
       <div className="absolute inset-0 bg-gradient-to-r from-brand-background/60 via-transparent to-transparent" />
+      {/*
+        Faz 13 (mobil düzeltme): below `lg` this image's mobile crop
+        (see hero.ts's `backgroundObjectPositionMobile` doc) can still
+        show a faint sliver of this banner's full-width bottom icon/text
+        row, right around where the real CTA buttons/trustInfo line sit —
+        the two gradients above were tuned for the desktop crop, which
+        doesn't have this row in the same place. This extra bottom-anchored
+        darkening is mobile-only (`lg:hidden`) so it doesn't affect the
+        desktop crop's already-correct contrast.
+      */}
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-brand-background to-transparent lg:hidden" />
     </div>
   );
 }
