@@ -141,7 +141,7 @@ export default async function CustomerOverviewPage({
                   {isAdmin ? (
                     <Link
                       href={`/dashboard/customers/${customerId}/websites/${website.id}`}
-                      className="block hover:bg-black/5"
+                      className="block hover:bg-brand-accent/5"
                     >
                       {row}
                     </Link>

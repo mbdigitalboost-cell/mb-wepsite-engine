@@ -50,7 +50,7 @@ export default async function DashboardWebsitesPage() {
             <li key={website.id}>
               <Link
                 href={`/dashboard/customers/${website.customer_id}/websites/${website.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-black/5"
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-brand-accent/5"
               >
                 <div>
                   <p className="font-medium text-foreground">{website.name}</p>

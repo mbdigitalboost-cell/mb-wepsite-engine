@@ -4,9 +4,7 @@ import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { loginAction } from "./actions";
 import { initialLoginState } from "./form-state";
-
-const inputClasses =
-  "w-full rounded-md border border-black/15 bg-transparent px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus-visible:border-foreground/40 focus-visible:outline-none";
+import { inputClasses } from "@/lib/utils/input-classes";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initialLoginState);

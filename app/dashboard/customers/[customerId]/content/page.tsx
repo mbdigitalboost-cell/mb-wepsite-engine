@@ -32,7 +32,7 @@ export default async function ContentHubPage({
           <li key={link.href}>
             <Link
               href={link.href}
-              className="block rounded-lg border border-black/10 px-4 py-3 text-sm font-medium hover:bg-black/5"
+              className="block rounded-lg border border-black/10 px-4 py-3 text-sm font-medium hover:bg-brand-accent/5"
             >
               {link.label}
             </Link>

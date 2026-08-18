@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { uploadMediaAssetAction } from "./actions";
 import { initialMediaFormState } from "./form-state";
 import { MEDIA_FOLDERS, ALLOWED_MEDIA_MIME_TYPES, MAX_MEDIA_FILE_SIZE_BYTES } from "@/lib/media/constants";
-
-const inputClasses =
-  "w-full rounded-md border border-black/15 bg-transparent px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus-visible:border-foreground/40 focus-visible:outline-none";
+import { inputClasses } from "@/lib/utils/input-classes";
 
 /**
  * Phase 9.4: real file upload, replacing Phase 6's URL-typing form.

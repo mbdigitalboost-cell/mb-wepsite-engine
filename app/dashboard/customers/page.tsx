@@ -72,7 +72,7 @@ export default async function CustomersPage() {
             <li key={customer.id}>
               <Link
                 href={`/dashboard/customers/${customer.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-black/5"
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-brand-accent/5"
               >
                 <div>
                   <p className="font-medium text-foreground">{customer.name}</p>

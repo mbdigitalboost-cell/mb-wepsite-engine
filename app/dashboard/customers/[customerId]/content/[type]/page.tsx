@@ -92,7 +92,7 @@ async function ContentTypeList({ customerId, type }: { customerId: string; type:
           <li key={String(record.id)}>
             <Link
               href={`/dashboard/customers/${customerId}/content/${type}/${record.id}`}
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-black/5"
+              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-brand-accent/5"
             >
               <span className="font-medium text-foreground">{title}</span>
               <span className="flex items-center gap-3 text-xs text-foreground/50">

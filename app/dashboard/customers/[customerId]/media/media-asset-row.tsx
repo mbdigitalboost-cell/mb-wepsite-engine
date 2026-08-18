@@ -104,7 +104,7 @@ export function MediaAssetRow({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md border border-black/15 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-black/5"
+            className="rounded-md border border-black/15 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-brand-accent/5"
           >
             {pending ? "Kaydediliyor..." : "Kaydet"}
           </button>
