@@ -1,16 +1,20 @@
-import Image from "next/image";
-import { Snowflake } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { petraMitsubishi } from "@/lib/data/petra/mitsubishi";
+import { petraMitsubishiModels } from "@/lib/data/petra/mitsubishi-models";
+import { MitsubishiSlider } from "@/components/sections/mitsubishi-slider";
 
 /**
  * "Yetkili bayi/servis" wording only ever renders when
  * `dealerStatusVerified` is true (see lib/data/petra/mitsubishi.ts) — the
  * brief is explicit that this is a claim with legal/brand-usage
  * implications and must not be made without confirmation.
+ *
+ * Faz 13: sağ taraftaki tek statik görsel/placeholder yerine, 6 gerçek
+ * Mitsubishi Heavy model görseliyle çalışan tıklanabilir slider
+ * (MitsubishiSlider, lib/data/petra/mitsubishi-models.ts) — bkz.
+ * PHASE_13_RAPOR.md.
  */
 export function MitsubishiSection() {
   const description = petraMitsubishi.dealerStatusVerified
@@ -41,32 +45,7 @@ export function MitsubishiSection() {
         </Reveal>
 
         <Reveal index={1}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
-            {petraMitsubishi.image ? (
-              <Image
-                src={petraMitsubishi.image}
-                alt={petraMitsubishi.brandName}
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-              />
-            ) : (
-              // Faz 13 (mobil düzeltme): önceki düz gradyan, bu bölümün
-              // arka planıyla (bg-brand-secondary) neredeyse birebir
-              // aynı renkte olduğu için özellikle mobilde tek başına
-              // dururken "bozuk/boş kutu" gibi görünüyordu — gerçek bir
-              // Mitsubishi Heavy görseli onaylanana kadar (bkz.
-              // lib/data/petra/mitsubishi.ts, `image: null`) bunun yerine
-              // "içerik hazırlanıyor" olduğunu açıkça belli eden, kesikli
-              // çerçeveli bir yer tutucu — uydurma bir görsel değil.
-              <div className="flex h-full w-full flex-col items-center justify-center gap-3 border border-dashed border-white/15 bg-[linear-gradient(160deg,_var(--color-brand-background)_0%,_var(--color-brand-secondary)_100%)] text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-brand-background/60">
-                  <Icon icon={Snowflake} size="lg" className="text-brand-primary" />
-                </div>
-                <p className="max-w-[220px] text-xs text-brand-muted">Görsel hazırlanıyor</p>
-              </div>
-            )}
-          </div>
+          <MitsubishiSlider models={petraMitsubishiModels} brandName={petraMitsubishi.brandName} />
         </Reveal>
       </Container>
     </section>
