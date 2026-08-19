@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Full References page — the cinematic showcase (all 25, same
+ * Full References page — the cinematic showcase (every reference, same
  * `ReferencesShowcase` used on the homepage teaser) followed by the
  * complete accessible list grouped by category, ending in a sales CTA to
  * `/iletisim` ("Bir sonraki projeniz burada olabilir." — a call to
@@ -23,6 +23,12 @@ export const metadata: Metadata = {
  * and its 2 real logos are the only confirmed data here; no project
  * descriptions, dates, capacities or brand-collaboration claims are
  * rendered anywhere on this page (see lib/data/petra/references.ts).
+ *
+ * The count in the intro paragraph reads from `references.length` (not
+ * hardcoded) so a future reference batch never leaves a stale number
+ * here — see PHASE_REFERANSLAR_EK_RAPOR.md for why this was worth fixing
+ * (the first version had a literal "25 referans" that went stale the
+ * moment 8 more were added).
  */
 export default function ReferanslarPage() {
   const references = [...petraReferences].sort((a, b) => a.order - b.order);
@@ -42,7 +48,7 @@ export default function ReferanslarPage() {
             </h1>
             <p className="mt-5 max-w-xl text-base text-brand-muted">
               Kamu ve sağlık kurumlarından turizm, eğitim ve ticari işletmelere kadar tamamladığımız iklimlendirme
-              projelerinden 25 referans.
+              projelerinden {references.length} referans.
             </p>
           </Reveal>
         </Container>

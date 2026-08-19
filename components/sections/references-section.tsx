@@ -7,16 +7,17 @@ import { ReferencesShowcase } from "@/components/sections/references/references-
 import { petraReferences } from "@/lib/data/petra/references";
 
 /**
- * Homepage "Referanslarımız" teaser — a cinematic showcase of the 8
- * `featured` references (see lib/data/petra/references.ts for selection
- * criteria) plus a CTA to `/referanslar`, which holds the full 25. Not a
- * flat logo wall: reuses the same `ReferencesShowcase` cinematic
- * component built for the full page, so the homepage gets the same
- * "wow effect" premium treatment rather than a cut-down plain version.
+ * Homepage "Referanslarımız" teaser — a cinematic showcase of the
+ * `featured` references (currently 10 of 33, see
+ * lib/data/petra/references.ts for selection criteria) plus a CTA to
+ * `/referanslar`, which holds the full set. Not a flat logo wall: reuses
+ * the same `ReferencesShowcase` cinematic component built for the full
+ * page, so the homepage gets the same "wow effect" premium treatment
+ * rather than a cut-down plain version.
  *
  * Scroll narrative per the revision brief: this sits right after
  * "Neden Petra?" (`app/(public)/page.tsx`), before Statistics —
- * "Neden Petra? → Referanslarımız → 25 gerçek kurum/proje → CTA".
+ * "Neden Petra? → Referanslarımız → gerçek kurum/proje → CTA".
  */
 export function ReferencesSection() {
   const featuredReferences = petraReferences.filter((reference) => reference.featured).sort((a, b) => a.order - b.order);
