@@ -7,6 +7,7 @@ import { MitsubishiSection } from "@/components/sections/mitsubishi-section";
 import { Projects } from "@/components/sections/projects";
 import { Campaigns } from "@/components/sections/campaigns";
 import { WhyPetra } from "@/components/sections/why-petra";
+import { ReferencesSection } from "@/components/sections/references-section";
 import { Statistics } from "@/components/sections/statistics";
 import { Testimonials } from "@/components/sections/testimonials";
 import { Faq } from "@/components/sections/faq";
@@ -130,6 +131,7 @@ export default async function HomePage() {
       <Projects />
       <Campaigns />
       <WhyPetra />
+      <ReferencesSection />
       <Statistics />
       <Testimonials testimonials={testimonials} />
       <Faq faqs={faqs} />
