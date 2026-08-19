@@ -1,8 +1,11 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { HeroBackground } from "@/components/sections/hero-background";
+import { useParallaxPointer } from "@/lib/motion/use-parallax-pointer";
 import { petraHero } from "@/lib/data/petra/hero";
 import { petraSiteName } from "@/lib/data/petra/site-config";
 import { cn } from "@/lib/utils/cn";
@@ -24,8 +27,18 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
   const hideMobile = hero.backgroundHasEmbeddedHeadlineMobile;
   const hideDesktop = hero.backgroundHasEmbeddedHeadline;
 
+  // İnteraktif hero parallax: mouse (desktop) / touch-drag (mobil) takibi,
+  // yalnızca bu hero <section>'ına bağlı — sitedeki diğer bölümlere
+  // yayılmaz (bkz. lib/motion/use-parallax-pointer.ts, components/
+  // sections/hero-background.tsx). `ref` doğrudan <section>'a bağlanıyor
+  // ki mousemove olayları CTA butonları/metin gibi üstteki gerçek
+  // içeriğin üzerinden geçerken de yakalansın (event bubbling) — arka
+  // planın kendisine değil, tüm hero alanına tepki verir.
+  const { ref: parallaxRef, state: parallax } = useParallaxPointer<HTMLElement>();
+
   return (
     <section
+      ref={parallaxRef}
       className={cn(
         "relative -mt-20 flex overflow-hidden pb-16 lg:min-h-screen lg:aspect-auto lg:pb-0",
         // Faz 13 revizyon 2: `min-h-[92vh]` (a fixed viewport-height box)
@@ -69,6 +82,7 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         alt={petraSiteName}
         objectPosition={hero.backgroundObjectPosition}
         objectPositionMobile={hero.backgroundObjectPositionMobile}
+        parallax={parallax}
       />
 
       <Container className="relative z-10">
