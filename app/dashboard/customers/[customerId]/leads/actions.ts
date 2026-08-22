@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { leadStatusSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -12,10 +12,10 @@ import { logAuditEvent } from "@/lib/auth/audit-log";
  * app/api/forms/discovery-request/route.ts), never by an admin/customer
  * typing one in. `leads` has no anon/authenticated SELECT/INSERT policy
  * at all (0005_customer_rls.sql) — only this service-role path, gated by
- * requireCustomerAccess, can ever touch this table.
+ * requireCustomerWriteAccess, can ever touch this table.
  */
 export async function setLeadStatusAction(customerId: string, leadId: string, formData: FormData): Promise<void> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = leadStatusSchema.safeParse(formData.get("status"));
   if (!parsed.success) return;

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { trackingFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -34,7 +34,7 @@ export async function saveTrackingAction(
   _prevState: TrackingFormState,
   formData: FormData,
 ): Promise<TrackingFormState> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = trackingFormSchema.safeParse({
     ga4Id: formData.get("ga4Id"),

@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/require-session";
+import { listTotpFactors } from "@/lib/auth/mfa";
+import { MfaSection } from "./mfa-section";
 
 export default async function DashboardSettingsPage() {
   const { user } = await requireSession();
+  const totpFactors = await listTotpFactors();
 
   return (
     <div>
@@ -17,6 +20,13 @@ export default async function DashboardSettingsPage() {
         >
           Şifre Değiştir
         </Link>
+      </div>
+
+      <div className="mt-6 max-w-md rounded-lg border border-black/10 p-5">
+        <h2 className="text-sm font-semibold tracking-tight">İki Adımlı Doğrulama</h2>
+        <div className="mt-3">
+          <MfaSection factors={totpFactors} />
+        </div>
       </div>
 
       <p className="mt-6 text-sm text-foreground/60">

@@ -3,13 +3,24 @@
 import { useActionState, useId, useState } from "react";
 import { changeUserRoleAction } from "./actions";
 import { initialRoleFormState } from "./form-state";
+import { isAdminRole } from "@/lib/auth/roles";
+import type { AppRole } from "@/lib/supabase/types";
 
 const selectClasses =
   "rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-xs text-foreground focus-visible:border-foreground/40 focus-visible:outline-none";
 
+type SelectableRole = "platform_admin" | "store_admin";
+
 interface RoleFormProps {
   membershipId: string;
-  currentRole: "admin" | "customer";
+  /**
+   * Phase 1 RBAC genişlemesi öncesi taşınmamış satırlar hâlâ eski
+   * "admin"/"customer" etiketini taşıyabilir (migration 0005 uygulanana
+   * kadar) — bu yüzden burası tam `AppRole` kabul ediyor, sadece
+   * `isAdminRole()` ile iki-seçenekli forma normalize ediliyor. Formu
+   * kaydetmek her zaman YENİ etiketle (platform_admin/store_admin) yazar.
+   */
+  currentRole: AppRole;
   currentCustomerId: string | null;
   customers: { id: string; name: string }[];
 }
@@ -19,10 +30,15 @@ interface RoleFormProps {
  * as a plain Server Action + `useActionState` (no client-side fetch) so
  * this still works with JS disabled, same as every other form in this
  * panel.
+ *
+ * Phase 1: artık kendi şifresini de isteyen bir alan içeriyor — bkz.
+ * app/dashboard/users/actions.ts'teki changeUserRoleAction yorumu
+ * (PHASE_0 audit bulgusu: rol değişikliği platformdaki en riskli tek
+ * işlem, bu yüzden ek bir şifre onayı istiyor).
  */
 export function RoleForm({ membershipId, currentRole, currentCustomerId, customers }: RoleFormProps) {
   const [state, formAction, pending] = useActionState(changeUserRoleAction, initialRoleFormState);
-  const [role, setRole] = useState<"admin" | "customer">(currentRole);
+  const [role, setRole] = useState<SelectableRole>(isAdminRole(currentRole) ? "platform_admin" : "store_admin");
   const formId = useId();
 
   return (
@@ -33,14 +49,14 @@ export function RoleForm({ membershipId, currentRole, currentCustomerId, custome
         id={`${formId}-role`}
         name="role"
         value={role}
-        onChange={(event) => setRole(event.target.value as "admin" | "customer")}
+        onChange={(event) => setRole(event.target.value as SelectableRole)}
         className={selectClasses}
       >
-        <option value="customer">Customer</option>
-        <option value="admin">Admin</option>
+        <option value="store_admin">Store Admin</option>
+        <option value="platform_admin">Platform Admin</option>
       </select>
 
-      {role === "customer" ? (
+      {role === "store_admin" ? (
         <select
           aria-label="Müşteri"
           name="customerId"
@@ -58,6 +74,16 @@ export function RoleForm({ membershipId, currentRole, currentCustomerId, custome
       ) : (
         <input type="hidden" name="customerId" value="" />
       )}
+
+      <input
+        aria-label="Şifreniz (onay)"
+        name="currentPassword"
+        type="password"
+        required
+        placeholder="Şifreniz (onay)"
+        autoComplete="current-password"
+        className={selectClasses}
+      />
 
       <button
         type="submit"

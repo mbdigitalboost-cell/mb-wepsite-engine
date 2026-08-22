@@ -12,7 +12,11 @@ interface InviteFormProps {
 
 export function InviteForm({ customers }: InviteFormProps) {
   const [state, formAction, pending] = useActionState(inviteUserAction, initialInviteFormState);
-  const [role, setRole] = useState<"admin" | "customer">("customer");
+  // Phase 1 RBAC genişlemesi: eski "admin"/"customer" değerleri
+  // "platform_admin"/"store_admin" oldu (bkz. lib/auth/roles.ts +
+  // lib/validation/invite.ts). Görünen etiketler de aynı şekilde
+  // güncellendi ki form gerçekte ne oluşturduğunu doğru söylesin.
+  const [role, setRole] = useState<"platform_admin" | "store_admin">("store_admin");
   const formId = useId();
 
   return (
@@ -39,15 +43,15 @@ export function InviteForm({ customers }: InviteFormProps) {
           id={`${formId}-role`}
           name="role"
           value={role}
-          onChange={(event) => setRole(event.target.value as "admin" | "customer")}
+          onChange={(event) => setRole(event.target.value as "platform_admin" | "store_admin")}
           className={inputClasses}
         >
-          <option value="customer">Customer</option>
-          <option value="admin">Admin</option>
+          <option value="store_admin">Store Admin (müşteriye özel)</option>
+          <option value="platform_admin">Platform Admin (tüm müşteriler)</option>
         </select>
       </div>
 
-      {role === "customer" ? (
+      {role === "store_admin" ? (
         <div>
           <label htmlFor={`${formId}-customerId`} className="mb-1.5 block text-sm font-medium text-foreground">
             Müşteri

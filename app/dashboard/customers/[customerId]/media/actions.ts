@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { mediaUploadFormSchema, mediaAssetUpdateFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -22,7 +22,7 @@ export async function uploadMediaAssetAction(
   _prevState: MediaFormState,
   formData: FormData,
 ): Promise<MediaFormState> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -63,7 +63,7 @@ export async function updateMediaAssetAction(
   _prevState: MediaFormState,
   formData: FormData,
 ): Promise<MediaFormState> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = mediaAssetUpdateFormSchema.safeParse({
     fileName: formData.get("fileName"),
@@ -95,7 +95,7 @@ export async function updateMediaAssetAction(
  * up their media list.
  */
 export async function deleteMediaAssetAction(customerId: string, assetId: string): Promise<void> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
   const connection = await loadCustomerConnection(customerId);
   if (!connection) return;
 

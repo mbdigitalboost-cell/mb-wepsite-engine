@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { inviteUser } from "@/lib/auth/invite-user";
 import { inviteUserFormSchema, userRoleFormSchema } from "@/lib/validation/invite";
+import { reauthenticateWithPassword } from "@/lib/auth/reauthenticate";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { InviteFormState, RoleFormState } from "./form-state";
 
@@ -45,7 +46,7 @@ export async function inviteUserAction(
   }
 
   const { email, fullName, role, customerId } = parsed.data;
-  const scopedCustomerId = role === "customer" ? customerId || null : null;
+  const scopedCustomerId = role === "store_admin" ? customerId || null : null;
 
   const inviteResult = await inviteUser({ email, fullName });
   if (!inviteResult.ok || !inviteResult.userId) {
@@ -81,6 +82,15 @@ export async function inviteUserAction(
   return { error: null, success: `${email} adresine davet gönderildi.` };
 }
 
+/**
+ * Phase 1 (PHASE_0 audit bulgusu): platform'daki en yüksek riskli tek
+ * işlem — bir kullanıcıya platform admin yetkisi vermek/almak. Bu yüzden
+ * `requireAdmin()`'in üzerine EK olarak `reauthenticateWithPassword()`
+ * bağlandı — form artık admin'in kendi güncel şifresini de istiyor (bkz.
+ * lib/validation/invite.ts'teki `currentPassword` alanı ve
+ * lib/auth/reauthenticate.ts'in dosya yorumu: bu ek sürtünme bilinçli
+ * olarak SADECE bu action'a eklendi, diğer yazma action'larına değil).
+ */
 export async function changeUserRoleAction(
   _prevState: RoleFormState,
   formData: FormData,
@@ -91,14 +101,28 @@ export async function changeUserRoleAction(
     membershipId: formData.get("membershipId"),
     role: formData.get("role"),
     customerId: formData.get("customerId"),
+    currentPassword: formData.get("currentPassword"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
   }
 
-  const { membershipId, role, customerId } = parsed.data;
-  const scopedCustomerId = role === "customer" ? customerId || null : null;
+  const { membershipId, role, customerId, currentPassword } = parsed.data;
+
+  const reauth = await reauthenticateWithPassword(user, currentPassword);
+  if (!reauth.ok) {
+    await logAuditEvent({
+      userId: user.id,
+      customerId: null,
+      action: "user.role_change_reauth_failed",
+      entityType: "user",
+      entityId: membershipId,
+    });
+    return { error: reauth.error };
+  }
+
+  const scopedCustomerId = role === "store_admin" ? customerId || null : null;
 
   const supabase = await createSupabaseServerClient();
   const { data: membership, error } = await supabase

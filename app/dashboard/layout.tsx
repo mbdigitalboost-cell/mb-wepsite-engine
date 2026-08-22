@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { requireSession } from "@/lib/auth/require-session";
 import { getCurrentMemberships, isAdminMembership } from "@/lib/auth/get-memberships";
+import { getAalStatus, needsMfaChallenge } from "@/lib/auth/mfa";
 
 export const metadata: Metadata = {
   title: "Panel",
@@ -26,6 +28,19 @@ export const dynamic = "force-dynamic";
  */
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   const { user } = await requireSession();
+
+  // Güvenlik (Phase 1, MFA): bir kullanıcının doğrulanmış bir TOTP
+  // faktörü varsa ama BU oturum henüz onu tamamlamadıysa (ör. şifreyle
+  // yeni giriş yapıldı, ikinci faktör henüz girilmedi), dashboard'un
+  // HİÇBİR sayfası/içeriği render edilmeden önce buraya bakılıyor — tek
+  // kontrol noktası, tek yerde. Faktörü olmayan bir kullanıcı için
+  // `needsMfaChallenge` her zaman false döner (nextLevel hiç "aal2"
+  // olmaz), yani MFA kurmamış biri için hiçbir davranış değişmiyor.
+  const aal = await getAalStatus();
+  if (needsMfaChallenge(aal)) {
+    redirect("/mfa-challenge");
+  }
+
   const memberships = await getCurrentMemberships(user.id);
   const isAdmin = isAdminMembership(memberships);
 

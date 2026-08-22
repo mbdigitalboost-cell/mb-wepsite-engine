@@ -3,6 +3,7 @@ import { LegalHero } from "@/components/legal/legal-hero";
 import { LegalDocument } from "@/components/legal/legal-document";
 import { petraCerezPolitikasi } from "@/lib/data/petra/legal/cerez-politikasi";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 
 export const metadata: Metadata = {
   title: "Çerez Politikası",
@@ -18,10 +19,7 @@ export default function CookiePolicyPage() {
 
   return (
     <>
-      {breadcrumbJsonLd ? (
-        // Static JSON-LD we generate ourselves — no user input reaches this.
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      ) : null}
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <LegalHero title={petraCerezPolitikasi.title} lastUpdated={petraCerezPolitikasi.lastUpdated} />
       <LegalDocument document={petraCerezPolitikasi} />
     </>

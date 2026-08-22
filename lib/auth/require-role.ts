@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { requireSession } from "@/lib/auth/require-session";
 import { getCurrentMemberships, type Membership } from "@/lib/auth/get-memberships";
+import { isAdminRole } from "@/lib/auth/roles";
 import type { AppRole } from "@/lib/supabase/types";
 
 export interface RoleContext {
@@ -28,7 +29,7 @@ export interface RoleContext {
 export async function loadRoleContext(): Promise<RoleContext> {
   const { user } = await requireSession();
   const memberships = await getCurrentMemberships(user.id);
-  const isAdmin = memberships.some((membership) => membership.role === "admin");
+  const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
   return { user, memberships, isAdmin };
 }
 

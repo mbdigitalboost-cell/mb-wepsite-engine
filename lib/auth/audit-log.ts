@@ -23,14 +23,13 @@ export interface LogAuditEventInput {
  * log row, and only from trusted server code — never from something a
  * browser session could trigger directly.
  *
- * Not called from anywhere yet. Phase 3 only prepares this helper; the
- * real admin/customer actions that will call it (create customer,
- * invite user, deactivate website, publish content, ...) come in later
- * phases once those actions themselves exist. Wire it in at the same
- * time each of those actions is built — right after the action
- * succeeds, with the `user`/`customerId` already established by
- * whichever `require-admin.ts` / `require-customer-access.ts` check
- * gated that action.
+ * DÜZELTME (Phase 1, PHASE_0 audit'inde yakalanan bulgu): bu yorum
+ * önceden "Not called from anywhere yet" diyordu — bu artık YANLIŞ ve
+ * bayattı. Bu fonksiyon halihazırda 10+ dosyadan çağrılıyor (kullanıcı
+ * yönetimi, müşteri/website CRUD, medya/lead/SEO/tracking/ayarlar
+ * action'ları, ve Phase 1'de eklenen login/logout/rate-limit olayları).
+ * Yeni bir kritik action yazarken buraya bakıp "zaten hiç kullanılmıyor,
+ * ekleme zahmetine değmez" sonucuna varmayın — tam tersi doğru.
  */
 export async function logAuditEvent(input: LogAuditEventInput): Promise<void> {
   const admin = createSupabaseAdminClient();

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { heroFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -32,7 +32,7 @@ export async function saveHeroAction(
   _prevState: HeroFormState,
   formData: FormData,
 ): Promise<HeroFormState> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = heroFormSchema.safeParse({
     heading: formData.get("heading"),
@@ -71,7 +71,7 @@ export async function saveHeroAction(
 }
 
 export async function setHeroStatusAction(customerId: string, heroId: string, nextStatus: ContentStatus): Promise<void> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
   const connection = await loadCustomerConnection(customerId);
   if (!connection) return;
 

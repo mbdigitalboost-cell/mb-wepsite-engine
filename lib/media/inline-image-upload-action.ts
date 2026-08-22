@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { uploadCustomerImage, type UploadCustomerImageResult } from "@/lib/media/upload-customer-image";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/constants";
 
@@ -26,7 +26,7 @@ export async function uploadInlineImageAction(
   folder: string,
   formData: FormData,
 ): Promise<UploadCustomerImageResult> {
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {

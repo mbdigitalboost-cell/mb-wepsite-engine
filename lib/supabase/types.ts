@@ -4,6 +4,8 @@
  *   supabase/platform/migrations/0002_customer_users.sql
  *   supabase/platform/migrations/0003_audit_logs.sql
  *   supabase/platform/migrations/0004_platform_rls.sql
+ *   supabase/platform/migrations/0005_expand_roles.sql
+ *   supabase/platform/migrations/0006_stores.sql
  *
  * Once a real Platform Supabase project exists, this can be regenerated
  * from the live schema with:
@@ -30,13 +32,32 @@ export type Json =
 
 export type CustomerStatus = "active" | "inactive";
 export type WebsiteStatus = "active" | "inactive";
+/** Phase 1, migration 0006_stores.sql. */
+export type StoreStatus = "active" | "inactive";
 /**
- * `admin` rows have `customer_id: null` (global access to every
- * customer). `customer` rows always have a `customer_id` (scoped to
- * exactly that customer). Enforced in the database by
- * customer_users_role_scope_check, not just by convention here.
+ * Phase 1 (migration 0005_expand_roles.sql) genişletti: eski "admin"/
+ * "customer" iki-rollü model, admin-eşdeğeri (customer_id NULL) ve
+ * store-eşdeğeri (customer_id NOT NULL) iki AİLEye ayrıldı:
+ *
+ *   admin-eşdeğeri: super_admin, platform_admin   (+ eski "admin" —
+ *     Postgres enum'dan değer SİLİNEMEZ, bu yüzden etiket enum'da kalıyor
+ *     ama migration 0005'ten sonra hiçbir satırda kullanılmıyor)
+ *   store-eşdeğeri: store_admin, store_editor, store_viewer (+ eski
+ *     "customer", aynı sebeple)
+ *
+ * `customer_users_role_scope_check` (migration 0005) bu iki aileyi
+ * customer_id NULL/NOT NULL kuralına bağlıyor. Kodda HİÇBİR YERDE bu
+ * string'lerle doğrudan karşılaştırma yapılmamalı — bkz.
+ * lib/auth/roles.ts (isAdminRole/isStoreRole/isStoreWriteRole).
  */
-export type AppRole = "admin" | "customer";
+export type AppRole =
+  | "admin"
+  | "customer"
+  | "super_admin"
+  | "platform_admin"
+  | "store_admin"
+  | "store_editor"
+  | "store_viewer";
 
 export type Database = {
   public: {
@@ -227,6 +248,46 @@ export type Database = {
           },
         ];
       };
+      stores: {
+        Row: {
+          id: string;
+          customer_id: string;
+          name: string;
+          slug: string;
+          status: StoreStatus;
+          supabase_connection_key: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          name: string;
+          slug: string;
+          status?: StoreStatus;
+          supabase_connection_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          name?: string;
+          slug?: string;
+          status?: StoreStatus;
+          supabase_connection_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stores_customer_id_fkey";
+            columns: ["customer_id"];
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -234,6 +295,7 @@ export type Database = {
       customer_status: CustomerStatus;
       website_status: WebsiteStatus;
       app_role: AppRole;
+      store_status: StoreStatus;
     };
     CompositeTypes: Record<string, never>;
   };

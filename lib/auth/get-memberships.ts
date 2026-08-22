@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/supabase/types";
+import { isAdminRole } from "@/lib/auth/roles";
 
 export interface Membership {
   role: AppRole;
@@ -39,5 +40,5 @@ export async function getCurrentMemberships(userId: string): Promise<Membership[
 }
 
 export function isAdminMembership(memberships: Membership[]): boolean {
-  return memberships.some((membership) => membership.role === "admin");
+  return memberships.some((membership) => isAdminRole(membership.role));
 }

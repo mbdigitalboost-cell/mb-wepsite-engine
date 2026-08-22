@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireCustomerAccess } from "@/lib/auth/require-customer-access";
+import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { getContentTypeConfig, isContentTypeKey, type ContentTypeConfig } from "@/lib/cms/dashboard/content-types";
 import { buildContentFormSchema } from "@/lib/validation/content";
@@ -16,13 +16,19 @@ import type { ContentStatus } from "@/lib/cms/customer-types";
  * lib/cms/dashboard/content-types.ts). `type` is always re-validated
  * against the known config, never trusted as a raw table name.
  *
- * Authorization: `requireCustomerAccess(customerId)` — NOT
+ * Authorization: `requireCustomerWriteAccess(customerId)` — NOT
  * `requireAdmin()`. Unlike Phase 4's Platform Customer/Website CRUD
  * (intentionally admin-only), content management is something a
  * customer's own user should be able to do for their own customer too —
  * per Phase 6 §4: "Customer: yalnızca kendi müşterisini yönetebilir."
  * Every export here re-checks this itself, independent of which page
  * happened to render the form that called it.
+ *
+ * Phase 1 RBAC genişlemesi: `requireCustomerAccess` (okuma) yerine
+ * `requireCustomerWriteAccess` kullanılıyor — bir `store_viewer` bu
+ * müşterinin içeriğini görebilir ama buradan DEĞİŞTİREMEZ (bkz. o
+ * fonksiyonun dosya yorumundaki dürüstlük notu: bu ayrımın RLS'te bir
+ * karşılığı yok, tek uygulama noktası bu çağrı).
  */
 
 function readFormValues(config: ContentTypeConfig, formData: FormData): Record<string, unknown> {
@@ -50,7 +56,7 @@ export async function createContentItemAction(
 ): Promise<ContentFormState> {
   if (!isContentTypeKey(type)) return { error: "Geçersiz içerik türü." };
   const config = getContentTypeConfig(type)!;
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = buildContentFormSchema(type).safeParse(readFormValues(config, formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
@@ -101,7 +107,7 @@ export async function updateContentItemAction(
 ): Promise<ContentFormState> {
   if (!isContentTypeKey(type)) return { error: "Geçersiz içerik türü." };
   const config = getContentTypeConfig(type)!;
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const parsed = buildContentFormSchema(type).safeParse(readFormValues(config, formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
@@ -146,7 +152,7 @@ export async function setContentItemStatusAction(
 ): Promise<void> {
   if (!isContentTypeKey(type)) return;
   const config = getContentTypeConfig(type)!;
-  const { user } = await requireCustomerAccess(customerId);
+  const { user } = await requireCustomerWriteAccess(customerId);
 
   const connection = await loadCustomerConnection(customerId);
   if (!connection) return;

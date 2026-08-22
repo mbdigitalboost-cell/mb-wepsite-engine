@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { requireSession } from "@/lib/auth/require-session";
 import { getCurrentMemberships } from "@/lib/auth/get-memberships";
+import { isAdminRole, isStoreRole, isStoreWriteRole } from "@/lib/auth/roles";
 
 export interface CustomerAccessContext {
   user: User;
@@ -39,12 +40,47 @@ export async function requireCustomerAccess(customerId: string): Promise<Custome
   const { user } = await requireSession();
   const memberships = await getCurrentMemberships(user.id);
 
-  const isAdmin = memberships.some((membership) => membership.role === "admin");
+  const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
   const isMemberOfThisCustomer = memberships.some(
-    (membership) => membership.role === "customer" && membership.customerId === customerId,
+    (membership) => isStoreRole(membership.role) && membership.customerId === customerId,
   );
 
   if (!isAdmin && !isMemberOfThisCustomer) {
+    notFound();
+  }
+
+  return { user, isAdmin };
+}
+
+/**
+ * Phase 1 RBAC genişlemesi: `requireCustomerAccess`'in "yazma" eşdeğeri.
+ * `store_viewer` (salt-okur bir mağaza kullanıcısı — bugün hiçbir gerçek
+ * hesapta kullanılmıyor, ama Phase 2'nin Taktikalp46 için hedeflediği
+ * rol) bu kontrolden GEÇEMEZ; sadece store_admin/store_editor ve her
+ * zamanki gibi platform admin'ler geçer.
+ *
+ * DÜRÜSTLÜK NOTU (rapora da yazılmalı): bu, `requireCustomerAccess`'in
+ * aksine bir RLS karşılığı OLMAYAN bir kontrol. Okuma tarafında gerçek
+ * güvenlik sınırı Platform RLS'in `is_customer_member()` fonksiyonu —
+ * ama site içeriği (hero/solutions/leads/...) tamamen AYRI bir müşteri
+ * Supabase projesinde yaşıyor ve dashboard oraya SERVICE-ROLE anahtarıyla
+ * bağlanıyor (bkz. lib/cms/connection.ts) — yani o projenin kendi RLS'i
+ * bu isteğin hangi platform kullanıcısından geldiğini hiç bilmiyor.
+ * `store_viewer` yazamasın kuralının TEK uygulama noktası bu fonksiyon —
+ * bir action bunu çağırmayı unutursa, hiçbir veritabanı satırı bunu geri
+ * yakalamaz. Bu yüzden her "değiştir/sil/yükle" action'ı MUTLAKA bunu
+ * (okuma amaçlıysa requireCustomerAccess'i) çağırmalı.
+ */
+export async function requireCustomerWriteAccess(customerId: string): Promise<CustomerAccessContext> {
+  const { user } = await requireSession();
+  const memberships = await getCurrentMemberships(user.id);
+
+  const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
+  const hasWriteAccess = memberships.some(
+    (membership) => isStoreWriteRole(membership.role) && membership.customerId === customerId,
+  );
+
+  if (!isAdmin && !hasWriteAccess) {
     notFound();
   }
 

@@ -3,6 +3,7 @@ import { LegalHero } from "@/components/legal/legal-hero";
 import { LegalDocument } from "@/components/legal/legal-document";
 import { petraKvkkAydinlatmaMetni } from "@/lib/data/petra/legal/kvkk-aydinlatma-metni";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 
 export const metadata: Metadata = {
   title: "KVKK Aydınlatma Metni",
@@ -18,10 +19,7 @@ export default function KvkkPage() {
 
   return (
     <>
-      {breadcrumbJsonLd ? (
-        // Static JSON-LD we generate ourselves — no user input reaches this.
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      ) : null}
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <LegalHero title={petraKvkkAydinlatmaMetni.title} lastUpdated={petraKvkkAydinlatmaMetni.lastUpdated} />
       <LegalDocument document={petraKvkkAydinlatmaMetni} />
     </>

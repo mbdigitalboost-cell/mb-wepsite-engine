@@ -6,6 +6,7 @@ import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
 
@@ -69,11 +70,10 @@ export default async function SolutionDetailPage({
   return (
     <>
       {breadcrumbJsonLd ? (
-        // Static JSON-LD we generate ourselves — no user input reaches this.
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-        />
+        // GÜVENLİK: solution.title CMS'ten (admin panelinden düzenlenebilir)
+        // geliyor — <JsonLd> bunu güvenli şekilde kaçırıyor, bkz. o dosyanın
+        // yorumu (PHASE_0 Bulgu H3).
+        <JsonLd data={breadcrumbJsonLd} />
       ) : null}
       <section className="border-b border-white/10 py-20 lg:py-28">
         <Container>

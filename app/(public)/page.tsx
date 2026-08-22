@@ -22,6 +22,7 @@ import { petraTestimonials } from "@/lib/data/petra/testimonials";
 import { petraFaqs } from "@/lib/data/petra/faqs";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings } from "@/lib/cms/adapters";
 import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
@@ -116,16 +117,8 @@ export default async function HomePage() {
 
   return (
     <>
-      {faqJsonLd ? (
-        // Static JSON-LD we generate ourselves — no user input reaches this.
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      ) : null}
-      {localBusinessJsonLd ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
-        />
-      ) : null}
+      {faqJsonLd ? <JsonLd data={faqJsonLd} /> : null}
+      {localBusinessJsonLd ? <JsonLd data={localBusinessJsonLd} /> : null}
       <Hero whatsappHref={whatsappHref} hero={hero} />
       <TrustBar />
       <Solutions solutions={solutions} />
