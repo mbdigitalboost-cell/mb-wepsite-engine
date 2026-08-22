@@ -103,13 +103,35 @@ export default async function SolutionDetailPage({
         solution has one, otherwise the same icon-over-gradient treatment
         used on the /cozumler cards (components/sections/solutions.tsx),
         never a fabricated photo.
+
+        Faz H-devam düzeltme (kullanıcı raporu, 2026-08-22): bu kutu
+        `aspect-[21/9]` (ultra geniş, panoramik) olarak tasarlanmıştı —
+        eski `_v1`/`_v3` görselleri yatay (1200x800) olduğu için makul
+        bir kırpma oluyordu. Yeni `_v2`/`_v4` görselleri ise
+        PETRA_COZUM_GORSEL_URETIM_TALIMATI.md'ye göre bilinçli olarak
+        DİKEY (3:4, 2000x2667). Dikey bir görseli 21:9 gibi aşırı geniş
+        bir kutuya `object-cover` ile sığdırmak, görselin dar bir dikey
+        şeridini alıp tüm genişliğe aşırı yakınlaştırıyordu — kullanıcının
+        bildirdiği "kayma"/çözünürlük düşmesi hissi buradan kaynaklanıyordu
+        (piksel sayısı sabit kalıp alan devasa büyütülüyordu). Düzeltme:
+        kutu artık görselin gerçek oranıyla (3:4) eşleşiyor ve ortalanmış,
+        sınırlı bir genişlikte (`max-w-md`) gösteriliyor — bu sayede
+        object-cover neredeyse hiç kırpma yapmıyor ve görsel kendi
+        çözünürlüğünde net kalıyor. Görseli olmayan çözümler için ikon
+        kutusu da aynı orana güncellendi (tutarlılık için).
       */}
       <section className="py-16 lg:py-20">
         <Container>
           <Reveal>
-            <div className="relative aspect-[21/9] w-full overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-md overflow-hidden rounded-[var(--radius-brand)] border border-white/10">
               {solution.image ? (
-                <Image src={solution.image} alt={solution.title} fill sizes="100vw" className="object-cover" />
+                <Image
+                  src={solution.image}
+                  alt={solution.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 448px"
+                  className="object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,_var(--color-brand-secondary)_0%,_var(--color-brand-background)_100%)]">
                   <Icon
