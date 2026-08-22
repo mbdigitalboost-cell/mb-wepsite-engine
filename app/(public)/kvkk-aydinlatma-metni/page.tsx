@@ -1,12 +1,29 @@
 import type { Metadata } from "next";
-import { LegalPlaceholder } from "@/components/legal/legal-placeholder";
+import { LegalHero } from "@/components/legal/legal-hero";
+import { LegalDocument } from "@/components/legal/legal-document";
+import { petraKvkkAydinlatmaMetni } from "@/lib/data/petra/legal/kvkk-aydinlatma-metni";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = {
   title: "KVKK Aydınlatma Metni",
-  description: "Petra Mühendislik KVKK aydınlatma metni.",
+  description: "Petra Mühendislik KVKK aydınlatma metni — 6698 sayılı Kanun kapsamında kişisel verilerin işlenmesine ilişkin bilgilendirme.",
   alternates: { canonical: "/kvkk-aydinlatma-metni" },
 };
 
 export default function KvkkPage() {
-  return <LegalPlaceholder eyebrow="Yasal" title="KVKK Aydınlatma Metni" />;
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: petraKvkkAydinlatmaMetni.title, path: "/kvkk-aydinlatma-metni" },
+  ]);
+
+  return (
+    <>
+      {breadcrumbJsonLd ? (
+        // Static JSON-LD we generate ourselves — no user input reaches this.
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      ) : null}
+      <LegalHero title={petraKvkkAydinlatmaMetni.title} lastUpdated={petraKvkkAydinlatmaMetni.lastUpdated} />
+      <LegalDocument document={petraKvkkAydinlatmaMetni} />
+    </>
+  );
 }
