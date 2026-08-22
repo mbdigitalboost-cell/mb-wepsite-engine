@@ -1,8 +1,11 @@
+"use client";
+
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Icon } from "@/components/ui/icon";
 import { SectionDivider } from "@/components/ui/section-divider";
 import { HvacGridPattern } from "@/components/decorative/hvac-grid-pattern";
+import { useParallaxPointer } from "@/lib/motion/use-parallax-pointer";
 import { petraAdvantages } from "@/lib/data/petra/why-petra";
 import { petraWhyPetraIcons, petraWhyPetraIconFallback } from "@/lib/data/petra/why-petra-icons";
 import { petraSiteName } from "@/lib/data/petra/site-config";
@@ -15,8 +18,21 @@ import { petraSiteName } from "@/lib/data/petra/site-config";
  * section (still static-only, matching its pre-existing behavior — see
  * app/(public)/page.tsx, `<WhyPetra />` takes no props) and none was
  * added here.
+ *
+ * Hakkımızda sayfası revizyonu: kart grid'ine çok hafif masaüstü
+ * mouse-parallax eklendi (`useParallaxPointer` — References showcase'te
+ * kullanılan aynı hook, yalnızca `source === "mouse"` olduğunda, dokunma-
+ * tikte tamamen kapalı). Bu, bileşeni Client Component yapıyor (önceden
+ * Server Component'ti) — hem anasayfada hem `/hakkimizda`'da kullanıldığı
+ * için değişiklik her iki yerde de görünür, brief'in "Neden Petra?
+ * bölümünü kaldırma, daha görsel hale getir" isteğiyle uyumlu.
  */
 export function WhyPetra() {
+  const { ref: parallaxRef, state: parallax } = useParallaxPointer<HTMLDivElement>();
+  const isMouse = parallax.source === "mouse";
+  const offsetX = isMouse ? parallax.x * 4 : 0;
+  const offsetY = isMouse ? parallax.y * 4 : 0;
+
   return (
     <section className="relative overflow-hidden border-t border-white/10 py-24 lg:py-32">
       <SectionDivider />
@@ -43,7 +59,11 @@ export function WhyPetra() {
           </p>
         </Reveal>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+        <div
+          ref={parallaxRef}
+          className="grid grid-cols-1 gap-5 will-change-transform sm:grid-cols-2 sm:gap-6"
+          style={{ transform: `translate3d(${offsetX}px, ${offsetY}px, 0)` }}
+        >
           {petraAdvantages.map((advantage, index) => {
             const number = String(index + 1).padStart(2, "0");
             return (
