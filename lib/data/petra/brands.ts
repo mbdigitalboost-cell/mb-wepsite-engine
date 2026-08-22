@@ -19,6 +19,15 @@
  * `dealerStatusVerified` bayrağıyla kilitli tutulur. Burada yalnızca
  * nötr "satışını ve kurulumunu gerçekleştirdiği markalardan biri"
  * ifadesi kullanılır.
+ *
+ * Güncelleme (aynı gün, `klima_logo.rar`): kullanıcı, 4 marka için daha
+ * temiz/resmi görünümlü logo dosyaları sağladı — Gree, Hisense, Midea,
+ * Systemair görselleri bu yeni dosyalarla değiştirildi. Diğer 5 markanın
+ * (Mitsubishi Heavy, Samsung, EuroForm, Haier, Vestel) logosu bu pakette
+ * ya hiç yoktu ya da (Samsung'daki gibi) kullanılabilir bir logo değildi
+ * (deri dokulu bir "duvar kağıdı" görseliydi, resmi logo değil) — kullanıcının
+ * kendi talimatına uygun olarak ("logosu olmayan, şu an sitede aktif olan
+ * logoyu kullan") bu 5 marka için önceki görsel aynen korundu.
  */
 
 export interface PetraBrand {
