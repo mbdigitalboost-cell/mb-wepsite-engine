@@ -9,6 +9,7 @@ import { BrandsSection } from "@/components/sections/brands-section";
 import { Projects } from "@/components/sections/projects";
 import { Campaigns } from "@/components/sections/campaigns";
 import { WhyPetra } from "@/components/sections/why-petra";
+import { SiteWorksSection } from "@/components/sections/site-works-section";
 import { ReferencesSection } from "@/components/sections/references-section";
 import { Statistics } from "@/components/sections/statistics";
 import { Testimonials } from "@/components/sections/testimonials";
@@ -135,6 +136,7 @@ export default async function HomePage() {
       <Projects />
       <Campaigns />
       <WhyPetra />
+      <SiteWorksSection />
       <ReferencesSection />
       <Statistics />
       <Testimonials testimonials={testimonials} />
