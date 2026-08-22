@@ -2,9 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { track } from "@/lib/tracking/track";
 import { useParallaxPointer } from "@/lib/motion/use-parallax-pointer";
 import type { PetraBrand } from "@/lib/data/petra/brands";
 
@@ -26,6 +24,15 @@ const SCROLL_STEP_PX = 260;
  * kontrol edilebilir. Kart başına hafif hover kaldırma/glow dışında,
  * kaydırma alanının kendisine parallax uygulanmıyor (scroll ile parallax
  * transform'unun çakışıp titreşim yaratmaması için) — bkz. rapor.
+ *
+ * Faz H düzeltme (kullanıcı raporu): kartlar başlangıçta hepsi aynı genel
+ * `/cozumler` sayfasına giden <Link> idi — marka özelinde ayrı bir ürün
+ * sayfası olmadığı için hepsi aynı yere gidiyordu, bu da "Samsung'a
+ * tıkladım, alakasız bir yere gittim" hissi yarattı (bkz. rapor).
+ * Marka başına gerçek/doğru bir hedef sayfa henüz yok — uydurma bir sayfa
+ * oluşturmak yerine kartlar artık TIKLANAMAZ (düz <div>, href yok).
+ * `PetraBrand.href` alanı veri modelinde duruyor; ileride her marka için
+ * gerçek bir sayfa/route eklendiğinde kartlar tekrar <Link>'e çevrilebilir.
  */
 export function BrandsSlider({ brands }: BrandsSliderProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -48,16 +55,14 @@ export function BrandsSlider({ brands }: BrandsSliderProps) {
           const offsetX = isMouse ? parallax.x * 3 : 0;
           const offsetY = isMouse ? parallax.y * 3 : 0;
           return (
-            <Link
+            <div
               key={brand.id}
-              href={brand.href}
               role="listitem"
-              aria-label={`${brand.name} — ürünleri incele`}
+              aria-label={brand.name}
               className="group/brand relative flex w-[210px] shrink-0 snap-start flex-col gap-3 sm:w-[240px]"
-              onClick={() => track("service_view", { source: "brands_slider", brand: brand.slug })}
               style={{ transform: `translate3d(${offsetX}px, ${offsetY}px, 0)` }}
             >
-              <div className="relative aspect-[2/1] w-full overflow-hidden rounded-[var(--radius-brand)] border border-white/10 bg-white/[0.03] transition-all duration-300 ease-out group-hover/brand:-translate-y-1 group-hover/brand:border-brand-primary/40 group-hover/brand:shadow-[0_0_20px_2px_var(--tw-shadow-color)] group-hover/brand:shadow-brand-primary/20 group-focus-visible/brand:-translate-y-1 group-focus-visible/brand:border-brand-primary/40">
+              <div className="relative aspect-[2/1] w-full overflow-hidden rounded-[var(--radius-brand)] border border-white/10 bg-white/[0.03] transition-all duration-300 ease-out group-hover/brand:-translate-y-1 group-hover/brand:border-brand-primary/40 group-hover/brand:shadow-[0_0_20px_2px_var(--tw-shadow-color)] group-hover/brand:shadow-brand-primary/20">
                 <Image
                   src={brand.image}
                   alt={`${brand.name} logosu`}
@@ -67,10 +72,10 @@ export function BrandsSlider({ brands }: BrandsSliderProps) {
                   className="object-contain p-3"
                 />
               </div>
-              <span className="text-center text-xs font-medium tracking-[0.15em] text-brand-muted uppercase transition-colors duration-300 group-hover/brand:text-white">
+              <span className="text-center text-xs font-medium tracking-[0.15em] text-brand-muted uppercase">
                 {brand.name}
               </span>
-            </Link>
+            </div>
           );
         })}
       </div>
