@@ -4,6 +4,7 @@ import { TrustBar } from "@/components/sections/trust-bar";
 import { Solutions } from "@/components/sections/solutions";
 import { EngineeringProcess } from "@/components/sections/engineering-process";
 import { MitsubishiSection } from "@/components/sections/mitsubishi-section";
+import { BrandsSection } from "@/components/sections/brands-section";
 import { Projects } from "@/components/sections/projects";
 import { Campaigns } from "@/components/sections/campaigns";
 import { WhyPetra } from "@/components/sections/why-petra";
@@ -128,6 +129,7 @@ export default async function HomePage() {
       <Solutions solutions={solutions} />
       <EngineeringProcess />
       <MitsubishiSection />
+      <BrandsSection />
       <Projects />
       <Campaigns />
       <WhyPetra />
