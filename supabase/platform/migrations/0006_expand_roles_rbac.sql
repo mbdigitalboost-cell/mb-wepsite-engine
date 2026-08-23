@@ -1,6 +1,12 @@
 -- =============================================================================
--- PLATFORM MIGRATION 0005
--- Expand app_role: admin/customer → super_admin/platform_admin/store_admin/store_editor/store_viewer
+-- PLATFORM MIGRATION 0006
+-- Expand app_role — DATA MIGRATION + CHECK constraint + indexes + RLS functions
+--
+-- ÖN KOŞUL: 0005_expand_roles_enum.sql bu migration'dan ÖNCE, AYRI bir
+-- transaction olarak commit edilmiş olmalı (bkz. o dosyanın yorumu —
+-- aksi halde bu dosyadaki UPDATE satırları "unsafe use of new value"
+-- hatasıyla başarısız olur; bu, bu oturumda canlı veritabanına karşı
+-- güvenli bir rollback'li transaction ile EMPİRİK olarak doğrulandı).
 --
 -- PHASE 1 (Commerce Platform genişlemesi) — PHASE_0 audit raporunun
 -- Authorization/RBAC bölümünde önerilen genişleme. Bugün gerçekte var
@@ -12,38 +18,43 @@
 --   customer → store_admin     (bugünkü "customer" ile birebir aynı
 --                                yetki: tek bir customer_id'ye bağlı)
 --
+-- Bu iki UPDATE'in canlı veritabanındaki tam olarak hangi 2 satırı
+-- etkileyeceği bu oturumda doğrudan sorgulanarak doğrulandı:
+--   customer_users.id = d7fe5d74-... (user mbdigitalboost@gmail.com, role=admin, customer_id=NULL)
+--   customer_users.id = 284759e5-... (user petramuhendislik@mbdigitalboost.com, role=customer, customer_id=55bf2f5c-...)
+-- Başka hiçbir satır yok — bu iki UPDATE'in etki alanı tam olarak bu 2
+-- satırla sınırlı.
+--
 -- super_admin / store_editor / store_viewer bu migration'da HİÇBİR
 -- satıra ATANMIYOR ve hiçbir yeni davranışa bağlanmıyor — sadece ileride
--- (ör. Taktikalp46 için salt-okur bir mağaza kullanıcısı, ya da
--- MB Digital Boost'un kendi ekibiyle bir müşterinin admin'i arasında bir
--- ayrım gerektiğinde) enum'da hazır bulunuyorlar. Kullanılmadıkları
--- sürece sıfır ek davranış/risk taşırlar.
+-- enum'da hazır bulunuyorlar. Kullanılmadıkları sürece sıfır ek
+-- davranış/risk taşırlar.
 --
--- DÜRÜSTLÜK NOTU — GERİ ALINABİLİRLİK: PostgreSQL bir enum tipinden DEĞER
--- SİLMEYİ desteklemez (tipi yeniden yaratmadan). 'admin'/'customer'
--- etiketleri enum'da SONSUZA DEK kalacak — ama migration'dan sonra hiçbir
--- satır, hiçbir fonksiyon, hiçbir kod yolu onlara referans vermeyecek
--- (bkz. lib/auth/roles.ts — sadece geriye dönük uyumluluk için hâlâ
--- tanınıyorlar). Migration'ın geri kalanı TAM GERİ ALINABİLİR: aşağıdaki
--- UPDATE'in tersini çalıştırıp (platform_admin → admin, store_admin →
--- customer) ve CHECK constraint'i / is_platform_admin() /
+-- DÜRÜSTLÜK NOTU — GERİ ALINABİLİRLİK: Postgres enum'dan değer silmeyi
+-- desteklemediği için 'admin'/'customer' etiketleri enum'da sonsuza dek
+-- kalacak (0005'ten miras) — ama bu migration'dan sonra hiçbir satır,
+-- hiçbir fonksiyon, hiçbir kod yolu onlara referans vermeyecek (bkz.
+-- lib/auth/roles.ts — sadece geriye dönük uyumluluk için hâlâ
+-- tanınıyorlar). Bu migration'ın geri kalanı TAM GERİ ALINABİLİR:
+-- aşağıdaki UPDATE'in tersini çalıştırıp (platform_admin → admin,
+-- store_admin → customer) ve CHECK constraint'i / is_platform_admin() /
 -- is_customer_member() fonksiyonlarını 0004'teki haline döndürerek eski
 -- davranışa dönülebilir.
 --
--- PostgreSQL 12+ üzerinde ALTER TYPE ... ADD VALUE aynı transaction
--- içinde daha sonraki bir komutta kullanılabilir (sadece AYNI komutta
--- kullanılamaz) — Supabase PostgreSQL 15+ çalıştırdığı için bu migration
--- tek bir transaction içinde güvenle tamamlanır.
+-- BU DOSYADAKİ HER ADIM, bu oturumda canlı projeye karşı (ROLLBACK'li,
+-- kalıcı hiçbir etkisi olmayan bir transaction içinde, gerçek veriyle
+-- birebir eşleşen bir mimic tabloda) test edildi:
+--   - UPDATE'ler doğru satırları doğru yeni role taşıyor.
+--   - CHECK constraint hem 2 eski hem 5 yeni rolü doğru kabul/reddediyor
+--     (admin-ailesi + customer_id NOT NULL → RED; store-ailesi +
+--     customer_id NULL → RED; her iki aile de doğru customer_id
+--     durumunda → KABUL).
+--   - is_platform_admin()/is_customer_member() mantığı platform_admin,
+--     store_admin, store_editor, store_viewer, super_admin için doğru
+--     true/false döndürüyor VE cross-tenant izolasyon çalışıyor (bir
+--     müşterinin store_admin'i başka bir müşteriye member sayılmıyor).
 -- =============================================================================
 
-alter type public.app_role add value if not exists 'super_admin';
-alter type public.app_role add value if not exists 'platform_admin';
-alter type public.app_role add value if not exists 'store_admin';
-alter type public.app_role add value if not exists 'store_editor';
-alter type public.app_role add value if not exists 'store_viewer';
-
--- Veri taşıma: sadece bugün gerçekten var olan iki rol güncelleniyor,
--- başka hiçbir satır etkilenmiyor.
 update public.customer_users set role = 'platform_admin' where role = 'admin';
 update public.customer_users set role = 'store_admin' where role = 'customer';
 
@@ -115,7 +126,7 @@ comment on function public.is_customer_member(uuid) is
 
 -- NOT: is_customer_member() bilinçli olarak store_editor/store_viewer'ı
 -- store_admin'den ayırmıyor — RLS seviyesinde üçü de "bu müşteriye ait"
--- sayılıyor (ör. Platform DB'deki customers/websites satırlarını
+-- sayılıyor (ör. Platform DB'deki customers/websites/stores satırlarını
 -- GÖREBİLİRLER). "store_viewer YAZAMAZ" kuralı RLS'te değil, uygulama
 -- katmanında (requireCustomerWriteAccess, bkz.
 -- lib/auth/require-customer-access.ts) uygulanıyor — çünkü asıl site

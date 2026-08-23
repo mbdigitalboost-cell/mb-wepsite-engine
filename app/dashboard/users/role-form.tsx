@@ -15,8 +15,9 @@ interface RoleFormProps {
   membershipId: string;
   /**
    * Phase 1 RBAC genişlemesi öncesi taşınmamış satırlar hâlâ eski
-   * "admin"/"customer" etiketini taşıyabilir (migration 0005 uygulanana
-   * kadar) — bu yüzden burası tam `AppRole` kabul ediyor, sadece
+   * "admin"/"customer" etiketini taşıyabilir (migration 0006 uygulanana
+   * kadar — 0005 sadece enum'a yeni değerler ekliyor, veri taşıması
+   * 0006'da) — bu yüzden burası tam `AppRole` kabul ediyor, sadece
    * `isAdminRole()` ile iki-seçenekli forma normalize ediliyor. Formu
    * kaydetmek her zaman YENİ etiketle (platform_admin/store_admin) yazar.
    */

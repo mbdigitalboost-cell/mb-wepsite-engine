@@ -4,8 +4,9 @@
  *   supabase/platform/migrations/0002_customer_users.sql
  *   supabase/platform/migrations/0003_audit_logs.sql
  *   supabase/platform/migrations/0004_platform_rls.sql
- *   supabase/platform/migrations/0005_expand_roles.sql
- *   supabase/platform/migrations/0006_stores.sql
+ *   supabase/platform/migrations/0005_expand_roles_enum.sql
+ *   supabase/platform/migrations/0006_expand_roles_rbac.sql
+ *   supabase/platform/migrations/0007_stores.sql
  *
  * Once a real Platform Supabase project exists, this can be regenerated
  * from the live schema with:
@@ -32,20 +33,24 @@ export type Json =
 
 export type CustomerStatus = "active" | "inactive";
 export type WebsiteStatus = "active" | "inactive";
-/** Phase 1, migration 0006_stores.sql. */
+/** Phase 1, migration 0007_stores.sql. */
 export type StoreStatus = "active" | "inactive";
 /**
- * Phase 1 (migration 0005_expand_roles.sql) genişletti: eski "admin"/
- * "customer" iki-rollü model, admin-eşdeğeri (customer_id NULL) ve
- * store-eşdeğeri (customer_id NOT NULL) iki AİLEye ayrıldı:
+ * Phase 1 (migration 0005_expand_roles_enum.sql +
+ * 0006_expand_roles_rbac.sql — enum değerleri ve onların kullanımı,
+ * Postgres'in "yeni enum değeri eklendiği transaction'da kullanılamaz"
+ * kısıtlaması nedeniyle İKİ AYRI dosyaya bölündü, bkz. o dosyaların
+ * yorumu) genişletti: eski "admin"/"customer" iki-rollü model,
+ * admin-eşdeğeri (customer_id NULL) ve store-eşdeğeri (customer_id NOT
+ * NULL) iki AİLEye ayrıldı:
  *
  *   admin-eşdeğeri: super_admin, platform_admin   (+ eski "admin" —
  *     Postgres enum'dan değer SİLİNEMEZ, bu yüzden etiket enum'da kalıyor
- *     ama migration 0005'ten sonra hiçbir satırda kullanılmıyor)
+ *     ama migration 0006'dan sonra hiçbir satırda kullanılmıyor)
  *   store-eşdeğeri: store_admin, store_editor, store_viewer (+ eski
  *     "customer", aynı sebeple)
  *
- * `customer_users_role_scope_check` (migration 0005) bu iki aileyi
+ * `customer_users_role_scope_check` (migration 0006) bu iki aileyi
  * customer_id NULL/NOT NULL kuralına bağlıyor. Kodda HİÇBİR YERDE bu
  * string'lerle doğrudan karşılaştırma yapılmamalı — bkz.
  * lib/auth/roles.ts (isAdminRole/isStoreRole/isStoreWriteRole).

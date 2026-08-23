@@ -6,11 +6,12 @@ import { z } from "zod";
  *   - role "platform_admin" → customerId must be empty (customer_id =
  *                             NULL, enforced by
  *                             customer_users_role_scope_check, migration
- *                             0005).
+ *                             0006).
  *   - role "store_admin"    → customerId is required.
  *
- * Phase 1 RBAC genişlemesi (migration 0005_expand_roles.sql): eski
- * "admin"/"customer" değerleri "platform_admin"/"store_admin" oldu (aynı
+ * Phase 1 RBAC genişlemesi (migration 0005_expand_roles_enum.sql +
+ * 0006_expand_roles_rbac.sql): eski "admin"/"customer" değerleri
+ * "platform_admin"/"store_admin" oldu (aynı
  * davranış, yeni isim — bkz. lib/auth/roles.ts). Enum'da ayrıca
  * "super_admin"/"store_editor"/"store_viewer" de var ama bu form onları
  * BİLİNÇLİ OLARAK sunmuyor — bir rol atama arayüzü için henüz gerçek bir

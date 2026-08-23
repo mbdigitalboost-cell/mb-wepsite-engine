@@ -1,6 +1,15 @@
 -- =============================================================================
--- PLATFORM MIGRATION 0006
+-- PLATFORM MIGRATION 0007
 -- stores — foundation table for the Commerce Platform vision
+--
+-- (Numaralandırma notu: bu dosya önceki bir taslakta 0006, ondan önceki
+-- bir planda 0009 olarak geçmişti — ikisi de bayattı. Gerçek kaynak
+-- mevcut migration klasörü + canlı `supabase_migrations.schema_migrations`
+-- tablosu: platformda şu an tam olarak 4 migration commit edilmiş
+-- (0001-0004), bu yüzden sıradaki 3 dosya 0005/0006/0007. Bu dosya
+-- 0005/0006'ya (RBAC genişlemesi) BAĞIMLI DEĞİL — customer_users'a hiç
+-- dokunmuyor, sadece is_customer_member()'ı çağırıyor — ama üç dosya da
+-- sırayla, aynı PR/onay içinde uygulanacağı için 0007 numarası verildi.)
 --
 -- PHASE 1 (Commerce Platform genişlemesi), work item F/G. Bu migration
 -- SADECE bir temel atıyor — ürün/sipariş/ödeme/kargo tabloları YOK, bu
@@ -20,12 +29,22 @@
 -- yönünün (marketing-site sayısı vs. e-ticaret-mağazası sayısı) şimdiden
 -- ayrılması.
 --
--- `supabase_connection_key` burada NULLABLE — bir mağazanın ürün/sipariş
--- verisi nerede yaşayacağı (kendi müşteri projesinde mi, yoksa Taktikalp46
--- gibi yeni bir müşteri için Platform projesinin kendisinde mi) henüz
--- kararlaştırılmadı; bu migration o kararı zorlamıyor, sadece alanı
--- hazır tutuyor. Petra'nın satırı gerçek "PETRA" anahtarıyla dolduruluyor
--- çünkü bu ZATEN doğrulanmış, gerçek bir değer (bkz. websites tablosu).
+-- GÜVENLİK — `supabase_connection_key` NEDEN SECRET DEĞİL: bu sütun
+-- yalnızca bir ETİKET (ör. "PETRA") — gerçek Supabase URL/anon
+-- key/service-role key hiçbir zaman bu tabloda (ya da `websites`'ta)
+-- saklanmıyor, sadece Vercel ortam değişkenlerinde
+-- (SUPABASE_URL_<KEY>/SUPABASE_SERVICE_ROLE_KEY_<KEY>) yaşıyor ve
+-- yalnızca `lib/cms/connection.ts` server-side kodundan okunuyor (bkz. o
+-- dosyanın yorumu, migration 0001'in `websites` tablosu için de aynı
+-- notu içerir). Bu etiketin kendisi RLS ile `stores_select_member_or_admin`
+-- politikası altında o müşterinin kendi kullanıcılarına GÖRÜNÜR olacak
+-- (tıpkı bugün `websites.supabase_connection_key`'in zaten
+-- `websites_select_member_or_admin` altında görünür olduğu gibi — bu
+-- YENİ bir açık değil, mevcut, kasıtlı desenin aynen devamı) — ama bu
+-- zararsız, çünkü etiketin kendisini bilmek gerçek bir kimlik bilgisi
+-- vermiyor. Client'a hiçbir zaman DOĞRUDAN service-role/anon key
+-- gönderilmiyor; bu tablo yalnızca "hangi anahtar" sorusuna cevap
+-- veriyor, "o anahtarın değeri ne" sorusuna değil.
 --
 -- Bu migration KESİNLİKLE Taktikalp46 için yeni bir Supabase projesi
 -- AÇMIYOR — kullanıcının açık talimatı. Sadece Platform DB'de bir satır.
@@ -42,7 +61,8 @@ create table public.stores (
   -- Hangi Supabase projesinin bu mağazanın e-ticaret verisini
   -- (ileride: products/orders/...) tutacağını işaret eder. NULL =
   -- henüz bir e-ticaret backend'i bağlanmadı (bugünkü Petra durumu —
-  -- mağaza kaydı var, ürün/sipariş sistemi yok).
+  -- mağaza kaydı var, ürün/sipariş sistemi yok). Yalnızca bir ETİKET —
+  -- bkz. dosya başındaki güvenlik notu.
   supabase_connection_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -66,7 +86,7 @@ create index stores_status_idx on public.stores (status);
 alter table public.stores enable row level security;
 
 -- Aynı desen: customers/websites (migration 0004) ile birebir aynı
--- erişim şekli. is_customer_member() zaten migration 0005'te store-
+-- erişim şekli. is_customer_member() zaten migration 0006'da store-
 -- eşdeğeri rolleri tanıyor, burada hiçbir yeni fonksiyon gerekmiyor.
 create policy stores_select_member_or_admin
   on public.stores for select
@@ -87,10 +107,12 @@ create policy stores_delete_admin_only
 
 -- Seed: TEK gerçek satır, Petra için. Uydurma bir "ikinci test mağazası"
 -- YOK — bu migration'ın kapsamı bugün gerçekten var olan tek müşteriyi
--- kaydetmek. customer_id + supabase_connection_key, 2026-08-22'de
--- doğrudan Platform DB'den doğrulanan gerçek değerler (bkz. Phase 1
--- raporu): customers.id = '55bf2f5c-5ac9-4d9e-9e9a-8b8f153ee81d',
--- websites.supabase_connection_key = 'PETRA'.
+-- kaydetmek. customer_id + supabase_connection_key, bu oturumda
+-- doğrudan Platform DB'den (canlı `customers`/`websites` sorgularıyla,
+-- iki kez) doğrulanan gerçek değerler: customers.id =
+-- '55bf2f5c-5ac9-4d9e-9e9a-8b8f153ee81d' (name: "Petra Mühendislik",
+-- slug: "petra-muhendislik", status: active),
+-- websites.supabase_connection_key = 'PETRA' (status: active).
 insert into public.stores (customer_id, name, slug, status, supabase_connection_key)
 values (
   '55bf2f5c-5ac9-4d9e-9e9a-8b8f153ee81d',
