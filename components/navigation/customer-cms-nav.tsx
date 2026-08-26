@@ -10,6 +10,7 @@ import {
   Inbox,
   Settings2,
   Sparkles,
+  Store,
   Wrench,
   Layers,
   FolderKanban,
@@ -54,6 +55,7 @@ export function CustomerCmsNav({ customerId }: CustomerCmsNavProps) {
     { href: `${base}/seo`, label: "SEO", match: `${base}/seo`, icon: Search },
     { href: `${base}/tracking`, label: "Tracking", match: `${base}/tracking`, icon: BarChart3 },
     { href: `${base}/leads`, label: "Talepler", match: `${base}/leads`, icon: Inbox },
+    { href: `${base}/stores`, label: "Mağazalar", match: `${base}/stores`, icon: Store },
     { href: `${base}/settings`, label: "Site Ayarları", match: `${base}/settings`, icon: Settings2 },
   ];
 

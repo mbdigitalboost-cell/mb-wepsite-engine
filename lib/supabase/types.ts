@@ -7,6 +7,18 @@
  *   supabase/platform/migrations/0005_expand_roles_enum.sql
  *   supabase/platform/migrations/0006_expand_roles_rbac.sql
  *   supabase/platform/migrations/0007_stores.sql
+ *   supabase/platform/migrations/0008_store_extension_helpers.sql (fonksiyon, tablo eklemiyor)
+ *   supabase/platform/migrations/0009_store_profile_settings.sql
+ *   supabase/platform/migrations/0010_store_branding_navigation.sql
+ *   supabase/platform/migrations/0011_store_homepage_builder.sql
+ *
+ * PHASE 2 NOTU: 0008-0011 henüz production'a UYGULANMADI (bkz. o
+ * dosyaların başlığı) — bu tip tanımları migration SQL'iyle birebir
+ * eşleşecek şekilde ELLE yazıldı ki kod bugünden itibaren type-check
+ * edilebilsin. Migration'lar production'a uygulandıktan SONRA bu blok
+ * `generate_typescript_types` ile yeniden üretilip DOĞRULANMALI (elle
+ * yazılmış olması, canlı şemadan sapma riski taşır — bkz. PHASE 2 final
+ * raporundaki "kalan riskler" bölümü).
  *
  * Once a real Platform Supabase project exists, this can be regenerated
  * from the live schema with:
@@ -35,6 +47,12 @@ export type CustomerStatus = "active" | "inactive";
 export type WebsiteStatus = "active" | "inactive";
 /** Phase 1, migration 0007_stores.sql. */
 export type StoreStatus = "active" | "inactive";
+/** Phase 2, migration 0009_store_profile_settings.sql. */
+export type StoreTaxMode = "included" | "excluded" | "disabled";
+/** Phase 2, migration 0010_store_branding_navigation.sql. */
+export type StoreButtonStyle = "rounded" | "square" | "pill";
+export type StoreColorMode = "light" | "dark" | "system";
+export type StoreNavigationMenuType = "main" | "footer" | "category";
 /**
  * Phase 1 (migration 0005_expand_roles_enum.sql +
  * 0006_expand_roles_rbac.sql — enum değerleri ve onların kullanımı,
@@ -293,8 +311,348 @@ export type Database = {
           },
         ];
       };
+      /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. */
+      store_profiles: {
+        Row: {
+          store_id: string;
+          display_name: string | null;
+          description: string | null;
+          logo_url: string | null;
+          favicon_url: string | null;
+          phone: string | null;
+          email: string | null;
+          address: string | null;
+          social_links: Json;
+          business_info: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          display_name?: string | null;
+          description?: string | null;
+          logo_url?: string | null;
+          favicon_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          address?: string | null;
+          social_links?: Json;
+          business_info?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          display_name?: string | null;
+          description?: string | null;
+          logo_url?: string | null;
+          favicon_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          address?: string | null;
+          social_links?: Json;
+          business_info?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_profiles_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. */
+      store_settings: {
+        Row: {
+          store_id: string;
+          currency: string;
+          locale: string;
+          tax_mode: StoreTaxMode;
+          maintenance_mode: boolean;
+          maintenance_message: string | null;
+          customer_settings: Json;
+          order_settings: Json;
+          general_preferences: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          currency?: string;
+          locale?: string;
+          tax_mode?: StoreTaxMode;
+          maintenance_mode?: boolean;
+          maintenance_message?: string | null;
+          customer_settings?: Json;
+          order_settings?: Json;
+          general_preferences?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          currency?: string;
+          locale?: string;
+          tax_mode?: StoreTaxMode;
+          maintenance_mode?: boolean;
+          maintenance_message?: string | null;
+          customer_settings?: Json;
+          order_settings?: Json;
+          general_preferences?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /** Phase 2, migration 0010_store_branding_navigation.sql. Henüz production'a uygulanmadı. */
+      store_branding: {
+        Row: {
+          store_id: string;
+          primary_color: string | null;
+          secondary_color: string | null;
+          accent_color: string | null;
+          button_style: StoreButtonStyle | null;
+          typography: string | null;
+          color_mode: StoreColorMode;
+          theme_config: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          primary_color?: string | null;
+          secondary_color?: string | null;
+          accent_color?: string | null;
+          button_style?: StoreButtonStyle | null;
+          typography?: string | null;
+          color_mode?: StoreColorMode;
+          theme_config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          primary_color?: string | null;
+          secondary_color?: string | null;
+          accent_color?: string | null;
+          button_style?: StoreButtonStyle | null;
+          typography?: string | null;
+          color_mode?: StoreColorMode;
+          theme_config?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_branding_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /** Phase 2, migration 0010_store_branding_navigation.sql. Henüz production'a uygulanmadı. */
+      store_navigation_menus: {
+        Row: {
+          id: string;
+          store_id: string;
+          menu_type: StoreNavigationMenuType;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          menu_type: StoreNavigationMenuType;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          menu_type?: StoreNavigationMenuType;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_navigation_menus_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /** Phase 2, migration 0010_store_branding_navigation.sql. Henüz production'a uygulanmadı. */
+      store_navigation_items: {
+        Row: {
+          id: string;
+          menu_id: string;
+          store_id: string;
+          parent_item_id: string | null;
+          label: string;
+          url: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          menu_id: string;
+          store_id: string;
+          parent_item_id?: string | null;
+          label: string;
+          url: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          menu_id?: string;
+          store_id?: string;
+          parent_item_id?: string | null;
+          label?: string;
+          url?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_navigation_items_menu_id_fkey";
+            columns: ["menu_id"];
+            referencedRelation: "store_navigation_menus";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_navigation_items_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /** Phase 2, migration 0011_store_homepage_builder.sql. Henüz production'a uygulanmadı. */
+      homepage_section_types: {
+        Row: {
+          key: string;
+          label: string;
+          description: string | null;
+          default_config: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          label: string;
+          description?: string | null;
+          default_config?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          label?: string;
+          description?: string | null;
+          default_config?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      /** Phase 2, migration 0011_store_homepage_builder.sql. Henüz production'a uygulanmadı. */
+      store_homepage_sections: {
+        Row: {
+          id: string;
+          store_id: string;
+          section_type_key: string;
+          internal_label: string | null;
+          title: string | null;
+          description: string | null;
+          image_url: string | null;
+          link_url: string | null;
+          config: Json;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          section_type_key: string;
+          internal_label?: string | null;
+          title?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          link_url?: string | null;
+          config?: Json;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          section_type_key?: string;
+          internal_label?: string | null;
+          title?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          link_url?: string | null;
+          config?: Json;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_homepage_sections_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_homepage_sections_section_type_key_fkey";
+            columns: ["section_type_key"];
+            referencedRelation: "homepage_section_types";
+            referencedColumns: ["key"];
+          },
+        ];
+      };
     };
-    Views: Record<string, never>;
+    Views: {
+      /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. Read-only projeksiyon — Insert/Update yok. */
+      store_public_settings: {
+        Row: {
+          store_id: string;
+          currency: string;
+          locale: string;
+          maintenance_mode: boolean;
+          maintenance_message: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: Record<string, never>;
     Enums: {
       customer_status: CustomerStatus;

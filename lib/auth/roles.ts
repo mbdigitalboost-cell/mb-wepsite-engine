@@ -41,3 +41,18 @@ export function isStoreRole(role: AppRole): boolean {
 export function isStoreWriteRole(role: AppRole): boolean {
   return (STORE_WRITE_ROLES as readonly string[]).includes(role);
 }
+
+/**
+ * PHASE 2 EKİ (2026-08-25 karar madde 2) — store_editor'ü store_admin'den
+ * ayıran, önceden hiç var olmayan bir üçüncü kademe. STORE_WRITE_ROLES
+ * (yukarıda) "içerik yazabilir" (store_admin+store_editor) anlamına
+ * gelmeye devam ediyor — DEĞİŞMEDİ. Bu YENİ sabit ise "Store
+ * Profile/Settings/kritik ayarlar yazabilir" anlamına geliyor: SADECE
+ * store_admin, store_editor DAHİL DEĞİL. DB tarafındaki eşdeğeri:
+ * is_store_admin_member() (bkz. migration 0008_store_extension_helpers.sql).
+ */
+export const STORE_ADMIN_TIER_ROLES = ["store_admin"] as const satisfies readonly AppRole[];
+
+export function isStoreAdminTierRole(role: AppRole): boolean {
+  return (STORE_ADMIN_TIER_ROLES as readonly string[]).includes(role);
+}

@@ -51,6 +51,32 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "seo.update": "SEO güncellendi",
   "tracking.update": "Tracking ayarları güncellendi",
   "lead.status_change": "Talep durumu değiştirildi",
+
+  // PHASE 2 — Commerce Admin: Stores + store-scoped submodules
+  "store.create": "Mağaza oluşturuldu",
+  "store.update": "Mağaza güncellendi",
+  "store.activate": "Mağaza aktifleştirildi",
+  "store.deactivate": "Mağaza pasifleştirildi",
+  "store_profile.update": "Mağaza profili güncellendi",
+  "store_settings.update": "Mağaza ayarları güncellendi",
+  "store_settings.maintenance_enable": "Bakım modu açıldı",
+  "store_settings.maintenance_disable": "Bakım modu kapatıldı",
+  "store_settings.maintenance_reauth_failed": "Bakım modu değişikliği (şifre onayı başarısız)",
+  "store_branding.update": "Mağaza marka/tema ayarları güncellendi",
+  "navigation_menu.create": "Navigasyon menüsü oluşturuldu",
+  "navigation_item.create": "Navigasyon öğesi oluşturuldu",
+  "navigation_item.update": "Navigasyon öğesi güncellendi",
+  "navigation_item.delete": "Navigasyon öğesi silindi",
+  "navigation_item.reorder": "Navigasyon sıralaması güncellendi",
+  "homepage_section.create": "Ana sayfa bölümü oluşturuldu",
+  "homepage_section.update": "Ana sayfa bölümü güncellendi",
+  "homepage_section.delete": "Ana sayfa bölümü silindi",
+  "homepage_section.activate": "Ana sayfa bölümü aktifleştirildi",
+  "homepage_section.deactivate": "Ana sayfa bölümü pasifleştirildi",
+  "homepage_section.reorder": "Ana sayfa bölüm sıralaması güncellendi",
+  "homepage_section_type.create": "Ana sayfa bölüm tipi oluşturuldu",
+  "homepage_section_type.update": "Ana sayfa bölüm tipi güncellendi",
+  "homepage_section_type.deactivate": "Ana sayfa bölüm tipi pasifleştirildi",
 };
 
 export function auditActionLabel(action: string): string {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Globe, UserCog, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Globe, Store, UserCog, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Icon } from "@/components/ui/icon";
@@ -22,6 +22,7 @@ const adminLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/customers", label: "Müşteriler", icon: Users },
   { href: "/dashboard/websites", label: "Web Siteleri", icon: Globe },
+  { href: "/dashboard/stores", label: "Mağazalar", icon: Store },
   { href: "/dashboard/users", label: "Kullanıcılar", icon: UserCog },
   { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
 ];

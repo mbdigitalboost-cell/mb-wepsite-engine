@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { loadRoleContext } from "@/lib/auth/require-role";
+import { requireAal2 } from "@/lib/auth/require-aal2";
 
 export interface AdminContext {
   user: User;
@@ -26,11 +27,19 @@ export interface AdminContext {
  * YANLIŞLIKLA reddederdi. `loadRoleContext().isAdmin` zaten
  * `isAdminRole()` üzerinden ailenin tamamını doğru tanıyor (bkz.
  * lib/auth/roles.ts).
+ *
+ * PHASE 2 CRITICAL REMEDIATION (CRITICAL 2 — bkz.
+ * PHASE_2_CRITICAL_REMEDIATION_PLAN.md §8-9): platform admin işlemleri
+ * (Level 3/4 — `changeUserRoleAction`, `inviteUserAction` dahil TÜM
+ * admin-only Server Action'lar) `requireAal2()` çağırır — SADECE
+ * dashboard layout'ta değil, bu fonksiyonun kendi kod yolunda, her
+ * invocation'da. Bkz. lib/auth/require-aal2.ts'in dosya yorumu.
  */
 export async function requireAdmin(): Promise<AdminContext> {
   const context = await loadRoleContext();
   if (!context.isAdmin) {
     redirect("/dashboard");
   }
+  await requireAal2();
   return { user: context.user };
 }
