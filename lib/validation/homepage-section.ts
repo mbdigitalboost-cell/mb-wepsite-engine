@@ -62,7 +62,7 @@ export const homepageSectionFormSchema = z.object({
   internalLabel: z.string().trim().max(150).optional().or(z.literal("")),
   title: z.string().trim().max(300).optional().or(z.literal("")),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
-  imageUrl: z.string().trim().max(500).url("Geçerli bir URL olmalı.").optional().or(z.literal("")),
+  imageUrl: optionalSafeNavigationUrlSchema(500),
   // PHASE 2 CRITICAL REMEDIATION (CRITICAL 1, kısım C) — bkz. lib/validation/safe-url.ts.
   linkUrl: optionalSafeNavigationUrlSchema(500),
   isActive: z.coerce.boolean().default(true),
