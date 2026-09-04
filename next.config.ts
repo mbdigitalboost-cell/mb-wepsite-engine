@@ -17,6 +17,26 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Faz 4E: `next/image` varsayılan olarak hiçbir harici host'a izin
+  // vermez — bu blok yokken, admin'den yüklenen ve customer Supabase
+  // Storage'ında yaşayan HER görsel (ör. Ürün Yelpazesi kartları)
+  // optimizer'dan 400 dönüyordu (ham dosyanın kendisi sağlamdı, sorun
+  // buradaydı). Wildcard `*.supabase.co` seçildi, tek bir müşterinin
+  // (Petra'nın `wahbjfhvizalenyxjywb`) host'unu sabitlemek yerine —
+  // platform mimarisi her müşteriye ayrı bir Supabase projesi
+  // (`<proje-ref>.supabase.co`) veriyor (bkz. lib/cms/connection.ts),
+  // tek host'u yazmak bir sonraki müşteride aynı hataya düşerdi.
+  // `pathname`, Supabase Storage'ın public URL şemasıyla sınırlı —
+  // aynı host'taki başka bir path'e izin vermiyor.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {
