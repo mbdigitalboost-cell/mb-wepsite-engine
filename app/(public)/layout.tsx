@@ -11,10 +11,12 @@ import { petraNavLinks, petraLegalLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
-import { getTrackingPublicSettings, getNavigation } from "@/lib/cms/adapters";
+import { getTrackingPublicSettings, getNavigation, getSiteSettings } from "@/lib/cms/adapters";
+import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyLayoutSeoOverrides } from "@/lib/seo/build-metadata";
+import type { SiteSettingsRow } from "@/lib/cms/customer-types";
+import type { BrandTheme } from "@/lib/theme/types";
 
-const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
 const PETRA_CONNECTION_KEY = "PETRA";
 
 const petraDefaultTitle = "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven";
@@ -84,16 +86,51 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
   // header'da her zaman görünür, CMS bağlantısı/içeriği ne olursa olsun.
   const headerNavLinks = [...navLinks, { href: "/btu-hesaplama", label: "BTU Hesaplama" }];
 
+  // Faz 4B: site_settings → public bağlantısı. `siteSettings` null ise
+  // (bağlantı yok, satır yok veya hata) her aşağıdaki `resolved*`/`contactInfo`
+  // değeri sessizce statik fallback'e düşer — sayfa asla boş kalmaz. Satır
+  // varsa bile, boş bırakılan HER alan kendi statik karşılığına düşer
+  // (bkz. dashboard/customers/[customerId]/settings/page.tsx'in kendi
+  // metni: "burada girilmeyen bir değer public sitede uydurulmaz").
+  const siteSettings = await getSiteSettings<SiteSettingsRow | null>(PETRA_CONNECTION_KEY, null);
+  const contactInfo = siteSettings ? mapSiteSettingsContactInfo(siteSettings, petraContactInfo) : petraContactInfo;
+  const resolvedSiteName = siteSettings?.company_name ?? petraSiteName;
+  // site_settings'teki "logo" (normal, açık zemin için) / "logo_white"
+  // (beyaz, koyu zemin için) adlandırması, Logo bileşeninin
+  // logoSrcLight/logoSrcDark ayrımıyla aynı anlama gelir — bkz.
+  // lib/data/petra/brand-assets.ts'in kendi yorumu.
+  const resolvedLogoSrcDark = siteSettings?.logo_white ?? petraBrandAssets.logoSrcDark;
+  const resolvedLogoSrcLight = siteSettings?.logo ?? petraBrandAssets.logoSrcLight;
+  const whatsappHref = buildWhatsappHref(contactInfo.whatsapp);
+  // Sadece primary_color/secondary_color/radius bağlandı — ikisi de
+  // BrandTheme'de düz `string`. `button_style` BİLİNÇLİ OLARAK DIŞARIDA
+  // BIRAKILDI: admin formunda serbest metin (herhangi bir değer
+  // girilebilir) ama BrandTheme.buttonStyle sıkı bir union tipi
+  // ("solid"|"outline"|"soft") — DB'den doğrulanmamış bir string'i buraya
+  // basmak ya tip güvenliğini bir `as` ile kırar ya da sessizce geçersiz
+  // bir değer üretir. Bu, faz talimatının "kapsamlı mimari değişiklik
+  // gerekiyorsa dur ve raporla" maddesine giriyor — ayrı bir karar/doğrulama
+  // katmanı gerektirir, bu fazda YAPILMADI (bkz. rapor).
+  const theme: BrandTheme = {
+    ...petraTheme,
+    colors: {
+      ...petraTheme.colors,
+      primary: siteSettings?.primary_color ?? petraTheme.colors.primary,
+      secondary: siteSettings?.secondary_color ?? petraTheme.colors.secondary,
+    },
+    radius: siteSettings?.radius ?? petraTheme.radius,
+  };
+
   return (
-    <ThemeProvider theme={petraTheme}>
+    <ThemeProvider theme={theme}>
       <div className="petra-poppins flex min-h-full flex-1 flex-col bg-brand-background text-brand-foreground">
         <SiteHeader
-          siteName={petraSiteName}
-          logoSrcDark={petraBrandAssets.logoSrcDark}
-          logoSrcLight={petraBrandAssets.logoSrcLight}
+          siteName={resolvedSiteName}
+          logoSrcDark={resolvedLogoSrcDark}
+          logoSrcLight={resolvedLogoSrcLight}
           navLinks={headerNavLinks}
-          phone={petraContactInfo.phone}
-          phoneDisplay={petraContactInfo.phoneDisplay}
+          phone={contactInfo.phone}
+          phoneDisplay={contactInfo.phoneDisplay}
           ctaLabel="Keşif Talep Et"
           ctaHref="/iletisim"
           whatsappHref={whatsappHref}
@@ -106,24 +143,24 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
         */}
         <main className="flex-1 pt-20 pb-16 lg:pb-0">{children}</main>
         <SiteFooter
-          siteName={petraSiteName}
+          siteName={resolvedSiteName}
           tagline={petraTagline}
-          logoSrcDark={petraBrandAssets.logoSrcDark}
-          logoSrcLight={petraBrandAssets.logoSrcLight}
+          logoSrcDark={resolvedLogoSrcDark}
+          logoSrcLight={resolvedLogoSrcLight}
           navLinks={navLinks}
           legalLinks={petraLegalLinks}
-          phone={petraContactInfo.phone}
-          phoneDisplay={petraContactInfo.phoneDisplay}
+          phone={contactInfo.phone}
+          phoneDisplay={contactInfo.phoneDisplay}
           whatsappHref={whatsappHref}
-          email={petraContactInfo.email}
-          address={petraContactInfo.address}
-          serviceArea={petraContactInfo.serviceArea}
-          workingHours={petraContactInfo.workingHours}
-          mapUrl={petraContactInfo.mapUrl}
+          email={contactInfo.email}
+          address={contactInfo.address}
+          serviceArea={contactInfo.serviceArea}
+          workingHours={contactInfo.workingHours}
+          mapUrl={contactInfo.mapUrl}
           socialLinks={petraSocialLinks}
         />
         <MobileStickyCta
-          phone={petraContactInfo.phone}
+          phone={contactInfo.phone}
           whatsapp={whatsappHref}
           quoteHref="/iletisim"
         />

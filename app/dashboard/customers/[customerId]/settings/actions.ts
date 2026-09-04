@@ -87,6 +87,14 @@ export async function saveSiteSettingsAction(
   await logAuditEvent({ userId: user.id, customerId, action: "site.update", entityType: "site_settings", entityId: resolvedId, metadata: row });
 
   revalidatePath(`/dashboard/customers/${customerId}/settings`);
+  // Faz 4B: site_settings artık public layout'ta (header/footer/floating
+  // WhatsApp/mobile CTA/logo/tema renkleri) okunuyor — ve `/` route'u
+  // build'de statik ("○ Static") üretiliyor. Bu satır olmadan admin
+  // kaydeder ama public site bir sonraki deploy'a kadar HİÇ değişmez
+  // (bkz. FAZ 4A raporu §15/FAZ 4B raporu). `"layout"` tipi, layout.tsx'i
+  // paylaşan HER public route'u (sadece `/` değil) yeniden doğrular —
+  // header/footer aynı layout'tan tüm sayfalara render olduğu için gerekli.
+  revalidatePath("/", "layout");
   return { error: null };
 }
 
@@ -103,4 +111,7 @@ export async function setSiteSettingsStatusAction(customerId: string, settingsId
 
   await logAuditEvent({ userId: user.id, customerId, action: "site.update", entityType: "site_settings", entityId: settingsId, metadata: { status: nextStatus } });
   revalidatePath(`/dashboard/customers/${customerId}/settings`);
+  // Faz 4B: aynı gerekçe — publish/archive de public'in okuduğu
+  // `status='published'` satırını değiştirir (bkz. saveSiteSettingsAction).
+  revalidatePath("/", "layout");
 }

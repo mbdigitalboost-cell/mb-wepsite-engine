@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
-import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign } from "@/lib/data/petra/types";
+import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign, PetraContactInfo } from "@/lib/data/petra/types";
 
 /**
  * Maps CUSTOMER CMS rows into the exact static Petra types the existing
@@ -193,4 +193,28 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
 /** Only the whatsapp field is used today (homepage CTA) — the rest of site_settings isn't wired to any page yet this phase. */
 export function mapSiteSettingsWhatsapp(row: SiteSettingsRow): string | null {
   return row.whatsapp;
+}
+
+/**
+ * Faz 4B — public layout'un header/footer/floating WhatsApp/mobile CTA
+ * zincirinin ortak kaynağı. Her alan BAĞIMSIZ olarak kendi statik
+ * karşılığına düşer (satırın tamamı değil, tek tek alanlar) — bir
+ * müşteri sadece `whatsapp`'ı doldurup `email`'i boş bırakabilir, bu
+ * durumda `email` hâlâ statik `fallback.email`'i gösterir. `phoneDisplay`
+ * ayrı bir DB kolonu değil — statik veride olduğu gibi `phone` ile aynı
+ * değeri taşır. `mapUrl`'nin site_settings'te hiç karşılığı yok (adres
+ * metni var ama Google Maps koordinat linki yok), bu yüzden her zaman
+ * statik kalır.
+ */
+export function mapSiteSettingsContactInfo(row: SiteSettingsRow, fallback: PetraContactInfo): PetraContactInfo {
+  return {
+    phone: row.phone ?? fallback.phone,
+    phoneDisplay: row.phone ?? fallback.phoneDisplay,
+    whatsapp: row.whatsapp ?? fallback.whatsapp,
+    email: row.email ?? fallback.email,
+    address: row.address ?? fallback.address,
+    serviceArea: row.service_area ?? fallback.serviceArea,
+    workingHours: row.working_hours ?? fallback.workingHours,
+    mapUrl: fallback.mapUrl,
+  };
 }
