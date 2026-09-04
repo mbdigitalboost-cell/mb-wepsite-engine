@@ -72,7 +72,7 @@ export function SiteHeader({
             <a
               href={`tel:${phone}`}
               onClick={() => track("phone_click", { source: "header" })}
-              className="hidden items-center gap-2 text-sm font-medium text-white lg:flex"
+              className="hidden items-center gap-2 whitespace-nowrap text-sm font-medium text-white lg:flex"
             >
               <Icon icon={Phone} size="sm" className="text-brand-primary" />
               {phoneDisplay}
@@ -91,6 +91,7 @@ export function SiteHeader({
             <Button
               href={ctaHref}
               size="sm"
+              className="whitespace-nowrap"
               onClick={() => track("generate_lead", { source: "header" })}
             >
               {ctaLabel}

@@ -19,7 +19,7 @@ import {
 } from "@/lib/btu/types";
 
 const inputClasses =
-  "w-full rounded-[var(--radius-brand)] border border-white/15 bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:border-brand-primary focus-visible:outline-none";
+  "w-full rounded-[var(--radius-brand)] border border-white/15 bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:border-brand-primary focus-visible:outline-none [color-scheme:dark]";
 
 const numberFormatter = new Intl.NumberFormat("tr-TR");
 

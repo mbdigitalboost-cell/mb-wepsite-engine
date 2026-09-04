@@ -9,7 +9,7 @@ export function DesktopNav({ links }: { links: PetraNavLink[] }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Ana menü" className="hidden items-center gap-8 lg:flex">
+    <nav aria-label="Ana menü" className="hidden items-center gap-6 lg:flex">
       {links.map((link) => {
         const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
         return (
@@ -18,7 +18,7 @@ export function DesktopNav({ links }: { links: PetraNavLink[] }) {
             href={link.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "text-sm font-medium tracking-wide transition-colors",
+              "text-sm font-medium tracking-wide whitespace-nowrap transition-colors",
               isActive ? "text-white" : "text-white/70 hover:text-white",
             )}
           >
