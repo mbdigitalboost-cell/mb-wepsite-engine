@@ -15,3 +15,4 @@ export { getFaqs } from "@/lib/cms/adapters/faqs";
 export { getSiteSettings } from "@/lib/cms/adapters/site-settings";
 export { getSeo } from "@/lib/cms/adapters/seo";
 export { getTrackingPublicSettings } from "@/lib/cms/adapters/tracking";
+export { getNavigation } from "@/lib/cms/adapters/navigation";
