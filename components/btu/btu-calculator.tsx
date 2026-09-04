@@ -21,6 +21,10 @@ import {
 const inputClasses =
   "w-full rounded-[var(--radius-brand)] border border-white/15 bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:border-brand-primary focus-visible:outline-none [color-scheme:dark]";
 
+// Native <select> popup'ında option satırlarının koyu zemin/açık yazı
+// olmasını garanti eder (color-scheme tek başına yeterli değil).
+const optionClasses = "bg-[#0B0D0F] text-white";
+
 const numberFormatter = new Intl.NumberFormat("tr-TR");
 
 function formatBtu(value: number): string {
@@ -109,9 +113,11 @@ export function BtuCalculator() {
               className={inputClasses}
               aria-invalid={Boolean(fieldErrors.region)}
             >
-              <option value="">Seçiniz</option>
+              <option value="" className={optionClasses}>
+                Seçiniz
+              </option>
               {REGIONS.map((region) => (
-                <option key={region} value={region}>
+                <option key={region} value={region} className={optionClasses}>
                   {REGION_LABELS[region]}
                 </option>
               ))}
@@ -230,9 +236,11 @@ export function BtuCalculator() {
               className={inputClasses}
               aria-invalid={Boolean(fieldErrors.facade)}
             >
-              <option value="">Seçiniz</option>
+              <option value="" className={optionClasses}>
+                Seçiniz
+              </option>
               {FACADES.map((facade) => (
-                <option key={facade} value={facade}>
+                <option key={facade} value={facade} className={optionClasses}>
                   {FACADE_LABELS[facade]}
                 </option>
               ))}
@@ -251,9 +259,11 @@ export function BtuCalculator() {
               className={inputClasses}
               aria-invalid={Boolean(fieldErrors.sunExposure)}
             >
-              <option value="">Seçiniz</option>
+              <option value="" className={optionClasses}>
+                Seçiniz
+              </option>
               {SUN_EXPOSURE_LEVELS.map((level) => (
-                <option key={level} value={level}>
+                <option key={level} value={level} className={optionClasses}>
                   {SUN_EXPOSURE_LABELS[level]}
                 </option>
               ))}
@@ -274,9 +284,11 @@ export function BtuCalculator() {
               className={inputClasses}
               aria-invalid={Boolean(fieldErrors.insulationLevel)}
             >
-              <option value="">Seçiniz</option>
+              <option value="" className={optionClasses}>
+                Seçiniz
+              </option>
               {INSULATION_LEVELS.map((level) => (
-                <option key={level} value={level}>
+                <option key={level} value={level} className={optionClasses}>
                   {INSULATION_LABELS[level]}
                 </option>
               ))}
