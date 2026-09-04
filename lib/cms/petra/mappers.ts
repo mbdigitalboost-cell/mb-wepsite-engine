@@ -185,18 +185,53 @@ export interface MappedHero {
 }
 
 /**
+ * The subset of the static `petraHero` shape that `mapHeroRow` needs when
+ * a CMS row has no `background_image` of its own — i.e. everything that
+ * describes what makes THAT SPECIFIC static photo work (its baked-in
+ * headline, its own crop position, its dedicated mobile portrait crop,
+ * the offsets that keep real text clear of its baked-in rows). `petraHero`
+ * itself satisfies this structurally — see the one call site in
+ * app/(public)/page.tsx.
+ */
+export interface HeroFallbackVisuals {
+  backgroundImage: string | null;
+  backgroundHasEmbeddedHeadline: boolean;
+  backgroundObjectPosition: string;
+  backgroundObjectPositionMobile: string | undefined;
+  backgroundImageMobile: string | null;
+  backgroundHasEmbeddedHeadlineMobile: boolean;
+  trustInfoOffset: string | undefined;
+  ctaTopOffset: string | undefined;
+}
+
+/**
  * Hero's static shape splits `heading` into multiple styled lines
  * (headingLines + accentLineIndex) and has a `trustInfo` list that
  * doesn't exist in the CMS row at all. A single CMS `heading` string is
  * rendered as one plain line (accentLineIndex -1 = no accent line) and
  * `trustInfo` always falls back to the static value — CMS has no
  * equivalent field for it, so nothing here invents one.
+ *
+ * Faz 4H (canlı arıza düzeltmesi): `background_image` NULL olan
+ * `published` bir CMS satırı, statik `petraHero.backgroundImage`'e
+ * düşüyor (aşağıdaki `usingFallbackImage`) — ama o statik fotoğrafın
+ * kendi baked-in başlığı/kırpma noktası/özel mobil görseli var, CMS'in
+ * "düz, sade fotoğraf" varsayımlarıyla (backgroundHasEmbeddedHeadline:
+ * false, objectPosition: "center", vb.) uyuşmuyor. Bu yüzden fallback
+ * SADECE görseli değil, o görsele ait TÜM bu alanları birlikte taşımalı
+ * — yoksa gerçek H1 baked-in başlığın üstüne biniyor (masaüstü) ve/veya
+ * mobil, bu geniş masaüstü banner'ının yanlış kırpılmış bir dilimini
+ * gösteriyor (kanıt: canlı ekran görüntüleri + görsel 1823×863px).
+ * `usingFallbackImage` false olduğunda (CMS gerçek bir fotoğraf
+ * sağladığında) davranış öncekiyle birebir aynı kalır: sabit "düz CMS
+ * fotoğrafı" varsayımları.
  */
 export function mapHeroRow(
   row: HeroSectionRow,
   fallbackTrustInfo: string[],
-  fallbackBackgroundImage: string | null,
+  fallback: HeroFallbackVisuals,
 ): MappedHero {
+  const usingFallbackImage = !row.background_image;
   return {
     headingLines: [row.heading],
     accentLineIndex: -1,
@@ -204,22 +239,14 @@ export function mapHeroRow(
     ctaPrimaryLabel: row.cta_primary_label ?? "",
     ctaPrimaryHref: row.cta_primary_href ?? "/iletisim",
     ctaSecondaryLabel: row.cta_secondary_label ?? "",
-    // Faz 4H (canlı arıza düzeltmesi): diğer her alanın aksine bu alanda
-    // fallback YOKTU — bir CMS satırı `published` ama `background_image`
-    // NULL olduğunda, HeroBackground görseli tamamen gizliyor (sadece
-    // gradient kalıyor) ve statik görselin İÇİNE gömülü "Mühendislik
-    // Yaklaşımı" ikon satırı da onunla birlikte kayboluyordu — metin
-    // alanlarındaki boş-string fallback'lerin aksine bu, tüm bir görsel
-    // bölümü görünmez kılan tek alandı. Artık diğer alanlarla aynı
-    // desende: DB NULL ise statik `petraHero.backgroundImage`'e düşer.
-    backgroundImage: row.background_image ?? fallbackBackgroundImage,
-    backgroundHasEmbeddedHeadline: false,
-    backgroundObjectPosition: "center",
-    backgroundObjectPositionMobile: undefined,
-    backgroundImageMobile: null,
-    backgroundHasEmbeddedHeadlineMobile: false,
-    trustInfoOffset: undefined,
-    ctaTopOffset: undefined,
+    backgroundImage: row.background_image ?? fallback.backgroundImage,
+    backgroundHasEmbeddedHeadline: usingFallbackImage ? fallback.backgroundHasEmbeddedHeadline : false,
+    backgroundObjectPosition: usingFallbackImage ? fallback.backgroundObjectPosition : "center",
+    backgroundObjectPositionMobile: usingFallbackImage ? fallback.backgroundObjectPositionMobile : undefined,
+    backgroundImageMobile: usingFallbackImage ? fallback.backgroundImageMobile : null,
+    backgroundHasEmbeddedHeadlineMobile: usingFallbackImage ? fallback.backgroundHasEmbeddedHeadlineMobile : false,
+    trustInfoOffset: usingFallbackImage ? fallback.trustInfoOffset : undefined,
+    ctaTopOffset: usingFallbackImage ? fallback.ctaTopOffset : undefined,
     ctaTopOffsetMobile: undefined,
     trustInfo: fallbackTrustInfo,
   };

@@ -107,9 +107,7 @@ export default async function HomePage() {
     getProductShowcaseItems(PETRA_CONNECTION_KEY, petraProductShowcase),
   ]);
 
-  const hero = isCmsRow(heroResult)
-    ? mapHeroRow(heroResult as HeroSectionRow, petraHero.trustInfo, petraHero.backgroundImage)
-    : petraHero;
+  const hero = isCmsRow(heroResult) ? mapHeroRow(heroResult as HeroSectionRow, petraHero.trustInfo, petraHero) : petraHero;
   const solutions = isCmsRow((solutionsResult as unknown[])[0])
     ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
