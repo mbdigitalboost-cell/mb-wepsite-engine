@@ -24,3 +24,8 @@ export const petraLegalLinks: PetraNavLink[] = [
   { href: "/cerez-politikasi", label: "Çerez Politikası" },
   { href: "/kullanim-sartlari", label: "Kullanım Şartları" },
 ];
+
+export const petraHeaderNavLinks: PetraNavLink[] = [
+  ...petraNavLinks,
+  { href: "/btu-hesaplama", label: "BTU Hesaplama" },
+];

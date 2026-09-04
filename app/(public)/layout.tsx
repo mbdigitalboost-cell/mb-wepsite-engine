@@ -11,7 +11,7 @@ import { petraNavLinks, petraLegalLinks } from "@/lib/data/petra/navigation";
 import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
-import { getTrackingPublicSettings } from "@/lib/cms/adapters";
+import { getTrackingPublicSettings, getNavigation } from "@/lib/cms/adapters";
 import { resolveSiteWideSeo, applyLayoutSeoOverrides } from "@/lib/seo/build-metadata";
 
 const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
@@ -79,6 +79,10 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
   // `tracking_settings` base table, never `meta_capi_token` (that field
   // doesn't even exist on this view — see lib/cms/adapters/tracking.ts).
   const trackingResult = await getTrackingPublicSettings(PETRA_CONNECTION_KEY, null);
+  const navLinks = await getNavigation(PETRA_CONNECTION_KEY, petraNavLinks);
+  // BTU hesaplama sayfası CMS'in navigation_items tablosunda yönetilmiyor —
+  // header'da her zaman görünür, CMS bağlantısı/içeriği ne olursa olsun.
+  const headerNavLinks = [...navLinks, { href: "/btu-hesaplama", label: "BTU Hesaplama" }];
 
   return (
     <ThemeProvider theme={petraTheme}>
@@ -87,7 +91,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           siteName={petraSiteName}
           logoSrcDark={petraBrandAssets.logoSrcDark}
           logoSrcLight={petraBrandAssets.logoSrcLight}
-          navLinks={petraNavLinks}
+          navLinks={headerNavLinks}
           phone={petraContactInfo.phone}
           phoneDisplay={petraContactInfo.phoneDisplay}
           ctaLabel="Keşif Talep Et"
@@ -106,7 +110,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           tagline={petraTagline}
           logoSrcDark={petraBrandAssets.logoSrcDark}
           logoSrcLight={petraBrandAssets.logoSrcLight}
-          navLinks={petraNavLinks}
+          navLinks={navLinks}
           legalLinks={petraLegalLinks}
           phone={petraContactInfo.phone}
           phoneDisplay={petraContactInfo.phoneDisplay}
