@@ -5,6 +5,7 @@ import { Solutions } from "@/components/sections/solutions";
 import { EngineeringProcess } from "@/components/sections/engineering-process";
 import { MitsubishiSection } from "@/components/sections/mitsubishi-section";
 import { ProductShowcaseSection } from "@/components/sections/product-showcase-section";
+import { BtuPromoSection } from "@/components/sections/btu-promo-section";
 import { BrandsSection } from "@/components/sections/brands-section";
 import { Projects } from "@/components/sections/projects";
 import { Campaigns } from "@/components/sections/campaigns";
@@ -125,6 +126,7 @@ export default async function HomePage() {
       <EngineeringProcess />
       <MitsubishiSection />
       <ProductShowcaseSection />
+      <BtuPromoSection />
       <BrandsSection />
       <Projects />
       <Campaigns />
