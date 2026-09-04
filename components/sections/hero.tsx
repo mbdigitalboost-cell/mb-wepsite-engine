@@ -153,7 +153,7 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         */}
         <div
           className={cn(
-            "lg:flex lg:flex-col lg:items-start lg:gap-6 lg:ml-[var(--trust-offset)]",
+            "lg:flex lg:flex-col lg:items-center lg:gap-6 lg:ml-[var(--trust-offset)]",
             hideDesktop && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
           )}
           style={
