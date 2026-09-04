@@ -10,6 +10,11 @@ import type { NamedContentRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
+// Faz 4G — güvenlik ağı: bkz. app/(public)/page.tsx'in aynı satırındaki
+// yorum. Admin'deki anlık webhook birincil mekanizma; bu sadece arıza
+// durumunda devreye giren bir üst sınır.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Hizmetler",
   description: "Satış, keşif, projelendirme, kurulum ve teknik servis — uçtan uca iklimlendirme hizmeti.",

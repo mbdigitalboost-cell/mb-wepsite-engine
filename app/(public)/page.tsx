@@ -32,6 +32,15 @@ import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsR
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
+// Faz 4G — güvenlik ağı: admin'deki anlık cross-deployment revalidate
+// (content/[type]/actions.ts'teki triggerRemoteRevalidation) birincil
+// mekanizma; bu, o herhangi bir sebeple (domain eşlemesi eksik, secret
+// yanlış, ağ hatası) başarısız olursa sitenin en geç bu sürede kendi
+// kendine düzelmesini sağlayan ikincil bir zaman bazlı ISR. 5 dakika:
+// çok kısa seçilirse gereksiz yeniden render yükü, çok uzun seçilirse
+// arıza anında kabul edilemez gecikme olur.
+export const revalidate = 300;
+
 // `title.absolute` — Phase 9.3 finding, verified directly against the
 // prerendered `.next/server/app/index.html` output (not just a running
 // `next start`, to rule out a stale-process artifact skewing the test —

@@ -7,6 +7,7 @@ import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-con
 import { getContentTypeConfig, isContentTypeKey, type ContentTypeConfig, type ContentTypeKey } from "@/lib/cms/dashboard/content-types";
 import { buildContentFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { ContentFormState } from "./form-state";
 import type { ContentStatus } from "@/lib/cms/customer-types";
 
@@ -73,6 +74,111 @@ const PUBLIC_DETAIL_PATH_TEMPLATES: Partial<Record<ContentTypeKey, (slug: string
 function revalidatePublicPathsForType(type: ContentTypeKey): void {
   revalidatePath("/", "layout");
   for (const path of PUBLIC_LIST_PATHS[type]) revalidatePath(path);
+}
+
+/** Aynı path kümesini `revalidatePublicPathsForType`'ın PANEL içindeki
+ * (etkisiz) çağrısıyla VE `triggerRemoteRevalidation`'ın gerçek hedefe
+ * gönderdiği istekle paylaşmak için — tek kaynak, iki tüketici. */
+function collectPublicPaths(type: ContentTypeKey, detailSlug: string | null): string[] {
+  const paths = ["/", ...PUBLIC_LIST_PATHS[type]];
+  const detailPathFor = PUBLIC_DETAIL_PATH_TEMPLATES[type];
+  if (detailPathFor && detailSlug) paths.push(detailPathFor(detailSlug));
+  return paths;
+}
+
+/**
+ * Faz 4G — B (birincil, anlık) mekanizması. `revalidatePublicPathsForType`
+ * (yukarıda) SADECE bu Server Action'ın kendi çalıştığı deployment'ın
+ * (panel — mb-digital-boost-web-panel) route cache'ini hedefler; panel
+ * public route'ları hiç servis etmediği için bu revalidation'ın gerçek
+ * bir hedefi yoktur (bkz. FAZ 4G teşhis raporu). Bu fonksiyon, ilgili
+ * müşterinin GERÇEK production domain'ine (Platform DB'nin
+ * `websites.domain` kolonundan — `lib/cms/resolve-customer-connection.ts`
+ * `resolveConnectionKeyForCustomer`'ıyla BİREBİR aynı sorgu deseni)
+ * imzalı bir POST isteğiyle o deployment'ın KENDİ /api/revalidate
+ * route'unu tetikler.
+ *
+ * Müşteriye özel HİÇBİR dallanma yok — customerId → domain eşlemesi
+ * Platform DB'den, secret tek bir ortak env değişkeninden
+ * (`REVALIDATE_WEBHOOK_SECRET`) geliyor; bu fonksiyon hangi müşteri
+ * olduğunu hiç bilmeden çalışır.
+ *
+ * Domain bulunamazsa (henüz yayında olmayan/domain'i ayarlanmamış bir
+ * müşteri) veya secret yapılandırılmamışsa SESSİZCE atlanır — admin
+ * kaydını asla bozmaz (throw etmez), sadece console.warn.
+ *
+ * `await` ediliyor (fire-and-forget DEĞİL): Vercel'in serverless
+ * fonksiyon modelinde, yanıt gönderildikten/fonksiyon return ettikten
+ * sonra bekletilmeyen bir Promise'in gerçekten tamamlanacağı garanti
+ * değildir — özellikle `createContentItemAction`'daki `redirect()`'ten
+ * ÖNCE çağrıldığı için, awaitlenmezse istek hiç gönderilmeden fonksiyon
+ * sonlanabilir. 3 saniyelik timeout, bunun admin'in "Kaydet" tıklamasını
+ * anlamsız şekilde uzun süre bekletmesini engelliyor — worst-case ek
+ * gecikme 3sn, sonsuz değil.
+ */
+async function triggerRemoteRevalidation(customerId: string, paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+
+  let domain: string | null;
+  try {
+    const platformAdmin = createSupabaseAdminClient();
+    const { data, error } = await platformAdmin
+      .from("websites")
+      .select("domain")
+      .eq("customer_id", customerId)
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[revalidate] websites lookup failed:", error.message);
+      return;
+    }
+    domain = data?.domain ?? null;
+  } catch (err) {
+    console.warn("[revalidate] platform admin client unavailable:", err);
+    return;
+  }
+
+  if (!domain) {
+    console.warn(`[revalidate] no active website domain for customerId=${customerId}, skipping remote revalidate`);
+    return;
+  }
+
+  const secret = process.env.REVALIDATE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn("[revalidate] REVALIDATE_WEBHOOK_SECRET not configured, skipping remote revalidate");
+    return;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const response = await fetch(`https://${domain}/api/revalidate`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        // Secret header'da taşınıyor, query string'de DEĞİL — URL'ler
+        // (Vercel access logları dahil) loglanabilir, header gövdesi
+        // aynı ölçüde loglanmaz.
+        "x-revalidate-secret": secret,
+      },
+      body: JSON.stringify({ paths }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.warn(`[revalidate] remote revalidate failed for ${domain}: HTTP ${response.status}`);
+      return;
+    }
+    console.log(`[revalidate] remote revalidate ok for ${domain}:`, paths);
+  } catch (err) {
+    console.warn(`[revalidate] remote revalidate request failed for ${domain}:`, err);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function readFormValues(config: ContentTypeConfig, formData: FormData): Record<string, unknown> {
@@ -144,6 +250,8 @@ export async function createContentItemAction(
   // kapsamayı sağlamak için burada da çağrılıyor — boş bir path'i
   // revalidate etmek zararsız (no-op).
   revalidatePublicPathsForType(type);
+  const createdSlug = typeof parsed.data.slug === "string" && parsed.data.slug ? parsed.data.slug : null;
+  await triggerRemoteRevalidation(customerId, collectPublicPaths(type, createdSlug));
   redirect(`/dashboard/customers/${customerId}/content/${type}/${data.id}`);
 }
 
@@ -191,10 +299,13 @@ export async function updateContentItemAction(
   // üretilen sayfalar bir sonraki deploy'a kadar eski içeriği göstermeye
   // devam ediyordu (kanıt: FAZ 4D teşhis raporu).
   revalidatePublicPathsForType(type);
+  const slug = typeof parsed.data.slug === "string" && parsed.data.slug ? parsed.data.slug : null;
   const detailPathFor = PUBLIC_DETAIL_PATH_TEMPLATES[type];
-  if (detailPathFor && typeof parsed.data.slug === "string" && parsed.data.slug) {
-    revalidatePath(detailPathFor(parsed.data.slug));
+  if (detailPathFor && slug) {
+    revalidatePath(detailPathFor(slug));
   }
+
+  await triggerRemoteRevalidation(customerId, collectPublicPaths(type, slug));
 
   return { error: null };
 }
@@ -247,6 +358,7 @@ export async function setContentItemStatusAction(
   // sorgusunu etkiler — aynı gerekçe, aynı kapsama.
   revalidatePublicPathsForType(type);
   const detailPathFor = PUBLIC_DETAIL_PATH_TEMPLATES[type];
+  let slug: string | null = null;
   if (detailPathFor) {
     // Bu action form verisi almıyor (sadece itemId + nextStatus), yani
     // slug elde etmenin tek yolu satırı okumak — status değişikliğinden
@@ -258,6 +370,9 @@ export async function setContentItemStatusAction(
     // cast etmek gerekiyor.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment in createContentItemAction above
     const { data: slugRow } = await (connection.client as any).from(type).select("slug").eq("id", itemId).maybeSingle();
-    if (slugRow?.slug) revalidatePath(detailPathFor(slugRow.slug as string));
+    slug = slugRow?.slug ?? null;
+    if (slug) revalidatePath(detailPathFor(slug));
   }
+
+  await triggerRemoteRevalidation(customerId, collectPublicPaths(type, slug));
 }

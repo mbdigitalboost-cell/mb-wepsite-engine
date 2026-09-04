@@ -10,6 +10,11 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
 
+// Faz 4G — güvenlik ağı: bkz. app/(public)/page.tsx'in aynı satırındaki
+// yorum. Admin'deki anlık webhook birincil mekanizma; bu sadece arıza
+// durumunda devreye giren bir üst sınır.
+export const revalidate = 300;
+
 /**
  * Phase 9.2: `resolvePetraSolutions()` (lib/cms/petra/resolve-solutions.ts,
  * shared with app/sitemap.ts as of Phase 9.3) is the single resolution
