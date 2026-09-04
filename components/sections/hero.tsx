@@ -134,77 +134,103 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
           </p>
         </Reveal>
 
-        <Reveal variant="fade-up" index={2}>
-          <div
-            className={cn(
-              "mt-10 flex flex-col gap-4 sm:flex-row",
-              hideMobile && hero.ctaTopOffsetMobile && "mt-[var(--cta-offset-mobile)]",
-              hideDesktop && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
-            )}
-            style={
-              {
-                ...(hideMobile && hero.ctaTopOffsetMobile
-                  ? { "--cta-offset-mobile": hero.ctaTopOffsetMobile }
-                  : {}),
-                ...(hideDesktop && hero.ctaTopOffset ? { "--cta-offset": hero.ctaTopOffset } : {}),
-              } as CSSProperties
-            }
-          >
-            <Button
-              href={hero.ctaPrimaryHref}
-              size="lg"
-              showArrow
-              trackEvent="generate_lead"
-              trackPayload={{ source: "hero" }}
+        {/*
+          Faz 4I (hizalama düzeltmesi): CTA butonları ve trustInfo satırı
+          masaüstünde (`lg`+) artık bu ORTAK sarmalayıcı üzerinden aynı
+          satırda, yan yana (`justify-between`) gösteriliyor — mobilde bu
+          div hiçbir unprefixed class taşımadığı için tamamen etkisiz
+          (düz bir <div>), iki alt öge eskisi gibi ayrı ayrı akışta kalır.
+          Dikey konumlandırma offset'i (`ctaTopOffset`) artık CTA'nın
+          kendi div'inden değil bu sarmalayıcıdan uygulanıyor — aksi
+          halde flex satırı içinde CTA kendi margin-top'uyla trustInfo'dan
+          aşağı kayardı. Her iki <Reveal> kendi bağımsız stagger index'ini
+          (2 / 3) koruyor, DOM/animasyon davranışları değişmedi.
+        */}
+        <div
+          className={cn(
+            "lg:flex lg:items-center lg:justify-between lg:gap-6",
+            hideDesktop && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
+          )}
+          style={
+            hideDesktop && hero.ctaTopOffset
+              ? ({ "--cta-offset": hero.ctaTopOffset } as CSSProperties)
+              : undefined
+          }
+        >
+          <Reveal variant="fade-up" index={2}>
+            <div
+              className={cn(
+                "mt-10 flex flex-col gap-4 sm:flex-row lg:mt-0",
+                hideMobile && hero.ctaTopOffsetMobile && "mt-[var(--cta-offset-mobile)]",
+              )}
+              style={
+                hideMobile && hero.ctaTopOffsetMobile
+                  ? ({ "--cta-offset-mobile": hero.ctaTopOffsetMobile } as CSSProperties)
+                  : undefined
+              }
             >
-              {hero.ctaPrimaryLabel}
-            </Button>
-            {whatsappHref ? (
               <Button
-                href={whatsappHref}
-                external
-                variant="outline"
+                href={hero.ctaPrimaryHref}
                 size="lg"
-                className="text-white"
-                trackEvent="whatsapp_click"
+                showArrow
+                trackEvent="generate_lead"
                 trackPayload={{ source: "hero" }}
               >
-                {hero.ctaSecondaryLabel}
+                {hero.ctaPrimaryLabel}
               </Button>
-            ) : null}
-          </div>
-        </Reveal>
+              {whatsappHref ? (
+                <Button
+                  href={whatsappHref}
+                  external
+                  variant="outline"
+                  size="lg"
+                  className="text-white"
+                  trackEvent="whatsapp_click"
+                  trackPayload={{ source: "hero" }}
+                >
+                  {hero.ctaSecondaryLabel}
+                </Button>
+              ) : null}
+            </div>
+          </Reveal>
 
-        <Reveal variant="fade-up" index={3}>
-          {/*
-            trustInfoOffset only ever needs to clear a baked-in image row
-            that itself only appears at desktop widths (see
-            lib/data/petra/hero.ts's doc) — scoped to lg: so mobile, where
-            there's no collision to avoid, keeps its normal left-aligned
-            position instead of being pushed off-screen. When the mobile
-            image has its own baked-in "why us" icon row (`hideMobile`),
-            this real trustInfo line would duplicate it, so it's hidden
-            below `lg` the same way the heading/subtext are.
-          */}
-          <div
-            className={cn(
-              "mt-14 items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:ml-[var(--trust-offset)]",
-              // trustInfo is never hidden at `lg`+ — even when the desktop
-              // image has its own baked icon row, the real line stays
-              // visible there and just shifts via `trustInfoOffset`
-              // instead (unchanged, pre-existing behavior).
-              hideMobile ? "hidden lg:flex" : "flex",
-            )}
-            style={hero.trustInfoOffset ? ({ "--trust-offset": hero.trustInfoOffset } as CSSProperties) : undefined}
-          >
-            {hero.trustInfo.map((item, i) => (
-              <span key={item} className="flex items-center gap-6">
-                {i > 0 ? <span aria-hidden="true" className="h-1 w-1 rounded-full bg-white/30" /> : null}
-                {item}
-              </span>
-            ))}
-          </div>
-        </Reveal>
+          <Reveal variant="fade-up" index={3}>
+            {/*
+              trustInfoOffset only ever needs to clear a baked-in image row
+              that itself only appears at desktop widths (see
+              lib/data/petra/hero.ts's doc) — scoped to lg: so mobile, where
+              there's no collision to avoid, keeps its normal left-aligned
+              position instead of being pushed off-screen. When the mobile
+              image has its own baked-in "why us" icon row (`hideMobile`),
+              this real trustInfo line would duplicate it, so it's hidden
+              below `lg` the same way the heading/subtext are.
+
+              Faz 4I: `lg:mt-0` added — trustInfo now sits beside CTA in
+              the same flex row (via the wrapper above) instead of below
+              it, so the old `mt-14` (meant for the stacked layout) must
+              not add extra vertical offset at `lg`+. Mobile keeps `mt-14`
+              unchanged (irrelevant anyway while `hidden` there).
+            */}
+            <div
+              className={cn(
+                "mt-14 items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:mt-0 lg:ml-[var(--trust-offset)]",
+                // trustInfo is never hidden at `lg`+ — even when the desktop
+                // image has its own baked icon row, the real line stays
+                // visible there and just shifts via `trustInfoOffset`
+                // instead (unchanged, pre-existing behavior).
+                hideMobile ? "hidden lg:flex" : "flex",
+              )}
+              style={hero.trustInfoOffset ? ({ "--trust-offset": hero.trustInfoOffset } as CSSProperties) : undefined}
+            >
+              {hero.trustInfo.map((item, i) => (
+                <span key={item} className="flex items-center gap-6">
+                  {i > 0 ? <span aria-hidden="true" className="h-1 w-1 rounded-full bg-white/30" /> : null}
+                  {item}
+                </span>
+              ))}
+            </div>
+          </Reveal>
+        </div>
       </Container>
     </section>
   );
