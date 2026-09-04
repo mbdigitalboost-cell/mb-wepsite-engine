@@ -135,26 +135,32 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         </Reveal>
 
         {/*
-          Faz 4I (hizalama düzeltmesi): CTA butonları ve trustInfo satırı
-          masaüstünde (`lg`+) artık bu ORTAK sarmalayıcı üzerinden aynı
-          satırda, yan yana (`justify-between`) gösteriliyor — mobilde bu
-          div hiçbir unprefixed class taşımadığı için tamamen etkisiz
-          (düz bir <div>), iki alt öge eskisi gibi ayrı ayrı akışta kalır.
-          Dikey konumlandırma offset'i (`ctaTopOffset`) artık CTA'nın
-          kendi div'inden değil bu sarmalayıcıdan uygulanıyor — aksi
-          halde flex satırı içinde CTA kendi margin-top'uyla trustInfo'dan
-          aşağı kayardı. Her iki <Reveal> kendi bağımsız stagger index'ini
-          (2 / 3) koruyor, DOM/animasyon davranışları değişmedi.
+          Faz 4J (hizalama revizyonu): CTA butonları ve trustInfo satırı
+          artık masaüstünde (`lg`+) bu ORTAK sarmalayıcı üzerinden DİKEY
+          olarak (üstte CTA, altında trustInfo) sağ tarafta gruplanıyor —
+          `trustInfoOffset` (`%44`), önceden trustInfo'nun kendi div'inde
+          uygulanan sağa-itme kaydırmasıydı; artık TEK YERDE, bu grubun
+          tamamına uygulanıyor (aşağıda `lg:ml-[var(--trust-offset)]`) —
+          trustInfo'nun kendi div'inde AYNI class tekrar YOK, aksi halde
+          %44 iki kere uygulanırdı. Mobilde bu div hiçbir unprefixed class
+          taşımadığı için tamamen etkisiz (düz bir <div>), iki alt öge
+          eskisi gibi ayrı ayrı akışta kalır. Dikey konumlandırma offset'i
+          (`ctaTopOffset`) hâlâ CTA'nın kendi div'inden değil bu
+          sarmalayıcıdan uygulanıyor — aksi halde flex sütununda CTA kendi
+          margin-top'uyla trustInfo'dan aşağı kayardı. Her iki <Reveal>
+          kendi bağımsız stagger index'ini (2 / 3) koruyor, DOM/animasyon
+          davranışları değişmedi.
         */}
         <div
           className={cn(
-            "lg:flex lg:items-center lg:justify-between lg:gap-6",
+            "lg:flex lg:flex-col lg:items-start lg:gap-6 lg:ml-[var(--trust-offset)]",
             hideDesktop && hero.ctaTopOffset && "lg:mt-[var(--cta-offset)]",
           )}
           style={
-            hideDesktop && hero.ctaTopOffset
-              ? ({ "--cta-offset": hero.ctaTopOffset } as CSSProperties)
-              : undefined
+            {
+              ...(hideDesktop && hero.ctaTopOffset ? { "--cta-offset": hero.ctaTopOffset } : {}),
+              ...(hero.trustInfoOffset ? { "--trust-offset": hero.trustInfoOffset } : {}),
+            } as CSSProperties
           }
         >
           <Reveal variant="fade-up" index={2}>
@@ -205,22 +211,26 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
               this real trustInfo line would duplicate it, so it's hidden
               below `lg` the same way the heading/subtext are.
 
-              Faz 4I: `lg:mt-0` added — trustInfo now sits beside CTA in
-              the same flex row (via the wrapper above) instead of below
-              it, so the old `mt-14` (meant for the stacked layout) must
+              Faz 4I: `lg:mt-0` added — trustInfo now sits below CTA
+              inside the shared right-side group (via the wrapper above)
+              with the gap coming from the wrapper's `lg:gap-6`, so the
+              old `mt-14` (meant for the original stacked layout) must
               not add extra vertical offset at `lg`+. Mobile keeps `mt-14`
               unchanged (irrelevant anyway while `hidden` there).
+
+              Faz 4J: `lg:ml-[var(--trust-offset)]` moved OFF this div —
+              the `%44` shift now applies once, to the whole CTA+trustInfo
+              group (see wrapper above). Re-adding it here would double it.
             */}
             <div
               className={cn(
-                "mt-14 items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:mt-0 lg:ml-[var(--trust-offset)]",
+                "mt-14 items-center gap-6 text-xs font-medium tracking-[0.2em] text-white/60 uppercase lg:mt-0",
                 // trustInfo is never hidden at `lg`+ — even when the desktop
                 // image has its own baked icon row, the real line stays
                 // visible there and just shifts via `trustInfoOffset`
                 // instead (unchanged, pre-existing behavior).
                 hideMobile ? "hidden lg:flex" : "flex",
               )}
-              style={hero.trustInfoOffset ? ({ "--trust-offset": hero.trustInfoOffset } as CSSProperties) : undefined}
             >
               {hero.trustInfo.map((item, i) => (
                 <span key={item} className="flex items-center gap-6">
