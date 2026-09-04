@@ -21,7 +21,8 @@ export type ContentTypeKey =
   | "projects"
   | "campaigns"
   | "testimonials"
-  | "faqs";
+  | "faqs"
+  | "product_showcase_items";
 
 export interface ContentFieldConfig {
   key: string;
@@ -73,6 +74,23 @@ const solutionFields: ContentFieldConfig[] = [
   { key: "image", label: "Görsel", kind: "image", required: false },
 ];
 
+/**
+ * Faz 4C (migration 0008): homepage "Ürün Yelpazesi" cards. `brand` is
+ * this type's title-equivalent field (see `titleField: "brand"` below —
+ * same pattern as testimonials' `name`/faqs' `question`, neither of
+ * which is called "title" either). No long-form `description` — only
+ * `short_description`, matching the legacy static data's single
+ * `shortDescription` field.
+ */
+const productShowcaseFields: ContentFieldConfig[] = [
+  { key: "brand", label: "Marka", kind: "text", required: true },
+  { key: "slug", label: "Slug", kind: "slug", required: true },
+  { key: "category", label: "Kategori", kind: "text", required: false },
+  { key: "short_description", label: "Kısa Açıklama", kind: "textarea", required: false },
+  { key: "href", label: "Link", kind: "text", required: false },
+  { key: "image", label: "Görsel", kind: "image", required: false },
+];
+
 /** Phase 9.6 (migration 0007): `projects.category`, optional badge on /projeler. */
 const projectFields: ContentFieldConfig[] = [
   ...namedContentFields,
@@ -110,6 +128,14 @@ export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
     fields: solutionFields,
     auditPrefix: "solution",
     imageFolder: "solutions",
+  },
+  product_showcase_items: {
+    key: "product_showcase_items",
+    label: "Ürün Yelpazesi",
+    titleField: "brand",
+    fields: productShowcaseFields,
+    auditPrefix: "product_showcase",
+    imageFolder: "products",
   },
   projects: {
     key: "projects",

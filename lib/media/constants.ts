@@ -34,6 +34,7 @@ export const MEDIA_FOLDERS = [
   "campaigns",
   "testimonials",
   "banners",
+  "products",
 ] as const;
 
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];

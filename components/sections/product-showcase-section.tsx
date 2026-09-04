@@ -1,8 +1,13 @@
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
-import { petraProductShowcase } from "@/lib/data/petra/product-showcase";
+import { petraProductShowcase, type PetraShowcaseProduct } from "@/lib/data/petra/product-showcase";
 import { ProductShowcaseSlider } from "@/components/sections/product-showcase-slider";
+
+interface ProductShowcaseSectionProps {
+  /** Optional CMS-sourced override — defaults to the static `petraProductShowcase` import. See components/sections/hero.tsx for the same pattern. */
+  products?: PetraShowcaseProduct[];
+}
 
 /**
  * Faz H-devam: `MitsubishiSection`'ın hemen altına eklenen, diğer 8
@@ -11,7 +16,7 @@ import { ProductShowcaseSlider } from "@/components/sections/product-showcase-sl
  * slider) gösteren bölüm. Mitsubishi Heavy'nin kendi bölümü/slider'ı
  * bilinçli olarak dokunulmadan korundu — bu, onun yerine geçmiyor.
  */
-export function ProductShowcaseSection() {
+export function ProductShowcaseSection({ products = petraProductShowcase }: ProductShowcaseSectionProps) {
   return (
     <section className="border-t border-white/10 bg-brand-secondary py-24 lg:py-32">
       <Container className="grid items-center gap-12 lg:grid-cols-2">
@@ -37,7 +42,7 @@ export function ProductShowcaseSection() {
         </Reveal>
 
         <Reveal index={1}>
-          <ProductShowcaseSlider products={petraProductShowcase} />
+          <ProductShowcaseSlider products={products} />
         </Reveal>
       </Container>
     </section>

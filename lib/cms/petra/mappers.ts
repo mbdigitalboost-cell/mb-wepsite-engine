@@ -1,7 +1,8 @@
 import "server-only";
 
-import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
+import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow } from "@/lib/cms/customer-types";
 import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign, PetraContactInfo } from "@/lib/data/petra/types";
+import type { PetraShowcaseProduct } from "@/lib/data/petra/product-showcase";
 
 /**
  * Maps CUSTOMER CMS rows into the exact static Petra types the existing
@@ -41,6 +42,28 @@ export function mapSolutionRows(rows: SolutionRow[]): PetraSolution[] {
     shortDescription: row.short_description ?? row.description ?? "",
     longDescription: row.description ?? row.short_description ?? "",
     image: row.image,
+  }));
+}
+
+/**
+ * Faz 4C (migration 0008) — homepage "Ürün Yelpazesi" cards. `type` on
+ * `PetraShowcaseProduct` is a legacy static-data field name; the CMS
+ * column is `category` (see lib/cms/customer-types.ts's doc on
+ * `ProductShowcaseItemRow` for why), mapped straight through here.
+ * `href` prefers the per-row column but falls back to the same
+ * `/cozumler` every legacy static entry hardcoded — same
+ * "existing default until a customer sets an override" rule as
+ * `mapCampaignRows`'s `ctaHref` below.
+ */
+export function mapProductShowcaseRows(rows: ProductShowcaseItemRow[]): PetraShowcaseProduct[] {
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    brand: row.brand,
+    type: row.category ?? "",
+    image: row.image ?? "",
+    shortDescription: row.short_description ?? "",
+    href: row.href ?? "/cozumler",
   }));
 }
 

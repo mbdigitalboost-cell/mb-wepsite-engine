@@ -21,13 +21,14 @@ import { petraHero } from "@/lib/data/petra/hero";
 import { petraSolutions } from "@/lib/data/petra/solutions";
 import { petraTestimonials } from "@/lib/data/petra/testimonials";
 import { petraFaqs } from "@/lib/data/petra/faqs";
+import { petraProductShowcase } from "@/lib/data/petra/product-showcase";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings } from "@/lib/cms/adapters";
-import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp } from "@/lib/cms/petra/mappers";
+import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems } from "@/lib/cms/adapters";
+import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
-import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow } from "@/lib/cms/customer-types";
+import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -88,12 +89,13 @@ export async function generateMetadata(): Promise<Metadata> {
  * have, which is exactly what this phase forbids.
  */
 export default async function HomePage() {
-  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult] = await Promise.all([
+  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult, showcaseResult] = await Promise.all([
     getHero<typeof petraHero>(PETRA_CONNECTION_KEY, petraHero),
     getSolutions(PETRA_CONNECTION_KEY, petraSolutions),
     getTestimonials(PETRA_CONNECTION_KEY, petraTestimonials),
     getFaqs(PETRA_CONNECTION_KEY, petraFaqs),
     getSiteSettings(PETRA_CONNECTION_KEY, petraContactInfo),
+    getProductShowcaseItems(PETRA_CONNECTION_KEY, petraProductShowcase),
   ]);
 
   const hero = isCmsRow(heroResult) ? mapHeroRow(heroResult as HeroSectionRow, petraHero.trustInfo) : petraHero;
@@ -107,6 +109,9 @@ export default async function HomePage() {
   const whatsapp = isCmsRow(siteSettingsResult)
     ? mapSiteSettingsWhatsapp(siteSettingsResult as SiteSettingsRow)
     : petraContactInfo.whatsapp;
+  const showcaseProducts = isCmsRow((showcaseResult as unknown[])[0])
+    ? mapProductShowcaseRows(showcaseResult as ProductShowcaseItemRow[])
+    : petraProductShowcase;
 
   const whatsappHref = buildWhatsappHref(whatsapp);
   const faqJsonLd = petraFaqStructuredData();
@@ -125,7 +130,7 @@ export default async function HomePage() {
       <Solutions solutions={solutions} />
       <EngineeringProcess />
       <MitsubishiSection />
-      <ProductShowcaseSection />
+      <ProductShowcaseSection products={showcaseProducts} />
       <BtuPromoSection />
       <BrandsSection />
       <Projects />

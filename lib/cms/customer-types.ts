@@ -104,6 +104,23 @@ export type SolutionRow = NamedContentRow & {
 };
 
 /**
+ * `product_showcase_items` only, since Faz 4C — homepage "Ürün Yelpazesi"
+ * cards, previously hardcoded in lib/data/petra/product-showcase.ts. Not
+ * a `NamedContentRow` (no `title`/`description`): `brand` is this type's
+ * title-equivalent column (see content-types.ts's `titleField: "brand"`),
+ * and there's no long-form description field, only `short_description`.
+ */
+export type ProductShowcaseItemRow = ContentRow & {
+  brand: string;
+  slug: string;
+  category: string | null;
+  short_description: string | null;
+  image: string | null;
+  href: string | null;
+  sort_order: number;
+};
+
+/**
  * `projects` only, since Phase 9.6 (migration 0007): adds `category`,
  * rendered as an optional badge by components/sections/projects.tsx.
  */
@@ -216,6 +233,7 @@ export type CustomerDatabase = {
       hero_sections: TableDef<HeroSectionRow, Partial<HeroSectionRow>, Partial<HeroSectionRow>>;
       services: TableDef<NamedContentRow, Partial<NamedContentRow>, Partial<NamedContentRow>>;
       solutions: TableDef<SolutionRow, Partial<SolutionRow>, Partial<SolutionRow>>;
+      product_showcase_items: TableDef<ProductShowcaseItemRow, Partial<ProductShowcaseItemRow>, Partial<ProductShowcaseItemRow>>;
       projects: TableDef<ProjectRow, Partial<ProjectRow>, Partial<ProjectRow>>;
       campaigns: TableDef<CampaignRow, Partial<CampaignRow>, Partial<CampaignRow>>;
       testimonials: TableDef<TestimonialRow, Partial<TestimonialRow>, Partial<TestimonialRow>>;
