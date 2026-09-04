@@ -45,6 +45,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const secret = process.env.REVALIDATE_WEBHOOK_SECRET;
   const provided = request.headers.get(SECRET_HEADER);
 
+  // TEMP DEBUG (Faz 4G — 401 teşhisi, kalıcı değil, değer asla loglanmıyor):
+  console.warn(
+    "[revalidate-debug] headerPresent=%s headerLen=%d envPresent=%s envLen=%d",
+    Boolean(provided),
+    provided?.length ?? -1,
+    Boolean(secret),
+    secret?.length ?? -1,
+  );
+
   if (!secret || !provided || !safeEqual(provided, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

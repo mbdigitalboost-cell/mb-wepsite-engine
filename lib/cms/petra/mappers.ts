@@ -192,7 +192,11 @@ export interface MappedHero {
  * `trustInfo` always falls back to the static value — CMS has no
  * equivalent field for it, so nothing here invents one.
  */
-export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): MappedHero {
+export function mapHeroRow(
+  row: HeroSectionRow,
+  fallbackTrustInfo: string[],
+  fallbackBackgroundImage: string | null,
+): MappedHero {
   return {
     headingLines: [row.heading],
     accentLineIndex: -1,
@@ -200,7 +204,15 @@ export function mapHeroRow(row: HeroSectionRow, fallbackTrustInfo: string[]): Ma
     ctaPrimaryLabel: row.cta_primary_label ?? "",
     ctaPrimaryHref: row.cta_primary_href ?? "/iletisim",
     ctaSecondaryLabel: row.cta_secondary_label ?? "",
-    backgroundImage: row.background_image,
+    // Faz 4H (canlı arıza düzeltmesi): diğer her alanın aksine bu alanda
+    // fallback YOKTU — bir CMS satırı `published` ama `background_image`
+    // NULL olduğunda, HeroBackground görseli tamamen gizliyor (sadece
+    // gradient kalıyor) ve statik görselin İÇİNE gömülü "Mühendislik
+    // Yaklaşımı" ikon satırı da onunla birlikte kayboluyordu — metin
+    // alanlarındaki boş-string fallback'lerin aksine bu, tüm bir görsel
+    // bölümü görünmez kılan tek alandı. Artık diğer alanlarla aynı
+    // desende: DB NULL ise statik `petraHero.backgroundImage`'e düşer.
+    backgroundImage: row.background_image ?? fallbackBackgroundImage,
     backgroundHasEmbeddedHeadline: false,
     backgroundObjectPosition: "center",
     backgroundObjectPositionMobile: undefined,

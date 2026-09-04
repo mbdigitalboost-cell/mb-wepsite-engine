@@ -152,6 +152,9 @@ async function triggerRemoteRevalidation(customerId: string, paths: string[]): P
     return;
   }
 
+  // TEMP DEBUG (Faz 4G — 401 teşhisi, kalıcı değil, değer asla loglanmıyor):
+  console.warn("[revalidate-debug] sending secretLen=%d to domain=%s", secret.length, domain);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3000);
 
