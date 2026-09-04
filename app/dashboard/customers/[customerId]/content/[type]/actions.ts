@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
-import { getContentTypeConfig, isContentTypeKey, type ContentTypeConfig } from "@/lib/cms/dashboard/content-types";
+import { getContentTypeConfig, isContentTypeKey, type ContentTypeConfig, type ContentTypeKey } from "@/lib/cms/dashboard/content-types";
 import { buildContentFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { ContentFormState } from "./form-state";
@@ -30,6 +30,50 @@ import type { ContentStatus } from "@/lib/cms/customer-types";
  * fonksiyonun dosya yorumundaki dürüstlük notu: bu ayrımın RLS'te bir
  * karşılığı yok, tek uygulama noktası bu çağrı).
  */
+
+/**
+ * Faz 4D — her tipin GERÇEK public karşılığı, app/(public)/ altındaki
+ * route dosyaları okunarak doğrulandı (bkz. FAZ 4D teşhis/uygulama
+ * raporu): solutions → /cozumler, services → /hizmetler, projects →
+ * /projeler, campaigns → /kampanyalar. testimonials/faqs/
+ * product_showcase_items'ın kendi sayfası yok, yalnızca ana sayfada
+ * (`/`) görünüyorlar — bu yüzden boş liste, ana sayfa kapsaması zaten
+ * her üç fonksiyonda da ayrıca `revalidatePath("/", "layout")` ile
+ * sağlanıyor (bkz. revalidatePublicPathsForType).
+ */
+const PUBLIC_LIST_PATHS: Record<ContentTypeKey, string[]> = {
+  solutions: ["/cozumler"],
+  services: ["/hizmetler"],
+  projects: ["/projeler"],
+  campaigns: ["/kampanyalar"],
+  testimonials: [],
+  faqs: [],
+  product_showcase_items: [],
+};
+
+/**
+ * SADECE `solutions`'ın gerçek bir slug bazlı detay sayfası var
+ * (`/cozumler/[slug]`) — services/projects/campaigns/
+ * product_showcase_items'ın hepsinde DB'de bir `slug` kolonu olsa da,
+ * hiçbiri için app/(public)/ altında bir `[slug]` route'u YOK (glob ile
+ * doğrulandı: hizmetler/projeler/kampanyalar altında [slug] klasörü
+ * yok). Uydurma bir path eklenmedi.
+ */
+const PUBLIC_DETAIL_PATH_TEMPLATES: Partial<Record<ContentTypeKey, (slug: string) => string>> = {
+  solutions: (slug) => `/cozumler/${slug}`,
+};
+
+/**
+ * Ana sayfa (`"layout"` tipiyle — header/footer paylaşan HER public
+ * route'u kapsar, sadece `/` değil, aynı FAZ 4B'deki site_settings
+ * gerekçesiyle) + o tipin kendi liste sayfası varsa onu revalidate eder.
+ * Detay sayfası revalidation'ı (yalnızca solutions) çağıran fonksiyonda
+ * ayrıca, slug elde edilebiliyorsa yapılır.
+ */
+function revalidatePublicPathsForType(type: ContentTypeKey): void {
+  revalidatePath("/", "layout");
+  for (const path of PUBLIC_LIST_PATHS[type]) revalidatePath(path);
+}
 
 function readFormValues(config: ContentTypeConfig, formData: FormData): Record<string, unknown> {
   const values: Record<string, unknown> = { sortOrder: formData.get("sortOrder") ?? 0 };
@@ -95,6 +139,11 @@ export async function createContentItemAction(
   });
 
   revalidatePath(`/dashboard/customers/${customerId}/content/${type}`);
+  // Faz 4D: yeni kayıt "draft" olarak başladığı için public'te henüz
+  // görünmüyor (RLS status='published'), ama diğer iki action'la aynı
+  // kapsamayı sağlamak için burada da çağrılıyor — boş bir path'i
+  // revalidate etmek zararsız (no-op).
+  revalidatePublicPathsForType(type);
   redirect(`/dashboard/customers/${customerId}/content/${type}/${data.id}`);
 }
 
@@ -136,6 +185,17 @@ export async function updateContentItemAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/content/${type}`);
   revalidatePath(`/dashboard/customers/${customerId}/content/${type}/${itemId}`);
+
+  // Faz 4D: public tarafı da revalidate et (bkz. yukarıdaki sabitlerin
+  // yorumu) — bu satırlar olmadan, `/` ve `/cozumler` gibi statik
+  // üretilen sayfalar bir sonraki deploy'a kadar eski içeriği göstermeye
+  // devam ediyordu (kanıt: FAZ 4D teşhis raporu).
+  revalidatePublicPathsForType(type);
+  const detailPathFor = PUBLIC_DETAIL_PATH_TEMPLATES[type];
+  if (detailPathFor && typeof parsed.data.slug === "string" && parsed.data.slug) {
+    revalidatePath(detailPathFor(parsed.data.slug));
+  }
+
   return { error: null };
 }
 
@@ -182,4 +242,22 @@ export async function setContentItemStatusAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/content/${type}`);
   revalidatePath(`/dashboard/customers/${customerId}/content/${type}/${itemId}`);
+
+  // Faz 4D: publish/archive de public'in status='published' filtreli
+  // sorgusunu etkiler — aynı gerekçe, aynı kapsama.
+  revalidatePublicPathsForType(type);
+  const detailPathFor = PUBLIC_DETAIL_PATH_TEMPLATES[type];
+  if (detailPathFor) {
+    // Bu action form verisi almıyor (sadece itemId + nextStatus), yani
+    // slug elde etmenin tek yolu satırı okumak — status değişikliğinden
+    // SONRA, best-effort (başarısız olursa sadece detay sayfası eski
+    // kalır, admin tarafındaki asıl işlem zaten tamamlanmış olur).
+    // `.select()`'in dinamik `type` ile generic çözümlemesi `.update()`'ten
+    // farklı davranıyor (`type as any` burada `SelectQueryError`'a
+    // düşüyor) — createContentItemAction'daki gibi client'ın kendisini
+    // cast etmek gerekiyor.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment in createContentItemAction above
+    const { data: slugRow } = await (connection.client as any).from(type).select("slug").eq("id", itemId).maybeSingle();
+    if (slugRow?.slug) revalidatePath(detailPathFor(slugRow.slug as string));
+  }
 }
