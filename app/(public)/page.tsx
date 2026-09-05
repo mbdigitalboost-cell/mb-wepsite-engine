@@ -123,7 +123,7 @@ export default async function HomePage() {
     : petraProductShowcase;
 
   const whatsappHref = buildWhatsappHref(whatsapp);
-  const faqJsonLd = petraFaqStructuredData();
+  const faqJsonLd = petraFaqStructuredData(faqs);
   // Faz 10: adres henüz onaylanmadığı için bu şu an her zaman `null`
   // döner (bkz. lib/seo/structured-data.ts) — sahte bir işletme beyanı
   // riski yok, gerçek adres onaylandığında kod değişikliği gerekmeden

@@ -1,6 +1,6 @@
-import { petraFaqs } from "@/lib/data/petra/faqs";
 import { petraContactInfo, petraSiteName } from "@/lib/data/petra/site-config";
 import { publicEnv } from "@/lib/config/env";
+import type { PetraFaq } from "@/lib/data/petra/types";
 
 /**
  * JSON-LD builders. Each one returns `null` when it doesn't have enough
@@ -10,13 +10,19 @@ import { publicEnv } from "@/lib/config/env";
  * §20/§38: "Sahte işletme bilgisi üretme").
  */
 
-export function petraFaqStructuredData() {
-  if (petraFaqs.length === 0) return null;
+/**
+ * Faz 6E: `faqs` is now a required parameter — the caller passes the same
+ * CMS-or-static-fallback array already resolved for the visible FAQ
+ * accordion (see app/(public)/page.tsx), so the JSON-LD never drifts from
+ * what the page actually renders.
+ */
+export function petraFaqStructuredData(faqs: PetraFaq[]) {
+  if (faqs.length === 0) return null;
 
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: petraFaqs.map((faq) => ({
+    mainEntity: faqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
       acceptedAnswer: { "@type": "Answer", text: faq.answer },

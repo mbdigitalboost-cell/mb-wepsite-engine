@@ -147,7 +147,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
           tagline={petraTagline}
           logoSrcDark={resolvedLogoSrcDark}
           logoSrcLight={resolvedLogoSrcLight}
-          navLinks={navLinks}
+          navLinks={headerNavLinks}
           legalLinks={petraLegalLinks}
           phone={contactInfo.phone}
           phoneDisplay={contactInfo.phoneDisplay}
