@@ -5,6 +5,7 @@ import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { siteSettingsFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { triggerRemoteRevalidation } from "@/lib/cms/dashboard/trigger-revalidation";
 import type { SiteSettingsFormState } from "./form-state";
 import type { ContentStatus } from "@/lib/cms/customer-types";
 
@@ -95,6 +96,13 @@ export async function saveSiteSettingsAction(
   // paylaşan HER public route'u (sadece `/` değil) yeniden doğrular —
   // header/footer aynı layout'tan tüm sayfalara render olduğu için gerekli.
   revalidatePath("/", "layout");
+  // Faz 6C: yukarıdaki `revalidatePath` çağrıları panelin KENDİ
+  // deployment'ında çalışıyor — panel public route servis etmediği için
+  // gerçek bir etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi). site_settings
+  // hem layout'u (tüm sayfalar) hem de artık `/hakkimizda`/`/iletisim`'i
+  // (FAZ 6A, statik fallback yerine getSiteSettings okuyorlar) doğrudan
+  // etkilediği için GERÇEK public deployment'a bu üç path'i tetikliyoruz.
+  await triggerRemoteRevalidation(customerId, ["/", "/hakkimizda", "/iletisim"]);
   return { error: null };
 }
 
@@ -114,4 +122,6 @@ export async function setSiteSettingsStatusAction(customerId: string, settingsId
   // Faz 4B: aynı gerekçe — publish/archive de public'in okuduğu
   // `status='published'` satırını değiştirir (bkz. saveSiteSettingsAction).
   revalidatePath("/", "layout");
+  // Faz 6C: aynı gerekçe — bkz. saveSiteSettingsAction'daki yorum.
+  await triggerRemoteRevalidation(customerId, ["/", "/hakkimizda", "/iletisim"]);
 }

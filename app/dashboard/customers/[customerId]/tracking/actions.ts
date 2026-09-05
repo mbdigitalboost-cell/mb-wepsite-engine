@@ -5,6 +5,7 @@ import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { trackingFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { triggerRemoteRevalidation } from "@/lib/cms/dashboard/trigger-revalidation";
 import type { TrackingFormState } from "./form-state";
 import type { TrackingSettingsRow } from "@/lib/cms/customer-types";
 
@@ -88,5 +89,10 @@ export async function saveTrackingAction(
   });
 
   revalidatePath(`/dashboard/customers/${customerId}/tracking`);
+  // Faz 6C: panel-local revalidatePath'in (yukarıda) public deployment'a
+  // etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi). tracking_settings
+  // `layout.tsx` üzerinden TÜM public sayfalara sızıyor — `/api/revalidate`'in
+  // "/" özel-durumu (`revalidatePath("/","layout")`) bunu kapsıyor.
+  await triggerRemoteRevalidation(customerId, ["/"]);
   return { error: null };
 }

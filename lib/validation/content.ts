@@ -113,3 +113,19 @@ export const mediaAssetUpdateFormSchema = z.object({
 });
 
 export const leadStatusSchema = z.enum(["new", "contacted", "closed"]);
+
+const SAFE_HREF_PATTERN = /^(\/(?!\/)\S*|#\S*|https?:\/\/\S+)$/;
+
+export const navigationItemFormSchema = z.object({
+  label: z.string().trim().min(1, "Etiket zorunlu.").max(150),
+  href: z
+    .string()
+    .trim()
+    .min(1, "URL zorunlu.")
+    .max(500)
+    .regex(
+      SAFE_HREF_PATTERN,
+      "Geçerli bir iç yol (/sayfa), sabit bağlantı (#bolum) veya http(s):// ile başlayan bir adres girin.",
+    ),
+  sortOrder: z.coerce.number().int().min(0).max(99999).default(0),
+});

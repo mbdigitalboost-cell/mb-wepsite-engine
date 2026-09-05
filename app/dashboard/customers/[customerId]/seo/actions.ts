@@ -5,6 +5,7 @@ import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { seoFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { triggerRemoteRevalidation } from "@/lib/cms/dashboard/trigger-revalidation";
 import type { SeoFormState } from "./form-state";
 
 /**
@@ -70,5 +71,11 @@ export async function saveSeoAction(
 
   await logAuditEvent({ userId: user.id, customerId, action: "seo.update", entityType: "seo_settings", entityId: resolvedId, metadata: row });
   revalidatePath(`/dashboard/customers/${customerId}/seo`);
+  // Faz 6C: panel-local revalidatePath'in (yukarıda) public deployment'a
+  // etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi). seo_settings sadece `/`
+  // sayfasının metadata'sını (applyHomeSeoOverrides) ve layout'un
+  // varsayılanını (applyLayoutSeoOverrides) etkiliyor — ikisi de `/`
+  // path'i üzerinden.
+  await triggerRemoteRevalidation(customerId, ["/"]);
   return { error: null };
 }

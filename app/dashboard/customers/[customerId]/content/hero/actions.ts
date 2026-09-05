@@ -5,6 +5,7 @@ import { requireCustomerWriteAccess } from "@/lib/auth/require-customer-access";
 import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-connection";
 import { heroFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { triggerRemoteRevalidation } from "@/lib/cms/dashboard/trigger-revalidation";
 import type { HeroFormState } from "./form-state";
 import type { ContentStatus } from "@/lib/cms/customer-types";
 
@@ -67,6 +68,11 @@ export async function saveHeroAction(
   }
 
   revalidatePath(`/dashboard/customers/${customerId}/content/hero`);
+  // Faz 6C: panel-local revalidatePath'in (yukarıda) public deployment'a
+  // etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi) — Hero sadece `/` sayfasında
+  // render ediliyor, o da zaten önceden webhook'suz sadece 5dk ISR'a
+  // bağımlıydı (FAZ 6B P1 bulgusu).
+  await triggerRemoteRevalidation(customerId, ["/"]);
   return { error: null };
 }
 
@@ -91,4 +97,6 @@ export async function setHeroStatusAction(customerId: string, heroId: string, ne
   });
 
   revalidatePath(`/dashboard/customers/${customerId}/content/hero`);
+  // Faz 6C: bkz. saveHeroAction'daki yorum.
+  await triggerRemoteRevalidation(customerId, ["/"]);
 }
