@@ -138,6 +138,14 @@ export interface MappedHero {
   ctaPrimaryLabel: string;
   ctaPrimaryHref: string;
   ctaSecondaryLabel: string;
+  /**
+   * Faz 6A (P1 düzeltmesi): daha önce bu alan `mapHeroRow`'da hiç
+   * üretilmiyordu — admin formunda `cta_secondary_href` kaydediliyordu
+   * ama hiçbir yerde okunmuyordu, ikincil buton her zaman WhatsApp'a
+   * gidiyordu (bkz. hero.tsx). `undefined` = admin bu alanı boş bıraktı,
+   * hero.tsx WhatsApp'a düşer (eski davranış korunur).
+   */
+  ctaSecondaryHref: string | undefined;
   backgroundImage: string | null;
   /**
    * Faz 9.9: CMS-uploaded hero images (via the Media/Storage system) are
@@ -239,6 +247,7 @@ export function mapHeroRow(
     ctaPrimaryLabel: row.cta_primary_label ?? "",
     ctaPrimaryHref: row.cta_primary_href ?? "/iletisim",
     ctaSecondaryLabel: row.cta_secondary_label ?? "",
+    ctaSecondaryHref: row.cta_secondary_href ?? undefined,
     backgroundImage: row.background_image ?? fallback.backgroundImage,
     backgroundHasEmbeddedHeadline: usingFallbackImage ? fallback.backgroundHasEmbeddedHeadline : false,
     backgroundObjectPosition: usingFallbackImage ? fallback.backgroundObjectPosition : "center",

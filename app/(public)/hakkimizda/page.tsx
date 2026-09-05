@@ -10,6 +10,11 @@ import { WhyPetra } from "@/components/sections/why-petra";
 import { petraAboutCta } from "@/lib/data/petra/about";
 import { petraContactInfo } from "@/lib/data/petra/site-config";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
+import { getSiteSettings } from "@/lib/cms/adapters";
+import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
+import type { SiteSettingsRow } from "@/lib/cms/customer-types";
+
+const PETRA_CONNECTION_KEY = "PETRA";
 
 export const metadata: Metadata = {
   title: "Hakkımızda",
@@ -39,8 +44,16 @@ export const metadata: Metadata = {
  * bayilik/distribütörlük, marka ortaklığı gibi hiçbir doğrulanmamış veri
  * eklenmedi (bkz. lib/data/petra/about.ts dosya başlığı).
  */
-export default function AboutPage() {
-  const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
+export default async function AboutPage() {
+  // Faz 6A (P1 düzeltmesi): bu sayfa daha önce statik `petraContactInfo`'yu
+  // doğrudan kullanıyordu, CMS'i hiç sorgulamıyordu — admin panelden
+  // WhatsApp numarası değiştirildiğinde header/footer/anasayfa güncellenir
+  // ama bu sayfa eski numarayı göstermeye devam ederdi. Artık
+  // app/(public)/layout.tsx ile AYNI zincir: getSiteSettings →
+  // mapSiteSettingsContactInfo (satır bazında statik fallback).
+  const siteSettings = await getSiteSettings<SiteSettingsRow | null>(PETRA_CONNECTION_KEY, null);
+  const contactInfo = siteSettings ? mapSiteSettingsContactInfo(siteSettings, petraContactInfo) : petraContactInfo;
+  const whatsappHref = buildWhatsappHref(contactInfo.whatsapp);
 
   return (
     <>

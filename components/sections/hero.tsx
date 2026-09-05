@@ -36,6 +36,14 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
   // planın kendisine değil, tüm hero alanına tepki verir.
   const { ref: parallaxRef, state: parallax } = useParallaxPointer<HTMLElement>();
 
+  // Faz 6A (P1 düzeltmesi): admin formunda kaydedilen "İkincil CTA linki"
+  // (`hero.ctaSecondaryHref`, DB: hero_sections.cta_secondary_href) daha
+  // önce hiç okunmuyordu — ikincil buton her zaman `whatsappHref`'e
+  // gidiyordu. Admin bu alanı doldurmuşsa artık gerçekten kullanılıyor;
+  // boş bıraktıysa (statik fallback dahil, o hiç bu alanı set etmiyor)
+  // eski davranış aynen korunur: WhatsApp linkine düşer.
+  const secondaryHref = hero.ctaSecondaryHref || whatsappHref;
+
   return (
     <section
       ref={parallaxRef}
@@ -184,10 +192,10 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
               >
                 {hero.ctaPrimaryLabel}
               </Button>
-              {whatsappHref ? (
+              {secondaryHref ? (
                 <Button
-                  href={whatsappHref}
-                  external
+                  href={secondaryHref}
+                  external={!hero.ctaSecondaryHref}
                   variant="outline"
                   size="lg"
                   className="text-white"

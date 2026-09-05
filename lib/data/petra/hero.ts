@@ -7,6 +7,14 @@ export const petraHero = {
   ctaPrimaryHref: "/iletisim",
   ctaSecondaryLabel: "WhatsApp'tan Ulaş",
   /**
+   * Faz 6A: statik fallback'in ikincil butonu her zaman WhatsApp'a gider
+   * (bkz. hero.tsx'teki `secondaryHref = hero.ctaSecondaryHref || whatsappHref`)
+   * — bu alan sadece CMS satırlarının `cta_secondary_href` kolonuyla aynı
+   * şekle sahip olmak için burada `undefined` olarak duruyor, statik hero
+   * için bir davranış değişikliği YOK.
+   */
+  ctaSecondaryHref: undefined as string | undefined,
+  /**
    * Faz 12 revizyon: customer-provided AI-generated hero banner (source:
    * ChatGPT_Image_16_A_u_2026_18_59_30.png, provided 2026-08-16). Same
    * pattern as the v2 crop it replaces — left half has a baked-in

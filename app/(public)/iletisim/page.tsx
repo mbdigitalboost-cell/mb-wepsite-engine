@@ -6,6 +6,11 @@ import { ContactDetails } from "@/components/sections/contact-details";
 import { DiscoveryRequestForm } from "@/components/forms/discovery-request-form";
 import { petraContactInfo } from "@/lib/data/petra/site-config";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
+import { getSiteSettings } from "@/lib/cms/adapters";
+import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
+import type { SiteSettingsRow } from "@/lib/cms/customer-types";
+
+const PETRA_CONNECTION_KEY = "PETRA";
 
 export const metadata: Metadata = {
   title: "İletişim",
@@ -13,16 +18,23 @@ export const metadata: Metadata = {
   alternates: { canonical: "/iletisim" },
 };
 
-export default function ContactPage() {
-  const whatsappHref = buildWhatsappHref(petraContactInfo.whatsapp);
+export default async function ContactPage() {
+  // Faz 6A (P1 düzeltmesi): bu sayfa daha önce statik `petraContactInfo`'yu
+  // doğrudan kullanıyordu, CMS'i hiç sorgulamıyordu — bkz. hakkimizda/page.tsx'teki
+  // aynı yorum. Artık layout.tsx ile aynı zincir: getSiteSettings →
+  // mapSiteSettingsContactInfo. `mapUrl`'in CMS'te karşılığı yok, her zaman
+  // statik kalır (mapper'ın kendi davranışı, burada değişmedi).
+  const siteSettings = await getSiteSettings<SiteSettingsRow | null>(PETRA_CONNECTION_KEY, null);
+  const contactInfo = siteSettings ? mapSiteSettingsContactInfo(siteSettings, petraContactInfo) : petraContactInfo;
+  const whatsappHref = buildWhatsappHref(contactInfo.whatsapp);
   const hasContactDetails =
-    petraContactInfo.phone ||
+    contactInfo.phone ||
     whatsappHref ||
-    petraContactInfo.email ||
-    petraContactInfo.address ||
-    petraContactInfo.serviceArea ||
-    petraContactInfo.workingHours ||
-    petraContactInfo.mapUrl;
+    contactInfo.email ||
+    contactInfo.address ||
+    contactInfo.serviceArea ||
+    contactInfo.workingHours ||
+    contactInfo.mapUrl;
 
   return (
     <>
@@ -40,14 +52,14 @@ export default function ContactPage() {
           {hasContactDetails ? (
             <Reveal index={1}>
               <ContactDetails
-                phone={petraContactInfo.phone}
-                phoneDisplay={petraContactInfo.phoneDisplay}
+                phone={contactInfo.phone}
+                phoneDisplay={contactInfo.phoneDisplay}
                 whatsappHref={whatsappHref}
-                email={petraContactInfo.email}
-                address={petraContactInfo.address}
-                serviceArea={petraContactInfo.serviceArea}
-                workingHours={petraContactInfo.workingHours}
-                mapUrl={petraContactInfo.mapUrl}
+                email={contactInfo.email}
+                address={contactInfo.address}
+                serviceArea={contactInfo.serviceArea}
+                workingHours={contactInfo.workingHours}
+                mapUrl={contactInfo.mapUrl}
               />
             </Reveal>
           ) : null}
