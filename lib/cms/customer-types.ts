@@ -164,6 +164,8 @@ export type NavigationItemRow = ContentRow & {
 export type SeoSettingsRow = {
   id: string;
   page_id: string | null;
+  /** Faz 6F-4A-3.1 (migration 0009) — statik sayfa SEO override anahtarı, NULL = site-wide. */
+  route_key: string | null;
   title: string | null;
   description: string | null;
   canonical: string | null;

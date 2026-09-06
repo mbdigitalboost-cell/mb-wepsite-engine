@@ -2,6 +2,7 @@
 
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
+import { ImageUploadField } from "@/components/dashboard/image-upload-field";
 import { saveSeoAction } from "./actions";
 import { initialSeoFormState } from "./form-state";
 import { inputClasses } from "@/lib/utils/input-classes";
@@ -9,6 +10,8 @@ import { inputClasses } from "@/lib/utils/input-classes";
 interface SeoFormProps {
   customerId: string;
   seoId: string | null;
+  /** Faz 6F-4A-3.2: null = site-wide (route_key IS NULL), dolu = statik sayfa override. */
+  routeKey: string | null;
   initialValues: {
     title: string;
     description: string;
@@ -19,13 +22,19 @@ interface SeoFormProps {
   };
 }
 
-export function SeoForm({ customerId, seoId, initialValues }: SeoFormProps) {
+export function SeoForm({ customerId, seoId, routeKey, initialValues }: SeoFormProps) {
   const action = saveSeoAction.bind(null, customerId, seoId);
   const [state, formAction, pending] = useActionState(action, initialSeoFormState);
   const formId = useId();
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
+      {/* Faz 6F-4A-3.2: hangi kaydın düzenlendiği (site-wide mi, hangi
+          statik sayfa mı) — sekme seçimiyle (page.tsx'in ?route= linki)
+          zaten belirleniyor, form sadece bunu action'a taşıyor. Boş
+          değer = site-wide, seoFormSchema bunu registry'ye karşı
+          doğruluyor. */}
+      <input type="hidden" name="routeKey" value={routeKey ?? ""} />
       <div>
         <label htmlFor={`${formId}-title`} className="mb-1.5 block text-sm font-medium text-foreground">
           Title
@@ -50,12 +59,13 @@ export function SeoForm({ customerId, seoId, initialValues }: SeoFormProps) {
         </label>
         <input id={`${formId}-canonical`} name="canonical" type="text" defaultValue={initialValues.canonical} className={inputClasses} />
       </div>
-      <div>
-        <label htmlFor={`${formId}-ogImage`} className="mb-1.5 block text-sm font-medium text-foreground">
-          OG Image URL
-        </label>
-        <input id={`${formId}-ogImage`} name="ogImage" type="text" defaultValue={initialValues.ogImage} className={inputClasses} />
-      </div>
+      <ImageUploadField
+        customerId={customerId}
+        folder="brand"
+        name="ogImage"
+        label="OG Image"
+        defaultValue={initialValues.ogImage}
+      />
 
       <div className="flex gap-6">
         <label className="flex items-center gap-2 text-sm text-foreground">

@@ -6,7 +6,11 @@ import { loadCustomerConnection } from "@/lib/cms/dashboard/require-customer-con
 import { seoFormSchema } from "@/lib/validation/content";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { triggerRemoteRevalidation } from "@/lib/cms/dashboard/trigger-revalidation";
+import { getStaticSeoRoutePath } from "@/lib/seo/route-registry";
 import type { SeoFormState } from "./form-state";
+
+/** Postgres unique_violation — bkz. seo_settings_route_key_unique (migration 0009). */
+const UNIQUE_VIOLATION = "23505";
 
 /**
  * Site-wide SEO only (page_id IS NULL) — seo_settings has no `status`
@@ -23,6 +27,7 @@ function toRow(parsed: {
   ogImage?: string;
   robotsIndex: boolean;
   robotsFollow: boolean;
+  routeKey?: string;
 }) {
   return {
     title: parsed.title || null,
@@ -31,6 +36,9 @@ function toRow(parsed: {
     og_image: parsed.ogImage || null,
     robots_index: parsed.robotsIndex,
     robots_follow: parsed.robotsFollow,
+    // Faz 6F-4A-3.2: boş ("" — site-wide sekmesi) => null, aksi halde
+    // seoFormSchema'nın registry'ye karşı doğruladığı statik sayfa anahtarı.
+    route_key: parsed.routeKey || null,
   };
 }
 
@@ -49,6 +57,7 @@ export async function saveSeoAction(
     ogImage: formData.get("ogImage"),
     robotsIndex: formData.get("robotsIndex") === "on",
     robotsFollow: formData.get("robotsFollow") === "on",
+    routeKey: formData.get("routeKey"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
 
@@ -62,20 +71,35 @@ export async function saveSeoAction(
 
   if (seoId) {
     const { error } = await connection.client.from("seo_settings").update(row).eq("id", seoId);
-    if (error) return { error: `Kaydedilemedi: ${error.message}` };
+    if (error) {
+      if (error.code === UNIQUE_VIOLATION) {
+        return { error: "Bu sayfa için zaten bir SEO kaydı bulunuyor." };
+      }
+      return { error: `Kaydedilemedi: ${error.message}` };
+    }
   } else {
     const { data, error } = await connection.client.from("seo_settings").insert({ ...row, page_id: null }).select("id").single();
-    if (error || !data) return { error: `Kaydedilemedi: ${error?.message ?? "bilinmeyen hata"}` };
+    if (error || !data) {
+      if (error?.code === UNIQUE_VIOLATION) {
+        return { error: "Bu sayfa için zaten bir SEO kaydı bulunuyor." };
+      }
+      return { error: `Kaydedilemedi: ${error?.message ?? "bilinmeyen hata"}` };
+    }
     resolvedId = data.id;
   }
 
   await logAuditEvent({ userId: user.id, customerId, action: "seo.update", entityType: "seo_settings", entityId: resolvedId, metadata: row });
   revalidatePath(`/dashboard/customers/${customerId}/seo`);
   // Faz 6C: panel-local revalidatePath'in (yukarıda) public deployment'a
-  // etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi). seo_settings sadece `/`
+  // etkisi yok (bkz. FAZ 4G/FAZ 6B teşhisi).
+  // Faz 6F-4A-3.2: site-wide (route_key boş) hâlâ "/" hedefliyor —
+  // seo_settings'in page_id=NULL/route_key=NULL satırı sadece `/`
   // sayfasının metadata'sını (applyHomeSeoOverrides) ve layout'un
-  // varsayılanını (applyLayoutSeoOverrides) etkiliyor — ikisi de `/`
-  // path'i üzerinden.
-  await triggerRemoteRevalidation(customerId, ["/"]);
+  // varsayılanını (applyLayoutSeoOverrides) etkiliyor. route_key doluysa
+  // (statik sayfa override'ı) gerçek hedef O sayfanın kendi path'i —
+  // "/" revalidate etmek o sayfayı YENİLEMEZ, bu yüzden path route_key'e
+  // göre hesaplanıyor.
+  const targetPath = parsed.data.routeKey ? getStaticSeoRoutePath(parsed.data.routeKey) : null;
+  await triggerRemoteRevalidation(customerId, [targetPath ?? "/"]);
   return { error: null };
 }

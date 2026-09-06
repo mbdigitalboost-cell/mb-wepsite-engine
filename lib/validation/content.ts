@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CONTENT_TYPES, type ContentTypeKey } from "@/lib/cms/dashboard/content-types";
 import { MEDIA_FOLDERS } from "@/lib/media/constants";
+import { isStaticSeoRouteKey } from "@/lib/seo/route-registry";
 
 const slugRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -77,6 +78,14 @@ export const siteSettingsFormSchema = z.object({
   buttonStyle: z.string().trim().max(50).optional().or(z.literal("")),
 });
 
+/**
+ * Faz 6F-4A-3.2: `routeKey` boş ("" — site-wide) veya
+ * `lib/seo/route-registry.ts`'in STATIC_SEO_ROUTES listesindeki bir
+ * `key` OLMALI — serbest metin kabul edilmiyor, admin'in yazım hatasıyla
+ * hiçbir sayfanın hiç okumayacağı bir route_key oluşturması bu şekilde
+ * engelleniyor. Form her zaman registry'den üretilen bir `<select>`
+ * sunduğu için bu esasen savunma amaçlı bir ikinci katman.
+ */
 export const seoFormSchema = z.object({
   title: z.string().trim().max(200).optional().or(z.literal("")),
   description: z.string().trim().max(400).optional().or(z.literal("")),
@@ -84,6 +93,13 @@ export const seoFormSchema = z.object({
   ogImage: z.string().trim().max(500).url("Geçerli bir URL olmalı.").optional().or(z.literal("")),
   robotsIndex: z.coerce.boolean().default(true),
   robotsFollow: z.coerce.boolean().default(true),
+  routeKey: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || isStaticSeoRouteKey(value), {
+      message: "Geçersiz sayfa seçimi.",
+    }),
 });
 
 export const trackingFormSchema = z.object({
