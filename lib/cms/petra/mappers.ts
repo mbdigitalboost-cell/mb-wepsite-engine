@@ -42,6 +42,11 @@ export function mapSolutionRows(rows: SolutionRow[]): PetraSolution[] {
     shortDescription: row.short_description ?? row.description ?? "",
     longDescription: row.description ?? row.short_description ?? "",
     image: row.image,
+    // Faz 6F-4A-3.4.1.3 — pass through untouched; resolveSolutionSeo()
+    // does the fallback chain, this mapper never invents/defaults SEO copy.
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
+    seoOgImage: row.seo_og_image,
   }));
 }
 

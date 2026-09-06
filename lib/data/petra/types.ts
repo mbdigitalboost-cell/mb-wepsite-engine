@@ -44,6 +44,10 @@ export interface PetraSolution {
   longDescription: string;
   /** Relative to /public, e.g. "/images/petra/solutions/split.webp". Null until a real asset exists. */
   image: string | null;
+  /** Faz 6F-4A-3.4.1.1 (migration 0010) — optional per-solution SEO overrides for /cozumler/[slug]. Missing/null = no override, see lib/seo/build-metadata.ts's resolveSolutionSeo(). Optional (not present) on the static petraSolutions fallback — no CMS row to source it from. */
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoOgImage?: string | null;
 }
 
 export interface PetraService {

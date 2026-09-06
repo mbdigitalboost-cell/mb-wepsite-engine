@@ -36,6 +36,54 @@ export async function resolveStaticPageSeo(connectionKey: string, routeKey: stri
   return resolveSiteWideSeo(connectionKey);
 }
 
+/** Input shape for resolveSolutionSeo() — kept independent of PetraSolution so this file doesn't need to import lib/data/petra/types.ts. */
+export interface SolutionSeoInput {
+  seoTitle: string | null | undefined;
+  seoDescription: string | null | undefined;
+  seoOgImage: string | null | undefined;
+  title: string;
+  description: string;
+}
+
+export interface ResolvedSolutionSeo {
+  title: string;
+  description: string;
+  ogImage: string | null;
+}
+
+/**
+ * Faz 6F-4A-3.4.1.3 — dynamic solution detail page (/cozumler/[slug])
+ * SEO resolution. Deliberately NOT `resolveStaticPageSeo()`: that
+ * function is `route_key`-scoped for the 8 static pages and has no
+ * relationship to a solution's slug — using it here would silently look
+ * up the wrong (or no) row. Uses `resolveSiteWideSeo()` instead, the
+ * same site-wide `seo_settings` row every other page falls back to.
+ *
+ * Per-field, 3-tier fallback (approved chain, not the 2-tier shape
+ * `applyHomeSeoOverrides`/`applyLayoutSeoOverrides` use — those merge one
+ * `SeoSettingsRow | null` onto an already-built `base: Metadata`; here
+ * every field independently checks its own solution-level override first,
+ * then the site-wide row, then the solution's own content field):
+ *   title       = solution.seoTitle ?? siteWide.title ?? solution.title
+ *   description = solution.seoDescription ?? siteWide.description ?? solution.description
+ *   ogImage     = solution.seoOgImage ?? siteWide.og_image ?? null
+ * `ogImage` NEVER falls back to the solution's own `image` — that asset
+ * is typically a vertical 3:4 crop, not an OG-friendly aspect ratio (see
+ * migration 0010's own comment). Canonical and robots are NOT part of
+ * this resolver on purpose — canonical stays slug-derived
+ * (`/cozumler/${slug}`) and robots stays inherited from the root public
+ * layout; neither should ever be overridden by a solution or the
+ * site-wide row.
+ */
+export async function resolveSolutionSeo(connectionKey: string, solution: SolutionSeoInput): Promise<ResolvedSolutionSeo> {
+  const siteWideSeo = await resolveSiteWideSeo(connectionKey);
+  return {
+    title: solution.seoTitle ?? siteWideSeo?.title ?? solution.title,
+    description: solution.seoDescription ?? siteWideSeo?.description ?? solution.description,
+    ogImage: solution.seoOgImage ?? siteWideSeo?.og_image ?? null,
+  };
+}
+
 /**
  * Site-wide fallback layer — applied once, at the root PUBLIC layout, so
  * it reaches every page under it EXCEPT a field that page sets itself

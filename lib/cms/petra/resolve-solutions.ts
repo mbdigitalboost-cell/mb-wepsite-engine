@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { petraSolutions } from "@/lib/data/petra/solutions";
 import type { PetraSolution } from "@/lib/data/petra/types";
 import { getSolutions } from "@/lib/cms/adapters";
@@ -17,10 +18,18 @@ const PETRA_CONNECTION_KEY = "PETRA";
  * listing the static six). Never fabricates a solution — CMS rows if the
  * adapter genuinely returned published data, otherwise exactly the
  * static `petraSolutions` fallback, nothing in between.
+ *
+ * Faz 6F-4A-3.4.1.3: wrapped in React's `cache()` (same pattern as
+ * app/(public)/layout.tsx's getSiteSettingsCached, Faz 6F-2) — Supabase's
+ * client isn't deduped by Next's own fetch memoization, so without this,
+ * generateMetadata() and the page body (and generateStaticParams, at
+ * build/ISR-revalidate time) each re-fetched the entire solutions list
+ * independently. Signature/behavior unchanged, still resolves once per
+ * request now instead of up to three times.
  */
-export async function resolvePetraSolutions(): Promise<PetraSolution[]> {
+export const resolvePetraSolutions = cache(async (): Promise<PetraSolution[]> => {
   const solutionsResult = await getSolutions(PETRA_CONNECTION_KEY, petraSolutions);
   return isCmsRow((solutionsResult as unknown[])[0])
     ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
-}
+});

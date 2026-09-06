@@ -9,6 +9,9 @@ import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
+import { resolveSolutionSeo } from "@/lib/seo/build-metadata";
+
+const PETRA_CONNECTION_KEY = "PETRA";
 
 // Faz 4G — güvenlik ağı: bkz. app/(public)/page.tsx'in aynı satırındaki
 // yorum. Admin'deki anlık webhook birincil mekanizma; bu sadece arıza
@@ -39,6 +42,15 @@ export async function generateStaticParams() {
   return solutions.map((solution) => ({ slug: solution.slug }));
 }
 
+// Faz 6F-4A-3.4.1.3: SEO title/description/OG image now resolve through
+// resolveSolutionSeo() (solution's own seo_title/seo_description/
+// seo_og_image -> site-wide seo_settings -> the solution's own content
+// fields, per field, independently) — see that function's own comment
+// for why resolveStaticPageSeo() (route_key-scoped, static pages only)
+// is deliberately NOT used here. Canonical stays slug-derived exactly as
+// before, and robots is deliberately never set here (both are outside
+// resolveSolutionSeo() on purpose — see its comment), so this page keeps
+// inheriting the root public layout's robots default unchanged.
 export async function generateMetadata({
   params,
 }: {
@@ -49,10 +61,19 @@ export async function generateMetadata({
   const solution = solutions.find((item) => item.slug === slug);
   if (!solution) return {};
 
-  return {
+  const seo = await resolveSolutionSeo(PETRA_CONNECTION_KEY, {
+    seoTitle: solution.seoTitle,
+    seoDescription: solution.seoDescription,
+    seoOgImage: solution.seoOgImage,
     title: solution.title,
     description: solution.shortDescription,
+  });
+
+  return {
+    title: seo.title,
+    description: seo.description,
     alternates: { canonical: `/cozumler/${solution.slug}` },
+    ...(seo.ogImage ? { openGraph: { images: [{ url: seo.ogImage }] } } : {}),
   };
 }
 
