@@ -12,16 +12,26 @@ import { petraContactInfo } from "@/lib/data/petra/site-config";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
+import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
+const ROUTE_KEY = "hakkimizda";
 
-export const metadata: Metadata = {
+const staticMetadata: Metadata = {
   title: "Hakkımızda",
   description:
     "Petra Mühendislik — 2017'de Kahramanmaraş'ta kurulan, ısıtma, soğutma ve iklimlendirme alanında mühendislik yaklaşımıyla çalışan bir firma.",
   alternates: { canonical: "/hakkimizda" },
 };
+
+// Faz 6F-4A-3.3: statik sayfa SEO — route_key eşleşen kayıt varsa onu,
+// yoksa site-wide satırı, o da yoksa yukarıdaki staticMetadata'yı
+// olduğu gibi kullanır (bkz. lib/seo/build-metadata.ts).
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
+  return applyHomeSeoOverrides(staticMetadata, seo);
+}
 
 /**
  * Hakkımızda sayfası revizyonu (2026-08-19 briefi). Önceki sürüm tek bir

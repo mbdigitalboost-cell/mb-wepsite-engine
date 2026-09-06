@@ -21,6 +21,22 @@ export async function resolveSiteWideSeo(connectionKey: string): Promise<SeoSett
 }
 
 /**
+ * Faz 6F-4A-3.3 — statik sayfa SEO çözümü: ÖNCE o sayfanın kendi
+ * `route_key`'li satırına bakar, YOKSA site-wide satıra (aynı
+ * `resolveSiteWideSeo()`) düşer. Hiçbiri yoksa `null` döner — çağıran
+ * (`applyHomeSeoOverrides`) bu durumda kendi statik `Metadata` objesini
+ * değiştirmeden döndürür. `routeKey`, `lib/seo/route-registry.ts`'in
+ * `STATIC_SEO_ROUTES` listesindeki bir `key` olmalı — registry ile
+ * senkron olmayan bir değer basitçe hiçbir satırla eşleşmez, hataya
+ * değil sessiz fallback'e düşer.
+ */
+export async function resolveStaticPageSeo(connectionKey: string, routeKey: string): Promise<SeoSettingsRow | null> {
+  const pageSeo = await getSeo<SeoSettingsRow | null>(connectionKey, null, routeKey);
+  if (pageSeo) return pageSeo;
+  return resolveSiteWideSeo(connectionKey);
+}
+
+/**
  * Site-wide fallback layer — applied once, at the root PUBLIC layout, so
  * it reaches every page under it EXCEPT a field that page sets itself
  * (Next.js metadata resolution: a leaf segment's own field always wins
@@ -72,6 +88,11 @@ export function applyLayoutSeoOverrides(base: Metadata, seo: SeoSettingsRow | nu
  * `staticMetadata`). A CMS override is a different code path from that
  * omission, so it needs its own explicit guarantee rather than relying
  * on Next's non-CMS default-inheritance behavior.
+ *
+ * Faz 6F-4A-3.3: despite the name, this function's body has nothing
+ * homepage-specific in it — the 8 static pages' `generateMetadata()`
+ * reuse it verbatim (with their own `staticMetadata` + `resolveStaticPageSeo`
+ * result) instead of a second, duplicate merge function.
  */
 export function applyHomeSeoOverrides(base: Metadata, seo: SeoSettingsRow | null): Metadata {
   if (!seo) return base;

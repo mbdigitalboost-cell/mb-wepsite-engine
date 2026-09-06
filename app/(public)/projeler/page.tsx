@@ -7,20 +7,28 @@ import { petraProjects } from "@/lib/data/petra/projects";
 import { petraSiteWorksFull } from "@/lib/data/petra/site-works";
 import { getProjects } from "@/lib/cms/adapters";
 import { isCmsRow, mapProjectRows } from "@/lib/cms/petra/mappers";
+import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
 import type { ProjectRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
+const ROUTE_KEY = "projeler";
 
 // Faz 4G — güvenlik ağı: bkz. app/(public)/page.tsx'in aynı satırındaki
 // yorum. Admin'deki anlık webhook birincil mekanizma; bu sadece arıza
 // durumunda devreye giren bir üst sınır.
 export const revalidate = 300;
 
-export const metadata: Metadata = {
+const staticMetadata: Metadata = {
   title: "Projeler",
   description: "Petra Mühendislik tarafından tamamlanan iklimlendirme projeleri ve gerçek saha uygulamaları.",
   alternates: { canonical: "/projeler" },
 };
+
+// Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
+  return applyHomeSeoOverrides(staticMetadata, seo);
+}
 
 // When published (named/CMS) projects exist, `Projects` renders its own
 // heading ("Gerçek Projeler. Gerçek Çözümler.") below this page's own

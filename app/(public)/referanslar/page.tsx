@@ -6,13 +6,23 @@ import { HvacGridPattern } from "@/components/decorative/hvac-grid-pattern";
 import { ReferencesShowcase } from "@/components/sections/references/references-showcase";
 import { ReferenceList } from "@/components/sections/references/reference-list";
 import { petraReferences } from "@/lib/data/petra/references";
+import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
 
-export const metadata: Metadata = {
+const PETRA_CONNECTION_KEY = "PETRA";
+const ROUTE_KEY = "referanslar";
+
+const staticMetadata: Metadata = {
   title: "Referanslarımız",
   description:
     "Petra Mühendislik'in kamu, sağlık, turizm, eğitim ve ticari alanlarda tamamladığı iklimlendirme projelerinden referanslar.",
   alternates: { canonical: "/referanslar" },
 };
+
+// Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
+  return applyHomeSeoOverrides(staticMetadata, seo);
+}
 
 /**
  * Full References page — the cinematic showcase (every reference, same
