@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import "./petra-fonts.css";
 import { ThemeProvider } from "@/lib/theme/theme-provider";
 import { petraTheme } from "@/lib/theme/petra-theme";
@@ -18,6 +19,20 @@ import type { SiteSettingsRow } from "@/lib/cms/customer-types";
 import type { BrandTheme } from "@/lib/theme/types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
+
+/**
+ * Faz 6F-2: `generateMetadata()` and `PublicLayout`'s own body both need
+ * `site_settings` (metadata needs `favicon`; the body already needed
+ * company_name/logo/colors) — Next.js runs these as separate function
+ * invocations that share no scope, so without `cache()` this would issue
+ * the exact same `getSiteSettings` query twice per request. `cache()` is
+ * React's per-request memoization primitive (official Next.js pattern for
+ * this exact "metadata + page need the same fetch" case) — both call
+ * sites below now share one query instead of duplicating it.
+ */
+const getSiteSettingsCached = cache((connectionKey: string) =>
+  getSiteSettings<SiteSettingsRow | null>(connectionKey, null),
+);
 
 const petraDefaultTitle = "Petra Mühendislik — İklimlendirmede Mühendislik ve Güven";
 const petraDefaultDescription =
@@ -62,8 +77,20 @@ const staticMetadata: Metadata = {
 // lib/seo/build-metadata.ts's `applyLayoutSeoOverrides` for exactly
 // which fields a site-wide `seo_settings` row can and cannot touch here.
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = await resolveSiteWideSeo(PETRA_CONNECTION_KEY);
-  return applyLayoutSeoOverrides(staticMetadata, seo);
+  const [seo, siteSettings] = await Promise.all([
+    resolveSiteWideSeo(PETRA_CONNECTION_KEY),
+    getSiteSettingsCached(PETRA_CONNECTION_KEY),
+  ]);
+  const metadata = applyLayoutSeoOverrides(staticMetadata, seo);
+  // Faz 6F-2: `getSiteSettings` (fetchPublishedSingle) already filters to
+  // `status='published'` — a draft site_settings row never reaches this
+  // point at all, so no separate draft check is needed here. `favicon`
+  // null/empty leaves `icons` unset, which keeps the existing
+  // app/favicon.ico file-convention fallback exactly as it works today.
+  if (siteSettings?.favicon) {
+    metadata.icons = { icon: siteSettings.favicon };
+  }
+  return metadata;
 }
 
 /**
@@ -92,7 +119,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
   // varsa bile, boş bırakılan HER alan kendi statik karşılığına düşer
   // (bkz. dashboard/customers/[customerId]/settings/page.tsx'in kendi
   // metni: "burada girilmeyen bir değer public sitede uydurulmaz").
-  const siteSettings = await getSiteSettings<SiteSettingsRow | null>(PETRA_CONNECTION_KEY, null);
+  const siteSettings = await getSiteSettingsCached(PETRA_CONNECTION_KEY);
   const contactInfo = siteSettings ? mapSiteSettingsContactInfo(siteSettings, petraContactInfo) : petraContactInfo;
   const resolvedSiteName = siteSettings?.company_name ?? petraSiteName;
   // site_settings'teki "logo" (normal, açık zemin için) / "logo_white"
