@@ -101,6 +101,10 @@ export type NamedContentRow = ContentRow & {
  */
 export type SolutionRow = NamedContentRow & {
   short_description: string | null;
+  /** Faz 6F-4A-3.4.1.1 (migration 0010) — /cozumler/[slug] için opsiyonel SEO override'ları, NULL = solution'ın kendi title/short_description/image'ına düş. */
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_og_image: string | null;
 };
 
 /**

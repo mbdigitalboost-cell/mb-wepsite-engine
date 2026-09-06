@@ -72,6 +72,14 @@ const solutionFields: ContentFieldConfig[] = [
   { key: "short_description", label: "Kısa Açıklama (liste kartında gösterilir)", kind: "textarea", required: false },
   { key: "description", label: "Uzun Açıklama (detay sayfasında gösterilir)", kind: "textarea", required: false },
   { key: "image", label: "Görsel", kind: "image", required: false },
+  // Faz 6F-4A-3.4.1.2 (migration 0010) — /cozumler/[slug] detay sayfası
+  // için opsiyonel SEO override alanları. Boş bırakılırsa solution'ın
+  // kendi title/short_description/image'ına düşülür (bkz. build-metadata.ts,
+  // bağlanması ayrı bir faz — 6F-4A-3.4.1.3). `imageFolder` burada değil,
+  // ContentTypeConfig.imageFolder'dan ("solutions") geliyor.
+  { key: "seo_title", label: "SEO Başlık", kind: "text", required: false },
+  { key: "seo_description", label: "SEO Açıklama", kind: "textarea", required: false },
+  { key: "seo_og_image", label: "SEO Görsel (OG Image)", kind: "image", required: false },
 ];
 
 /**
