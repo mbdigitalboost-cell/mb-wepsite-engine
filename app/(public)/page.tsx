@@ -22,13 +22,15 @@ import { petraSolutions } from "@/lib/data/petra/solutions";
 import { petraTestimonials } from "@/lib/data/petra/testimonials";
 import { petraFaqs } from "@/lib/data/petra/faqs";
 import { petraProductShowcase } from "@/lib/data/petra/product-showcase";
+import { petraProjects } from "@/lib/data/petra/projects";
+import { petraCampaigns } from "@/lib/data/petra/campaigns";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems } from "@/lib/cms/adapters";
-import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows } from "@/lib/cms/petra/mappers";
+import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems, getProjects, getCampaigns } from "@/lib/cms/adapters";
+import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows, mapProjectRows, mapCampaignRows } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
-import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow } from "@/lib/cms/customer-types";
+import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, ProjectRow, CampaignRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -91,21 +93,27 @@ export async function generateMetadata(): Promise<Metadata> {
  * "the adapter returned the fallback value unchanged" (see
  * lib/cms/petra/mappers.ts).
  *
- * Projects/Campaigns are intentionally NOT wired here yet — their CMS
- * table shape doesn't carry every field the existing component needs
- * (no `category` on projects, no CTA fields on campaigns; see Phase 6
- * report). Wiring them would mean inventing values these fields don't
- * have, which is exactly what this phase forbids.
+ * Faz 6F-3: Projects/Campaigns now follow the exact same pattern —
+ * migration 0007 (Phase 9.6) already added `projects.category` and
+ * `campaigns.price_label`/`cta_label`/`cta_href`, and `mapProjectRows`/
+ * `mapCampaignRows` (lib/cms/petra/mappers.ts) already produce the full
+ * `PetraProject`/`PetraCampaign` shape these components expect — the
+ * same mappers `/projeler`/`/kampanyalar` already use in production.
+ * Nothing here is invented; an empty/unpublished CMS falls back to the
+ * exact same static `petraProjects`/`petraCampaigns` (both `[]` today).
  */
 export default async function HomePage() {
-  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult, showcaseResult] = await Promise.all([
-    getHero<typeof petraHero>(PETRA_CONNECTION_KEY, petraHero),
-    getSolutions(PETRA_CONNECTION_KEY, petraSolutions),
-    getTestimonials(PETRA_CONNECTION_KEY, petraTestimonials),
-    getFaqs(PETRA_CONNECTION_KEY, petraFaqs),
-    getSiteSettings(PETRA_CONNECTION_KEY, petraContactInfo),
-    getProductShowcaseItems(PETRA_CONNECTION_KEY, petraProductShowcase),
-  ]);
+  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult, showcaseResult, projectsResult, campaignsResult] =
+    await Promise.all([
+      getHero<typeof petraHero>(PETRA_CONNECTION_KEY, petraHero),
+      getSolutions(PETRA_CONNECTION_KEY, petraSolutions),
+      getTestimonials(PETRA_CONNECTION_KEY, petraTestimonials),
+      getFaqs(PETRA_CONNECTION_KEY, petraFaqs),
+      getSiteSettings(PETRA_CONNECTION_KEY, petraContactInfo),
+      getProductShowcaseItems(PETRA_CONNECTION_KEY, petraProductShowcase),
+      getProjects(PETRA_CONNECTION_KEY, petraProjects),
+      getCampaigns(PETRA_CONNECTION_KEY, petraCampaigns),
+    ]);
 
   const hero = isCmsRow(heroResult) ? mapHeroRow(heroResult as HeroSectionRow, petraHero.trustInfo, petraHero) : petraHero;
   const solutions = isCmsRow((solutionsResult as unknown[])[0])
@@ -121,6 +129,12 @@ export default async function HomePage() {
   const showcaseProducts = isCmsRow((showcaseResult as unknown[])[0])
     ? mapProductShowcaseRows(showcaseResult as ProductShowcaseItemRow[])
     : petraProductShowcase;
+  const projects = isCmsRow((projectsResult as unknown[])[0])
+    ? mapProjectRows(projectsResult as ProjectRow[])
+    : petraProjects;
+  const campaigns = isCmsRow((campaignsResult as unknown[])[0])
+    ? mapCampaignRows(campaignsResult as CampaignRow[])
+    : petraCampaigns;
 
   const whatsappHref = buildWhatsappHref(whatsapp);
   const faqJsonLd = petraFaqStructuredData(faqs);
@@ -142,8 +156,8 @@ export default async function HomePage() {
       <ProductShowcaseSection products={showcaseProducts} />
       <BtuPromoSection />
       <BrandsSection />
-      <Projects />
-      <Campaigns />
+      <Projects projects={projects} />
+      <Campaigns campaigns={campaigns} />
       <WhyPetra />
       <SiteWorksSection />
       <ReferencesSection />
