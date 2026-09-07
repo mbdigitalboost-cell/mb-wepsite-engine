@@ -194,6 +194,15 @@ export interface MappedHero {
   ctaTopOffset: string | undefined;
   /** Same reasoning as `ctaTopOffset` above — CMS hero photos never need this. */
   ctaTopOffsetMobile: string | undefined;
+  /**
+   * Faz "Hero — Yeni Görsel + Mouse-Reactive Motion": gates the aligned
+   * red-streak motion layer (components/sections/hero-atmosphere.tsx) —
+   * that layer's SVG paths are hand-aligned to the ONE curated static
+   * fallback photo (lib/data/petra/hero.ts), so it must never appear
+   * over an arbitrary CMS-uploaded photo. Always `false` here, same
+   * pattern as `backgroundHasEmbeddedHeadline` above.
+   */
+  backgroundHasAtmosphere: boolean;
   trustInfo: string[];
 }
 
@@ -215,6 +224,8 @@ export interface HeroFallbackVisuals {
   backgroundHasEmbeddedHeadlineMobile: boolean;
   trustInfoOffset: string | undefined;
   ctaTopOffset: string | undefined;
+  /** See `MappedHero.backgroundHasAtmosphere` above — this is `petraHero`'s own value, carried through when a CMS row has no image of its own. */
+  backgroundHasAtmosphere: boolean;
 }
 
 /**
@@ -262,6 +273,7 @@ export function mapHeroRow(
     trustInfoOffset: usingFallbackImage ? fallback.trustInfoOffset : undefined,
     ctaTopOffset: usingFallbackImage ? fallback.ctaTopOffset : undefined,
     ctaTopOffsetMobile: undefined,
+    backgroundHasAtmosphere: usingFallbackImage ? fallback.backgroundHasAtmosphere : false,
     trustInfo: fallbackTrustInfo,
   };
 }

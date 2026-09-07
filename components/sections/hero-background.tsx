@@ -79,6 +79,17 @@ interface HeroBackgroundProps {
    * background.
    */
   parallax?: ParallaxState;
+  /**
+   * Faz "Hero — Yeni Görsel + Mouse-Reactive Motion": gates the aligned
+   * red-streak atmosphere layer (hero-atmosphere.tsx) — `true` ONLY for
+   * the one curated static fallback photo whose real streak positions
+   * that layer's SVG paths approximate (see
+   * lib/data/petra/hero.ts's `backgroundHasAtmosphere` doc). Never tied
+   * to `image`/`imageMobile` presence alone — an admin-uploaded CMS
+   * photo also has a real `image`, but would never have this layer's
+   * hand-aligned paths make sense over it.
+   */
+  showAtmosphere?: boolean;
 }
 
 export function HeroBackground({
@@ -88,6 +99,7 @@ export function HeroBackground({
   objectPosition = "center",
   objectPositionMobile = objectPosition,
   parallax,
+  showAtmosphere = false,
 }: HeroBackgroundProps) {
   const prefersReducedMotion = useReducedMotion();
   const [loaded, setLoaded] = useState(prefersReducedMotion);
@@ -220,11 +232,13 @@ export function HeroBackground({
           />
         </div>
       ) : null}
-      {/* Faz "Hero Motion": kırmızı atmosferik katman (hava akışı + glow
-          pulse) — ambient katmanının hemen yanında, AYNI koşulla
-          (gerçek bir görsel varken) render ediliyor, mouse/touch
-          parallax state'ine hiç bağlı değil (bkz. hero-atmosphere.tsx). */}
-      {image || imageMobile ? <HeroAtmosphere /> : null}
+      {/* Faz "Hero — Yeni Görsel + Mouse-Reactive Motion": kırmızı
+          atmosferik katman (otonom akış + mouse-reaktif modülasyon) —
+          ambient katmanının hemen yanında, ama `image`/`imageMobile`
+          varlığına DEĞİL, `showAtmosphere`'e (yalnızca küratörlü statik
+          fallback görseli için `true`) bağlı — bkz. hero-atmosphere.tsx
+          ve lib/data/petra/hero.ts'in `backgroundHasAtmosphere` doc'u. */}
+      {showAtmosphere ? <HeroAtmosphere parallax={parallax} /> : null}
       {/*
         Faz 13 revizyon 2: these two darkening gradients were tuned for a
         wide desktop-style banner (extra contrast for real text/buttons

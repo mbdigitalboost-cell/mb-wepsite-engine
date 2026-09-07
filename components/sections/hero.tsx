@@ -91,6 +91,7 @@ export function Hero({ whatsappHref, hero = petraHero }: HeroProps) {
         objectPosition={hero.backgroundObjectPosition}
         objectPositionMobile={hero.backgroundObjectPositionMobile}
         parallax={parallax}
+        showAtmosphere={hero.backgroundHasAtmosphere}
       />
 
       <Container className="relative z-10">

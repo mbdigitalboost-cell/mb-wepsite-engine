@@ -88,42 +88,53 @@ body {
 }
 
 /* Petra Hero — atmosferik motion (components/sections/hero-atmosphere.tsx).
-   İkisi de sadece opacity/transform animasyonu — CLS riski yok. Sabit,
-   sürekli döngüler (ease-in-out, infinite); `prefers-reduced-motion:
-   reduce` iken yukarıdaki global kural (satır ~60) `animation-duration`'ı
-   0.01ms'e zorlayarak bunları da otomatik olarak neredeyse-durağan hale
-   getiriyor — ayrı bir override GEREKMİYOR. */
+   Faz "Hero — Yeni Görsel + Mouse-Reactive Motion": bu katman artık
+   `11_hero_main_v1.jpg`/`11_hero_mobile_v1.jpg`'nin ÜZERİNE, onların
+   KENDİ zaten belirgin kırmızı/beyaz ışık şeritlerine hafif bir
+   "canlılık" katmak için var — o yüzden peak opaklıklar eski sürüme
+   (0.35-0.75 / 0-1) göre BİLEREK çok daha düşük tutuldu (0.18-0.32 /
+   0-1 ama dıştaki wrapper'da ayrıca opacity-15/20/25 ile çarpılıyor,
+   bkz. hero-atmosphere.tsx). İkisi de sadece opacity/transform
+   animasyonu — CLS riski yok. Sabit, sürekli döngüler (ease-in-out,
+   infinite); `prefers-reduced-motion: reduce` iken yukarıdaki global
+   kural (satır ~60) `animation-duration`'ı 0.01ms'e zorlayarak bunları
+   da otomatik olarak neredeyse-durağan hale getiriyor — ayrı bir
+   override GEREKMİYOR. Bu iki class, hero-atmosphere.tsx'teki mouse-
+   reaktif JS `transform`'un uygulandığı DIŞ wrapper'ın İÇİNDEKİ
+   elemanlara uygulanıyor (glow div + SVG path'ler) — CSS `animation`
+   ile JS'in inline `transform`'u AYNI elemanda çakışmasın diye
+   (animasyon her zaman kazanır) bilinçli olarak iç/dış ayrımı var. */
 @keyframes hero-atmosphere-glow-pulse {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
   50% {
-    opacity: 0.75;
+    opacity: 0.85;
   }
 }
 
 .hero-atmosphere-glow {
-  animation: hero-atmosphere-glow-pulse 7s ease-in-out infinite;
+  animation: hero-atmosphere-glow-pulse 9s ease-in-out infinite;
 }
 
 @keyframes hero-atmosphere-airflow {
   0% {
-    transform: translate3d(-4%, 1%, 0);
+    transform: translate3d(-3%, 1%, 0);
     opacity: 0;
   }
-  12% {
+  15% {
     opacity: 1;
   }
-  88% {
+  85% {
     opacity: 1;
   }
   100% {
-    transform: translate3d(4%, -1%, 0);
+    transform: translate3d(3%, -1%, 0);
     opacity: 0;
   }
 }
 
 .hero-atmosphere-airflow {
-  animation: hero-atmosphere-airflow 16s ease-in-out infinite;
+  animation: hero-atmosphere-airflow 18s ease-in-out infinite;
 }
