@@ -36,11 +36,14 @@ import type { ContentStatus } from "@/lib/cms/customer-types";
  * Faz 4D — her tipin GERÇEK public karşılığı, app/(public)/ altındaki
  * route dosyaları okunarak doğrulandı (bkz. FAZ 4D teşhis/uygulama
  * raporu): solutions → /cozumler, services → /hizmetler, projects →
- * /projeler, campaigns → /kampanyalar. testimonials/faqs/
- * product_showcase_items'ın kendi sayfası yok, yalnızca ana sayfada
- * (`/`) görünüyorlar — bu yüzden boş liste, ana sayfa kapsaması zaten
- * her üç fonksiyonda da ayrıca `revalidatePath("/", "layout")` ile
- * sağlanıyor (bkz. revalidatePublicPathsForType).
+ * /projeler, campaigns → /kampanyalar. Faz 6: client_references →
+ * /referanslar (SOLUTIONS/services/projects/campaigns ile AYNI durum —
+ * kendi dedike bir public liste sayfası VAR, bu yüzden `brands`/
+ * `product_showcase_items`'ın aksine BOŞ bırakılmadı). testimonials/
+ * faqs/product_showcase_items/brands'ın kendi sayfası YOK, yalnızca ana
+ * sayfada (`/`) görünüyorlar — bu yüzden onlar için boş liste, ana sayfa
+ * kapsaması zaten HER fonksiyonda da ayrıca `revalidatePath("/", "layout")`
+ * ile sağlanıyor (bkz. revalidatePublicPathsForType).
  */
 const PUBLIC_LIST_PATHS: Record<ContentTypeKey, string[]> = {
   solutions: ["/cozumler"],
@@ -51,6 +54,7 @@ const PUBLIC_LIST_PATHS: Record<ContentTypeKey, string[]> = {
   faqs: [],
   product_showcase_items: [],
   brands: [],
+  client_references: ["/referanslar"],
 };
 
 /**

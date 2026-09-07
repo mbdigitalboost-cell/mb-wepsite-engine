@@ -6,10 +6,18 @@ import { HvacGridPattern } from "@/components/decorative/hvac-grid-pattern";
 import { ReferencesShowcase } from "@/components/sections/references/references-showcase";
 import { ReferenceList } from "@/components/sections/references/reference-list";
 import { petraReferences } from "@/lib/data/petra/references";
+import { getClientReferences } from "@/lib/cms/adapters";
+import { isCmsRow, mapClientReferenceRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import type { ClientReferenceRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 const ROUTE_KEY = "referanslar";
+
+// Faz 4G — güvenlik ağı: bkz. app/(public)/page.tsx'in aynı satırındaki
+// yorum. Admin'deki anlık webhook birincil mekanizma; bu sadece arıza
+// durumunda devreye giren bir üst sınır.
+export const revalidate = 300;
 
 const staticMetadata: Metadata = {
   title: "Referanslarımız",
@@ -39,9 +47,20 @@ export async function generateMetadata(): Promise<Metadata> {
  * here — see PHASE_REFERANSLAR_EK_RAPOR.md for why this was worth fixing
  * (the first version had a literal "25 referans" that went stale the
  * moment 8 more were added).
+ *
+ * Faz 6 (migration 0012): CMS-first, static `petraReferences` as
+ * fallback — same pattern as every other Petra route (see
+ * app/(public)/page.tsx's own comment). This is the SAME data source the
+ * homepage's `ReferencesSection` now also reads (both call
+ * `getClientReferences`) — an admin edit shows up on both surfaces from
+ * the same published rows, never two separate datasets.
  */
-export default function ReferanslarPage() {
-  const references = [...petraReferences].sort((a, b) => a.order - b.order);
+export default async function ReferanslarPage() {
+  const referencesResult = await getClientReferences(PETRA_CONNECTION_KEY, petraReferences);
+  const allReferences = isCmsRow((referencesResult as unknown[])[0])
+    ? mapClientReferenceRows(referencesResult as ClientReferenceRow[])
+    : petraReferences;
+  const references = [...allReferences].sort((a, b) => a.order - b.order);
 
   return (
     <>
@@ -64,21 +83,25 @@ export default function ReferanslarPage() {
         </Container>
       </section>
 
-      <section className="py-20 lg:py-28">
-        <Container>
-          <Reveal variant="scale-in">
-            <ReferencesShowcase references={references} />
-          </Reveal>
-        </Container>
-      </section>
+      {references.length > 0 ? (
+        <>
+          <section className="py-20 lg:py-28">
+            <Container>
+              <Reveal variant="scale-in">
+                <ReferencesShowcase references={references} />
+              </Reveal>
+            </Container>
+          </section>
 
-      <section className="border-t border-white/10 py-20 lg:py-28">
-        <Container>
-          <Reveal>
-            <ReferenceList references={references} />
-          </Reveal>
-        </Container>
-      </section>
+          <section className="border-t border-white/10 py-20 lg:py-28">
+            <Container>
+              <Reveal>
+                <ReferenceList references={references} />
+              </Reveal>
+            </Container>
+          </section>
+        </>
+      ) : null}
 
       <section className="border-t border-white/10 py-24 text-center lg:py-32">
         <Container>

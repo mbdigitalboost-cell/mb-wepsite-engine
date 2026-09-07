@@ -4,7 +4,19 @@ import { Button } from "@/components/ui/button";
 import { SectionDivider } from "@/components/ui/section-divider";
 import { HvacGridPattern } from "@/components/decorative/hvac-grid-pattern";
 import { ReferencesShowcase } from "@/components/sections/references/references-showcase";
-import { petraReferences } from "@/lib/data/petra/references";
+import { petraReferences, type PetraReference } from "@/lib/data/petra/references";
+
+interface ReferencesSectionProps {
+  /**
+   * Optional CMS-sourced override — defaults to the static
+   * `petraReferences` import when omitted, same pattern as
+   * components/sections/brands-section.tsx. Faz 6 (migration 0012): if
+   * NO reference is `featured` (e.g. an admin unchecks every one), the
+   * section renders nothing — a showcase with zero slides would crash
+   * (`ReferencesShowcase` indexes `references[0]` unconditionally).
+   */
+  references?: PetraReference[];
+}
 
 /**
  * Homepage "Referanslarımız" teaser — a cinematic showcase of the
@@ -19,8 +31,9 @@ import { petraReferences } from "@/lib/data/petra/references";
  * "Neden Petra?" (`app/(public)/page.tsx`), before Statistics —
  * "Neden Petra? → Referanslarımız → gerçek kurum/proje → CTA".
  */
-export function ReferencesSection() {
-  const featuredReferences = petraReferences.filter((reference) => reference.featured).sort((a, b) => a.order - b.order);
+export function ReferencesSection({ references = petraReferences }: ReferencesSectionProps) {
+  const featuredReferences = references.filter((reference) => reference.featured).sort((a, b) => a.order - b.order);
+  if (featuredReferences.length === 0) return null;
 
   return (
     <section className="relative overflow-hidden border-t border-white/10 py-24 lg:py-32">

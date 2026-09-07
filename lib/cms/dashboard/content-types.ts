@@ -23,7 +23,8 @@ export type ContentTypeKey =
   | "testimonials"
   | "faqs"
   | "product_showcase_items"
-  | "brands";
+  | "brands"
+  | "client_references";
 
 export interface ContentFieldConfig {
   key: string;
@@ -35,8 +36,16 @@ export interface ContentFieldConfig {
    * more "copy the URL from Medya Kütüphanesi and paste it here" round
    * trip. Still validated and stored as a URL string underneath (see
    * lib/validation/content.ts), so this is a rendering change only.
+   *
+   * Faz 6 (client_references): "boolean" renders as a real `<input
+   * type="checkbox">` (see content-form.tsx) instead of a text input —
+   * added for `client_references.is_real_logo`/`featured`, the first
+   * fields in this engine that are genuinely true/false rather than
+   * free text. Stored as a real `boolean` column underneath (Zod's
+   * `z.coerce.boolean()` on a checkbox's FormData value — `"on"` or
+   * absent — coerces exactly the same way `Boolean(...)` would).
    */
-  kind: "text" | "textarea" | "slug" | "url" | "image";
+  kind: "text" | "textarea" | "slug" | "url" | "image" | "boolean";
   required: boolean;
 }
 
@@ -114,6 +123,34 @@ const brandFields: ContentFieldConfig[] = [
   { key: "image", label: "Logo", kind: "image", required: false },
 ];
 
+/**
+ * Faz 6 (migration 0012): homepage "Referanslarımız" teaser + full
+ * /referanslar page client/institution reference logos. `image` (not
+ * `logo`) matches every OTHER content type's uniform image-field key
+ * convention — the static `PetraReference.logo` field is renamed here,
+ * see `mapClientReferenceRows` (lib/cms/petra/mappers.ts). `category` is
+ * free text (not a DB enum) — same "trust the admin" choice as
+ * `projects.category`/`product_showcase_items.category`; the mapper
+ * falls back to "Diğer Projeler" for any value outside the 5 known
+ * categories, so a typo never silently drops a reference from
+ * /referanslar's grouped list. No `slug` (the static type has none, no
+ * detail route exists) and no `href` (the static type's `href` is
+ * always `null` and never rendered as a real link — see migration
+ * 0012's own comment for why neither was added).
+ */
+const clientReferenceFields: ContentFieldConfig[] = [
+  { key: "name", label: "Kurum / Müşteri Adı", kind: "text", required: true },
+  { key: "category", label: "Kategori", kind: "text", required: false },
+  { key: "image", label: "Logo", kind: "image", required: false },
+  {
+    key: "is_real_logo",
+    label: "Gerçek marka logosu (işaretlenmezse nötr referans rozeti olarak gösterilir)",
+    kind: "boolean",
+    required: false,
+  },
+  { key: "featured", label: "Ana sayfada öne çıksın mı?", kind: "boolean", required: false },
+];
+
 /** Phase 9.6 (migration 0007): `projects.category`, optional badge on /projeler. */
 const projectFields: ContentFieldConfig[] = [
   ...namedContentFields,
@@ -170,6 +207,17 @@ export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
     // no new storage folder/system introduced.
     imageFolder: "brand",
   },
+  client_references: {
+    key: "client_references",
+    label: "Referanslar",
+    titleField: "name",
+    fields: clientReferenceFields,
+    auditPrefix: "client_reference",
+    // New "references" folder (lib/media/constants.ts) — a dedicated,
+    // independently growing (~33 rows) set of logos, kept separate from
+    // the generic "brand" folder faqs currently uses.
+    imageFolder: "references",
+  },
   projects: {
     key: "projects",
     label: "Projeler",
@@ -188,7 +236,15 @@ export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
   },
   testimonials: {
     key: "testimonials",
-    label: "Referanslar",
+    // Faz 6 (client_references): renamed from "Referanslar" — that
+    // label was a pre-existing naming collision (this type is customer
+    // QUOTES, name/role/company/quote, not the 33 client/institution
+    // LOGOS the actual /referanslar page and homepage "Referanslarımız"
+    // section show — see claude/FAZ6_REFERANSLAR_CMS_AUDIT.md's opening
+    // finding). The CRUD/route/data itself is completely UNCHANGED —
+    // only this display label. "Referanslar" now belongs solely to the
+    // new `client_references` type below, resolving the collision.
+    label: "Müşteri Yorumları",
     titleField: "name",
     auditPrefix: "testimonial",
     imageFolder: "testimonials",

@@ -9,6 +9,7 @@ export { getHero } from "@/lib/cms/adapters/hero";
 export { getSolutions } from "@/lib/cms/adapters/solutions";
 export { getProductShowcaseItems } from "@/lib/cms/adapters/product-showcase";
 export { getBrands } from "@/lib/cms/adapters/brands";
+export { getClientReferences } from "@/lib/cms/adapters/client-references";
 export { getServices } from "@/lib/cms/adapters/services";
 export { getProjects } from "@/lib/cms/adapters/projects";
 export { getCampaigns } from "@/lib/cms/adapters/campaigns";

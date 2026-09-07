@@ -49,6 +49,20 @@ export function ContentForm({
               defaultValue={initialValues[field.key] ?? ""}
               required={field.required}
             />
+          ) : field.kind === "boolean" ? (
+            // Faz 6 (client_references): a real checkbox, not the
+            // text/textarea input below — see content-types.ts's `kind`
+            // doc for how its FormData value round-trips through Zod.
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                id={`${formId}-${field.key}`}
+                name={field.key}
+                defaultChecked={initialValues[field.key] === "true"}
+                className="h-4 w-4 rounded border-black/20"
+              />
+              {field.label}
+            </label>
           ) : (
             <>
               <label htmlFor={`${formId}-${field.key}`} className="mb-1.5 block text-sm font-medium text-foreground">

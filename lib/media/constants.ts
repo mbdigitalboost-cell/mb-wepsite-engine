@@ -35,6 +35,11 @@ export const MEDIA_FOLDERS = [
   "testimonials",
   "banners",
   "products",
+  // Faz 6 (client_references): dedicated folder for the ~33 client/
+  // institution reference logos — kept separate from the generic "brand"
+  // folder (faqs' current tenant) rather than reusing it, since this is
+  // a large (33-row), independently growing set of its own.
+  "references",
 ] as const;
 
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];

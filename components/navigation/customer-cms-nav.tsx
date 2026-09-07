@@ -14,6 +14,7 @@ import {
   Layers,
   Package,
   Award,
+  Landmark,
   FolderKanban,
   Megaphone,
   MessageSquareQuote,
@@ -35,9 +36,14 @@ const CONTENT_LINKS: { segment: string; label: string; icon: LucideIcon }[] = [
   { segment: "solutions", label: "Çözümler", icon: Layers },
   { segment: "product_showcase_items", label: "Ürün Yelpazesi", icon: Package },
   { segment: "brands", label: "Markalar", icon: Award },
+  { segment: "client_references", label: "Referanslar", icon: Landmark },
   { segment: "projects", label: "Projeler", icon: FolderKanban },
   { segment: "campaigns", label: "Kampanyalar", icon: Megaphone },
-  { segment: "testimonials", label: "Referanslar", icon: MessageSquareQuote },
+  // Faz 6: "Referanslar" etiketi artık client_references'a ait (isim
+  // çakışması giderildi, bkz. content-types.ts'in testimonials yorumu) —
+  // bu segment/CRUD/veri HİÇ değişmedi, sadece etiket "Müşteri Yorumları"
+  // oldu.
+  { segment: "testimonials", label: "Müşteri Yorumları", icon: MessageSquareQuote },
   { segment: "faqs", label: "SSS", icon: HelpCircle },
 ];
 

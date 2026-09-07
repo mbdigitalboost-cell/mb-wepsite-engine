@@ -141,6 +141,25 @@ export type BrandRow = ContentRow & {
 };
 
 /**
+ * `client_references` only, since Faz 6 (migration 0012) — homepage
+ * "Referanslarımız" teaser + full /referanslar page client/institution
+ * logos, previously hardcoded in lib/data/petra/references.ts. No
+ * `slug`/`href` (the static `PetraReference` type's `href` is always
+ * `null` and never rendered as a link, and it has no slug field at all —
+ * see migration 0012's own comment). `is_real_logo`/`featured` replace
+ * the static type's `logoType`/`featured` — genuinely new booleans, no
+ * equivalent in `BrandRow`/`ProductShowcaseItemRow`.
+ */
+export type ClientReferenceRow = ContentRow & {
+  name: string;
+  category: string | null;
+  image: string | null;
+  is_real_logo: boolean;
+  featured: boolean;
+  sort_order: number;
+};
+
+/**
  * `projects` only, since Phase 9.6 (migration 0007): adds `category`,
  * rendered as an optional badge by components/sections/projects.tsx.
  */
@@ -257,6 +276,7 @@ export type CustomerDatabase = {
       solutions: TableDef<SolutionRow, Partial<SolutionRow>, Partial<SolutionRow>>;
       product_showcase_items: TableDef<ProductShowcaseItemRow, Partial<ProductShowcaseItemRow>, Partial<ProductShowcaseItemRow>>;
       brands: TableDef<BrandRow, Partial<BrandRow>, Partial<BrandRow>>;
+      client_references: TableDef<ClientReferenceRow, Partial<ClientReferenceRow>, Partial<ClientReferenceRow>>;
       projects: TableDef<ProjectRow, Partial<ProjectRow>, Partial<ProjectRow>>;
       campaigns: TableDef<CampaignRow, Partial<CampaignRow>, Partial<CampaignRow>>;
       testimonials: TableDef<TestimonialRow, Partial<TestimonialRow>, Partial<TestimonialRow>>;

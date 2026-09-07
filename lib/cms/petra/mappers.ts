@@ -1,9 +1,10 @@
 import "server-only";
 
-import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow } from "@/lib/cms/customer-types";
+import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow, ClientReferenceRow } from "@/lib/cms/customer-types";
 import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign, PetraContactInfo } from "@/lib/data/petra/types";
 import type { PetraShowcaseProduct } from "@/lib/data/petra/product-showcase";
 import type { PetraBrand } from "@/lib/data/petra/brands";
+import { petraReferenceCategories, type PetraReference, type PetraReferenceCategory } from "@/lib/data/petra/references";
 
 /**
  * Maps CUSTOMER CMS rows into the exact static Petra types the existing
@@ -87,6 +88,32 @@ export function mapBrandRows(rows: BrandRow[]): PetraBrand[] {
     image: row.image ?? "",
     shortDescription: row.short_description ?? "",
     href: row.href ?? "/cozumler",
+  }));
+}
+
+/**
+ * Faz 6 (migration 0012) — homepage "Referanslarımız" teaser + full
+ * /referanslar page. `category` is free text in the DB (admin-typed, no
+ * enum/CHECK) — any value OUTSIDE the 5 known `PetraReferenceCategory`
+ * values falls back to "Diğer Projeler" so a typo never silently drops a
+ * reference from /referanslar's category-grouped list (ReferenceList
+ * only renders rows whose category matches one of the 5 known values).
+ * `logoType`/`href` are derived, not passed through: `is_real_logo` maps
+ * directly to `"real"`/`"fallback"`, and `href` is always `null` (no
+ * detail route exists — see migration 0012's own comment, same as the
+ * static data's own permanent `null`).
+ */
+export function mapClientReferenceRows(rows: ClientReferenceRow[]): PetraReference[] {
+  const knownCategories: readonly string[] = petraReferenceCategories;
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    category: (knownCategories.includes(row.category ?? "") ? row.category : "Diğer Projeler") as PetraReferenceCategory,
+    logo: row.image ?? "",
+    logoType: row.is_real_logo ? "real" : "fallback",
+    href: null,
+    featured: row.featured,
+    order: row.sort_order,
   }));
 }
 

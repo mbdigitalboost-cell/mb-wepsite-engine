@@ -23,15 +23,16 @@ import { petraTestimonials } from "@/lib/data/petra/testimonials";
 import { petraFaqs } from "@/lib/data/petra/faqs";
 import { petraProductShowcase } from "@/lib/data/petra/product-showcase";
 import { petraBrands } from "@/lib/data/petra/brands";
+import { petraReferences } from "@/lib/data/petra/references";
 import { petraProjects } from "@/lib/data/petra/projects";
 import { petraCampaigns } from "@/lib/data/petra/campaigns";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems, getBrands, getProjects, getCampaigns } from "@/lib/cms/adapters";
-import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows, mapBrandRows, mapProjectRows, mapCampaignRows } from "@/lib/cms/petra/mappers";
+import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems, getBrands, getClientReferences, getProjects, getCampaigns } from "@/lib/cms/adapters";
+import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows, mapBrandRows, mapClientReferenceRows, mapProjectRows, mapCampaignRows } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
-import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow, ProjectRow, CampaignRow } from "@/lib/cms/customer-types";
+import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow, ClientReferenceRow, ProjectRow, CampaignRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -104,7 +105,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * exact same static `petraProjects`/`petraCampaigns` (both `[]` today).
  */
 export default async function HomePage() {
-  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult, showcaseResult, brandsResult, projectsResult, campaignsResult] =
+  const [heroResult, solutionsResult, testimonialsResult, faqsResult, siteSettingsResult, showcaseResult, brandsResult, referencesResult, projectsResult, campaignsResult] =
     await Promise.all([
       getHero<typeof petraHero>(PETRA_CONNECTION_KEY, petraHero),
       getSolutions(PETRA_CONNECTION_KEY, petraSolutions),
@@ -113,6 +114,7 @@ export default async function HomePage() {
       getSiteSettings(PETRA_CONNECTION_KEY, petraContactInfo),
       getProductShowcaseItems(PETRA_CONNECTION_KEY, petraProductShowcase),
       getBrands(PETRA_CONNECTION_KEY, petraBrands),
+      getClientReferences(PETRA_CONNECTION_KEY, petraReferences),
       getProjects(PETRA_CONNECTION_KEY, petraProjects),
       getCampaigns(PETRA_CONNECTION_KEY, petraCampaigns),
     ]);
@@ -134,6 +136,9 @@ export default async function HomePage() {
   const brands = isCmsRow((brandsResult as unknown[])[0])
     ? mapBrandRows(brandsResult as BrandRow[])
     : petraBrands;
+  const references = isCmsRow((referencesResult as unknown[])[0])
+    ? mapClientReferenceRows(referencesResult as ClientReferenceRow[])
+    : petraReferences;
   const projects = isCmsRow((projectsResult as unknown[])[0])
     ? mapProjectRows(projectsResult as ProjectRow[])
     : petraProjects;
@@ -165,7 +170,7 @@ export default async function HomePage() {
       <Campaigns campaigns={campaigns} />
       <WhyPetra />
       <SiteWorksSection />
-      <ReferencesSection />
+      <ReferencesSection references={references} />
       <Statistics />
       <Testimonials testimonials={testimonials} />
       <Faq faqs={faqs} />

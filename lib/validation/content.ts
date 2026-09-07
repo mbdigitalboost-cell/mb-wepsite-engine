@@ -16,6 +16,17 @@ export function buildContentFormSchema(type: ContentTypeKey) {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const field of config.fields) {
+    // Faz 6 (client_references): a checkbox's FormData value is `"on"`
+    // when checked or ENTIRELY ABSENT (not an empty string) when
+    // unchecked — `z.coerce.boolean()` calls the plain JS `Boolean(...)`
+    // on that, which already does exactly the right thing for both
+    // (`Boolean("on") === true`, `Boolean(null) === false`), so no
+    // special-casing is needed in readFormValues()/toRow() either.
+    if (field.kind === "boolean") {
+      shape[field.key] = z.coerce.boolean().default(false);
+      continue;
+    }
+
     let base: z.ZodString;
     if (field.kind === "slug") {
       base = z.string().trim().toLowerCase().max(150).regex(slugRegex, `${field.label} yalnızca küçük harf, rakam ve tire (-) içerebilir.`);
