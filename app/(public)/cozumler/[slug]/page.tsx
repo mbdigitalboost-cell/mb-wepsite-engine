@@ -51,6 +51,15 @@ export async function generateStaticParams() {
 // before, and robots is deliberately never set here (both are outside
 // resolveSolutionSeo() on purpose — see its comment), so this page keeps
 // inheriting the root public layout's robots default unchanged.
+//
+// Faz 6F-4A-3.5 (BUG-2 düzeltmesi): `title` artık `{ absolute: ... }` —
+// statik 8 sayfanın `applyHomeSeoOverrides`'ta zaten kullandığı BİREBİR
+// AYNI desen. Önceden düz string olduğu için ebeveyn layout'un
+// `"%s | Petra Mühendislik"` şablonuna giriyordu; kazanan değer site-wide
+// SEO'nun title'ı olduğunda (kendi içinde zaten "Petra Mühendislik"
+// markasını taşıyor) marka adı İKİ KEZ görünüyordu (production'da
+// doğrulanmıştı, bkz. claude/SEO_CURRENT_STATE_AUDIT.md). `{absolute}`
+// şablonu tamamen bypass eder, statik sayfalarla tutarlı hale getirir.
 export async function generateMetadata({
   params,
 }: {
@@ -70,10 +79,13 @@ export async function generateMetadata({
   });
 
   return {
-    title: seo.title,
+    title: { absolute: seo.title },
     description: seo.description,
     alternates: { canonical: `/cozumler/${solution.slug}` },
     ...(seo.ogImage ? { openGraph: { images: [{ url: seo.ogImage }] } } : {}),
+    // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — statik sayfaların OG için
+    // zaten kullandığı deseni aynı seo.title/description kaynağıyla tekrarı.
+    twitter: { title: seo.title, description: seo.description },
   };
 }
 

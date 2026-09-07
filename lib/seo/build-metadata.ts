@@ -21,19 +21,30 @@ export async function resolveSiteWideSeo(connectionKey: string): Promise<SeoSett
 }
 
 /**
- * Faz 6F-4A-3.3 — statik sayfa SEO çözümü: ÖNCE o sayfanın kendi
- * `route_key`'li satırına bakar, YOKSA site-wide satıra (aynı
- * `resolveSiteWideSeo()`) düşer. Hiçbiri yoksa `null` döner — çağıran
- * (`applyHomeSeoOverrides`) bu durumda kendi statik `Metadata` objesini
- * değiştirmeden döndürür. `routeKey`, `lib/seo/route-registry.ts`'in
+ * Faz 6F-4A-3.3 — statik sayfa SEO çözümü: o sayfanın kendi `route_key`'li
+ * satırına bakar. `routeKey`, `lib/seo/route-registry.ts`'in
  * `STATIC_SEO_ROUTES` listesindeki bir `key` olmalı — registry ile
  * senkron olmayan bir değer basitçe hiçbir satırla eşleşmez, hataya
  * değil sessiz fallback'e düşer.
+ *
+ * Faz 6F-4A-3.5 (BUG-1 düzeltmesi) — ÖNCEDEN, route-specific satır
+ * yoksa site-wide satıra (`resolveSiteWideSeo()`) düşüyordu; bu, site-wide
+ * bir satır kaydedilir kaydedilmez kendi `route_key`'i olmayan HER statik
+ * sayfanın (7/8) title/description/canonical'ını site-wide'ınkiyle
+ * EZİYORDU — production'da doğrulanmış bir bug (bkz.
+ * claude/SEO_CURRENT_STATE_AUDIT.md, claude/FAZ6F4A3_5_SEO_PRODUCTION_BUGFIX_PREFLIGHT.md §1).
+ * Artık route-specific satır yoksa `null` dönüyor — çağıran
+ * (`applyHomeSeoOverrides`) bu durumda sayfanın KENDİ statik `Metadata`
+ * objesini değiştirmeden döndürür. Site-wide'ın robots/OG-image gibi
+ * güvenli, "her route'a körlemesine uygulanabilir" alanları HÂLÂ
+ * ulaşıyor — ama bu fonksiyon üzerinden DEĞİL, root `app/(public)/layout.tsx`'in
+ * `applyLayoutSeoOverrides()`'ı üzerinden (ayrı, dar kapsamlı, zaten var
+ * olan mekanizma).
  */
 export async function resolveStaticPageSeo(connectionKey: string, routeKey: string): Promise<SeoSettingsRow | null> {
   const pageSeo = await getSeo<SeoSettingsRow | null>(connectionKey, null, routeKey);
   if (pageSeo) return pageSeo;
-  return resolveSiteWideSeo(connectionKey);
+  return null;
 }
 
 /** Input shape for resolveSolutionSeo() — kept independent of PetraSolution so this file doesn't need to import lib/data/petra/types.ts. */
@@ -113,6 +124,16 @@ export function applyLayoutSeoOverrides(base: Metadata, seo: SeoSettingsRow | nu
   if (seo.og_image) {
     merged.openGraph = { ...(base.openGraph ?? {}), images: [{ url: seo.og_image }] };
   }
+  // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — openGraph için zaten yapılan
+  // aynı koşullu merge'in twitter için tekrarı; ayrı bir Twitter-özel SEO
+  // alanı/sistemi YOK, aynı seo.title/description kaynağını paylaşıyor.
+  if (seo.title || seo.description) {
+    merged.twitter = {
+      ...(base.twitter ?? {}),
+      ...(seo.title ? { title: seo.title } : {}),
+      ...(seo.description ? { description: seo.description } : {}),
+    } as Metadata["twitter"];
+  }
   if (seo.robots_index === false || seo.robots_follow === false) {
     merged.robots = { index: seo.robots_index, follow: seo.robots_follow };
   }
@@ -158,6 +179,17 @@ export function applyHomeSeoOverrides(base: Metadata, seo: SeoSettingsRow | null
     ...(seo.description ? { description: seo.description } : {}),
     ...(seo.og_image ? { images: [{ url: seo.og_image }] } : {}),
   } as Metadata["openGraph"];
+
+  // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — openGraph için yukarıda
+  // yapılan aynı merge'in twitter için tekrarı, aynı seo.title/description
+  // kaynağından besleniyor.
+  if (seo.title || seo.description) {
+    merged.twitter = {
+      ...(base.twitter ?? {}),
+      ...(seo.title ? { title: seo.title } : {}),
+      ...(seo.description ? { description: seo.description } : {}),
+    } as Metadata["twitter"];
+  }
 
   return merged;
 }
