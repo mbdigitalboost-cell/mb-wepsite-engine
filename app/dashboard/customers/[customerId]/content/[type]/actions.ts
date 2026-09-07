@@ -50,6 +50,7 @@ const PUBLIC_LIST_PATHS: Record<ContentTypeKey, string[]> = {
   testimonials: [],
   faqs: [],
   product_showcase_items: [],
+  brands: [],
 };
 
 /**

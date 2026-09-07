@@ -1,8 +1,9 @@
 import "server-only";
 
-import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow } from "@/lib/cms/customer-types";
+import type { NamedContentRow, SolutionRow, ProjectRow, CampaignRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow } from "@/lib/cms/customer-types";
 import type { PetraSolution, PetraTestimonial, PetraFaq, PetraService, PetraProject, PetraCampaign, PetraContactInfo } from "@/lib/data/petra/types";
 import type { PetraShowcaseProduct } from "@/lib/data/petra/product-showcase";
+import type { PetraBrand } from "@/lib/data/petra/brands";
 
 /**
  * Maps CUSTOMER CMS rows into the exact static Petra types the existing
@@ -66,6 +67,23 @@ export function mapProductShowcaseRows(rows: ProductShowcaseItemRow[]): PetraSho
     slug: row.slug,
     brand: row.brand,
     type: row.category ?? "",
+    image: row.image ?? "",
+    shortDescription: row.short_description ?? "",
+    href: row.href ?? "/cozumler",
+  }));
+}
+
+/**
+ * Faz 6 (migration 0011) — homepage "Markalar" logo cards. `href` prefers
+ * the per-row column but falls back to the same `/cozumler` every legacy
+ * static entry hardcoded — same "existing default until a customer sets
+ * an override" rule as `mapProductShowcaseRows`'s `href` above.
+ */
+export function mapBrandRows(rows: BrandRow[]): PetraBrand[] {
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
     image: row.image ?? "",
     shortDescription: row.short_description ?? "",
     href: row.href ?? "/cozumler",

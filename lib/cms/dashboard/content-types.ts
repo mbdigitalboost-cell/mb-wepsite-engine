@@ -22,7 +22,8 @@ export type ContentTypeKey =
   | "campaigns"
   | "testimonials"
   | "faqs"
-  | "product_showcase_items";
+  | "product_showcase_items"
+  | "brands";
 
 export interface ContentFieldConfig {
   key: string;
@@ -99,6 +100,20 @@ const productShowcaseFields: ContentFieldConfig[] = [
   { key: "image", label: "Görsel", kind: "image", required: false },
 ];
 
+/**
+ * Faz 6 (migration 0011): homepage "Markalar" logo cards. `name` matches
+ * `PetraBrand.name` (lib/data/petra/brands.ts) directly — no schema-gap
+ * naming needed (unlike product_showcase_items' `brand`/`type`). No
+ * `category` field — `PetraBrand` has no category-equivalent.
+ */
+const brandFields: ContentFieldConfig[] = [
+  { key: "name", label: "Marka Adı", kind: "text", required: true },
+  { key: "slug", label: "Slug", kind: "slug", required: true },
+  { key: "short_description", label: "Kısa Açıklama", kind: "textarea", required: false },
+  { key: "href", label: "Link", kind: "text", required: false },
+  { key: "image", label: "Logo", kind: "image", required: false },
+];
+
 /** Phase 9.6 (migration 0007): `projects.category`, optional badge on /projeler. */
 const projectFields: ContentFieldConfig[] = [
   ...namedContentFields,
@@ -144,6 +159,16 @@ export const CONTENT_TYPES: Record<ContentTypeKey, ContentTypeConfig> = {
     fields: productShowcaseFields,
     auditPrefix: "product_showcase",
     imageFolder: "products",
+  },
+  brands: {
+    key: "brands",
+    label: "Markalar",
+    titleField: "name",
+    fields: brandFields,
+    auditPrefix: "brand",
+    // Reuses the existing "brand" media folder (lib/media/constants.ts) —
+    // no new storage folder/system introduced.
+    imageFolder: "brand",
   },
   projects: {
     key: "projects",
