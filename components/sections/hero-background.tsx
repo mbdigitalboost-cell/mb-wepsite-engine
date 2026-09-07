@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import Image from "next/image";
 import { useReducedMotion } from "@/lib/motion/use-reduced-motion";
+import { HeroAtmosphere } from "@/components/sections/hero-atmosphere";
 import { BREAKPOINTS } from "@/lib/design-system/tokens";
 import type { ParallaxState } from "@/lib/motion/use-parallax-pointer";
 import { cn } from "@/lib/utils/cn";
@@ -219,6 +220,11 @@ export function HeroBackground({
           />
         </div>
       ) : null}
+      {/* Faz "Hero Motion": kırmızı atmosferik katman (hava akışı + glow
+          pulse) — ambient katmanının hemen yanında, AYNI koşulla
+          (gerçek bir görsel varken) render ediliyor, mouse/touch
+          parallax state'ine hiç bağlı değil (bkz. hero-atmosphere.tsx). */}
+      {image || imageMobile ? <HeroAtmosphere /> : null}
       {/*
         Faz 13 revizyon 2: these two darkening gradients were tuned for a
         wide desktop-style banner (extra contrast for real text/buttons

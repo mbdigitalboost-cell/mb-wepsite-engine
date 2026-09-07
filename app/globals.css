@@ -86,3 +86,44 @@ body {
 .animate-reference-fade {
   animation: reference-fade-in 500ms var(--motion-easing);
 }
+
+/* Petra Hero — atmosferik motion (components/sections/hero-atmosphere.tsx).
+   İkisi de sadece opacity/transform animasyonu — CLS riski yok. Sabit,
+   sürekli döngüler (ease-in-out, infinite); `prefers-reduced-motion:
+   reduce` iken yukarıdaki global kural (satır ~60) `animation-duration`'ı
+   0.01ms'e zorlayarak bunları da otomatik olarak neredeyse-durağan hale
+   getiriyor — ayrı bir override GEREKMİYOR. */
+@keyframes hero-atmosphere-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.hero-atmosphere-glow {
+  animation: hero-atmosphere-glow-pulse 7s ease-in-out infinite;
+}
+
+@keyframes hero-atmosphere-airflow {
+  0% {
+    transform: translate3d(-4%, 1%, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(4%, -1%, 0);
+    opacity: 0;
+  }
+}
+
+.hero-atmosphere-airflow {
+  animation: hero-atmosphere-airflow 16s ease-in-out infinite;
+}
