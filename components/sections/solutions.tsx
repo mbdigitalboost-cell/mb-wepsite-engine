@@ -12,9 +12,16 @@ interface SolutionsProps {
   headingLevel?: "h1" | "h2";
   /** Optional CMS-sourced override — defaults to the static `petraSolutions` import. See components/sections/hero.tsx for the same pattern. */
   solutions?: PetraSolution[];
+  /**
+   * Faz SEO-A: opsiyonel, sayfa-özel destekleyici paragraf — geçmediğinde
+   * (ör. anasayfadaki kullanımda) HİÇBİR ŞEY render etmez, mevcut
+   * davranış BİREBİR korunur. `/cozumler` liste sayfası bunu gerçek,
+   * teyitli bir bölge/kapsam cümlesi geçirmek için kullanıyor.
+   */
+  description?: string;
 }
 
-export function Solutions({ headingLevel = "h2", solutions = petraSolutions }: SolutionsProps) {
+export function Solutions({ headingLevel = "h2", solutions = petraSolutions, description }: SolutionsProps) {
   const Heading = headingLevel;
 
   return (
@@ -24,6 +31,7 @@ export function Solutions({ headingLevel = "h2", solutions = petraSolutions }: S
           <Heading className="max-w-xl font-[family-name:var(--font-brand-heading)] text-[32px] leading-tight font-semibold text-white sm:text-[42px] lg:text-[56px]">
             İhtiyacınıza Uygun İklimlendirme Çözümleri
           </Heading>
+          {description ? <p className="mt-4 max-w-xl text-base text-brand-muted">{description}</p> : null}
         </Reveal>
 
         <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

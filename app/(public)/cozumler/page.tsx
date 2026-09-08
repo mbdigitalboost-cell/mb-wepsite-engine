@@ -51,7 +51,14 @@ export default async function SolutionsPage() {
   return (
     <>
       {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
-      <Solutions headingLevel="h1" solutions={solutions} />
+      {/* Faz SEO-A: gerçek, teyitli hizmet alanı (serviceArea) ve 6
+          kategorinin GERÇEK kapsamına dayanan tek cümlelik bağlam —
+          uydurma bir hizmet/kapasite iddiası içermiyor. */}
+      <Solutions
+        headingLevel="h1"
+        solutions={solutions}
+        description="Kahramanmaraş'ta konuttan ticari ve endüstriyel yapılara kadar split, multi-split, VRF, ısı pompası ve sıcak su sistemlerinde satış, keşif ve kurulum hizmeti sunuyoruz."
+      />
     </>
   );
 }

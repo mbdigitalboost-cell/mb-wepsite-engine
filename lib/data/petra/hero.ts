@@ -2,7 +2,13 @@ export const petraHero = {
   headingLines: ["İKLİMLENDİRMEDE", "MÜHENDİSLİK", "VE GÜVEN."],
   /** Index into headingLines that renders in the brand accent color. */
   accentLineIndex: 1,
-  subtext: "Konut ve ticari alanlar için profesyonel iklimlendirme çözümleri.",
+  // Faz SEO-A: "Kahramanmaraş'ta" eklendi — bu, DB seo_settings'teki
+  // title/description'da zaten var olan AYNI, teyitli konum bilgisinin
+  // (petraFoundingStory: "2017 yılında Kahramanmaraş'ta kuruldu")
+  // ilk kez sayfanın GÖVDE metninde (meta etiketi değil, kullanıcının
+  // gerçekten OKUDUĞU ilk cümlede) görünmesi — yeni bir iddia değil,
+  // zaten teyitli bir bilginin taşınması.
+  subtext: "Kahramanmaraş'ta konut ve ticari alanlar için profesyonel iklimlendirme çözümleri.",
   ctaPrimaryLabel: "Keşif Talep Et",
   ctaPrimaryHref: "/iletisim",
   ctaSecondaryLabel: "WhatsApp'tan Ulaş",

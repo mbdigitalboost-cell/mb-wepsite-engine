@@ -39,13 +39,23 @@ import type { PetraSolution } from "@/lib/data/petra/types";
  * ettiği düz isimlerden (`split-klimalar.jpg` vb.) yeniden adlandırıldı;
  * içerik birebir aynı, sadece dosya adı değişti.
  */
+/**
+ * Faz SEO-A: her `longDescription`'ın SONUNA, aynı cümle kalıbıyla, TEK
+ * bir gerçek bağlam cümlesi eklendi — `petraContactInfo.serviceArea`
+ * ("Onikişubat, Kahramanmaraş") ve `petraServices`'in (satış → keşif →
+ * projelendirme → kurulum → teknik servis) ZATEN var olan, teyitli
+ * kapsamının bir yansıması. Hiçbir kategoriye yeni bir kapasite/hizmet
+ * İDDİASI eklenmedi — sadece bu 6 kategorinin de GENEL süreç
+ * kapsamına (diğer tüm kategoriler gibi) dahil olduğu belirtiliyor. Her
+ * sayfada TEK bir "Kahramanmaraş" geçişi (keyword stuffing değil).
+ */
 export const petraSolutions: PetraSolution[] = [
   {
     slug: "split-klimalar",
     title: "Split Klimalar",
     shortDescription: "Yüksek performans ve sessiz çalışma ile ideal konfor.",
     longDescription:
-      "Split klima sistemleri, tek bir iç ve dış üniteden oluşan, konut ve küçük ölçekli ticari mekanlar için uygun iklimlendirme çözümüdür.",
+      "Split klima sistemleri, tek bir iç ve dış üniteden oluşan, konut ve küçük ölçekli ticari mekanlar için uygun iklimlendirme çözümüdür. Kahramanmaraş'ta bu sistemler için satış, keşif ve kurulum hizmeti sunuyoruz.",
     image: "/images/petra/solutions/10_split_klimalar_v4.jpg",
   },
   {
@@ -53,7 +63,7 @@ export const petraSolutions: PetraSolution[] = [
     title: "Multi-Split Sistemler",
     shortDescription: "Tek dış ünite ile birden fazla alanı iklimlendirin.",
     longDescription:
-      "Multi-split sistemler, tek bir dış üniteye bağlı birden fazla iç ünite ile farklı odaların bağımsız şekilde iklimlendirilmesini sağlar.",
+      "Multi-split sistemler, tek bir dış üniteye bağlı birden fazla iç ünite ile farklı odaların bağımsız şekilde iklimlendirilmesini sağlar. Kahramanmaraş'taki konut ve ticari projeler için keşif ve kurulum desteği veriyoruz.",
     image: "/images/petra/solutions/10_multi_split_sistemler_v2.jpg",
   },
   {
@@ -61,7 +71,7 @@ export const petraSolutions: PetraSolution[] = [
     title: "Profesyonel Klimalar",
     shortDescription: "Ticari ve endüstriyel alanlar için yüksek kapasiteli çözümler.",
     longDescription:
-      "Ofis, mağaza ve endüstriyel alanlar gibi daha büyük mekanlar için tasarlanmış, yüksek kapasiteli profesyonel klima sistemleri.",
+      "Ofis, mağaza ve endüstriyel alanlar gibi daha büyük mekanlar için tasarlanmış, yüksek kapasiteli profesyonel klima sistemleri. Kahramanmaraş'taki ticari ve endüstriyel işletmelere projelendirmeden kuruluma kadar hizmet veriyoruz.",
     // Faz 12 revizyon 2 (2026-08-17): 1200x800 ilk gerçek görsel eklendi.
     // Faz H-devam revizyonu (2026-08-22): bkz. dosya başındaki not — bu
     // dosya da yeni dikey (2000x2667) `_v2` görseliyle değiştirildi.
@@ -72,7 +82,7 @@ export const petraSolutions: PetraSolution[] = [
     title: "VRF Sistemleri",
     shortDescription: "Büyük yapılara akıllı, esnek ve verimli çözümler.",
     longDescription:
-      "VRF (Variable Refrigerant Flow) sistemleri, büyük binalarda farklı bölgelerin bağımsız ve verimli şekilde iklimlendirilmesini sağlayan gelişmiş bir teknolojidir.",
+      "VRF (Variable Refrigerant Flow) sistemleri, büyük binalarda farklı bölgelerin bağımsız ve verimli şekilde iklimlendirilmesini sağlayan gelişmiş bir teknolojidir. Kahramanmaraş'taki büyük ölçekli konut ve ticari yapılar için VRF projelendirme ve kurulum hizmeti sunuyoruz.",
     image: "/images/petra/solutions/10_vrf_sistemleri_v4.jpg",
   },
   {
@@ -80,7 +90,7 @@ export const petraSolutions: PetraSolution[] = [
     title: "Isı Pompaları",
     shortDescription: "Doğadan enerji alarak yüksek verimlilik sağlayın.",
     longDescription:
-      "Isı pompaları, çevredeki havadan ısı enerjisi transfer ederek hem ısıtma hem soğutma yapabilen, enerji verimliliği yüksek sistemlerdir.",
+      "Isı pompaları, çevredeki havadan ısı enerjisi transfer ederek hem ısıtma hem soğutma yapabilen, enerji verimliliği yüksek sistemlerdir. Kahramanmaraş'taki konut ve ticari yapılar için bu sistemlerin satış ve kurulumunu gerçekleştiriyoruz.",
     image: "/images/petra/solutions/10_isi_pompalari_v2.jpg",
   },
   {
@@ -88,7 +98,7 @@ export const petraSolutions: PetraSolution[] = [
     title: "Sıcak Su Sistemleri",
     shortDescription: "Güvenilir ve kesintisiz sıcak su çözümleri.",
     longDescription:
-      "Konut ve ticari yapılar için verimli ve sürdürülebilir sıcak su üretim çözümleri.",
+      "Konut ve ticari yapılar için verimli ve sürdürülebilir sıcak su üretim çözümleri. Kahramanmaraş'taki projeler için keşif, kurulum ve teknik servis desteği sağlıyoruz.",
     image: "/images/petra/solutions/10_sicak_su_sistemleri_v4.jpg",
   },
 ];

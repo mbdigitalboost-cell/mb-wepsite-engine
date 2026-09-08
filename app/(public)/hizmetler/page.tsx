@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/ui/reveal";
@@ -50,10 +51,14 @@ export default async function ServicesPage() {
   return (
     <>
       {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
+      {/* Faz SEO-A: description'a "Kahramanmaraş'ta" eklendi — meta
+          description DEĞİL, sayfanın GÖRÜNÜR H1 altındaki paragrafı;
+          serviceArea ("Onikişubat, Kahramanmaraş") ile tutarlı, teyitli
+          bir bilgi. */}
       <PageHeader
         eyebrow="Hizmetler"
         title="Uçtan Uca İklimlendirme Hizmeti"
-        description="Satıştan teknik servise, sürecin her aşamasında yanınızdayız."
+        description="Kahramanmaraş'ta satıştan teknik servise, sürecin her aşamasında yanınızdayız."
       />
       {/*
         Faz 9.9: decorative banner from the customer-provided visual pack —
@@ -88,6 +93,18 @@ export default async function ServicesPage() {
               </Reveal>
             ))}
           </div>
+          {/* Faz SEO-A: /cozumler'e doğal internal link — hangi ürün
+              kategorilerine bu hizmet sürecinin uygulandığını gösteren,
+              spammy olmayan bir anchor metni. */}
+          <Reveal index={services.length} className="mt-12 border-t border-white/10 pt-8">
+            <p className="text-sm text-brand-muted">
+              Bu süreci uyguladığımız iklimlendirme kategorilerini{" "}
+              <Link href="/cozumler" className="text-brand-primary hover:text-white">
+                Çözümlerimiz
+              </Link>{" "}
+              sayfasından inceleyebilirsiniz.
+            </p>
+          </Reveal>
         </Container>
       </section>
     </>

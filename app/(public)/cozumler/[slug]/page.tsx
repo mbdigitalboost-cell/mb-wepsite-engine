@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
@@ -142,6 +143,15 @@ export default async function SolutionDetailPage({
             >
               Keşif Talep Et
             </Button>
+            {/* Faz SEO-A: /hizmetler'e doğal internal link — kurulum/teknik
+                servis SÜRECİNİN detayına yönlendiren, spammy olmayan anchor. */}
+            <p className="mt-4 text-sm text-brand-muted">
+              Satış, keşif, kurulum ve teknik servis sürecimiz hakkında{" "}
+              <Link href="/hizmetler" className="text-brand-primary hover:text-white">
+                Hizmetlerimiz
+              </Link>{" "}
+              sayfasından bilgi alabilirsiniz.
+            </p>
           </Reveal>
         </Container>
       </section>
