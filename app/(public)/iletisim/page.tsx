@@ -9,6 +9,8 @@ import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -43,9 +45,16 @@ export default async function ContactPage() {
     contactInfo.serviceArea ||
     contactInfo.workingHours ||
     contactInfo.mapUrl;
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "İletişim", path: "/iletisim" },
+  ]);
 
   return (
     <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <PageHeader
         eyebrow="İletişim"
         title="İhtiyacınız İçin Doğru Çözümü Birlikte Belirleyelim"

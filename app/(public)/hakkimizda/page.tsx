@@ -13,6 +13,8 @@ import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -64,9 +66,17 @@ export default async function AboutPage() {
   const siteSettings = await getSiteSettings<SiteSettingsRow | null>(PETRA_CONNECTION_KEY, null);
   const contactInfo = siteSettings ? mapSiteSettingsContactInfo(siteSettings, petraContactInfo) : petraContactInfo;
   const whatsappHref = buildWhatsappHref(contactInfo.whatsapp);
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni — bkz. lib/seo/structured-data.ts'in
+  // petraBreadcrumbStructuredData'sı.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "Hakkımızda", path: "/hakkimizda" },
+  ]);
 
   return (
     <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <AboutHero />
       <FoundingStory />
       <Timeline />

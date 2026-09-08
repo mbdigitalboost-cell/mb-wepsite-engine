@@ -7,6 +7,8 @@ import { petraCampaigns } from "@/lib/data/petra/campaigns";
 import { getCampaigns } from "@/lib/cms/adapters";
 import { isCmsRow, mapCampaignRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { CampaignRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -42,10 +44,18 @@ export default async function CampaignsPage() {
   const campaigns = isCmsRow((campaignsResult as unknown[])[0])
     ? mapCampaignRows(campaignsResult as CampaignRow[])
     : petraCampaigns;
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni — kampanya olsun olmasın sayfa aynı
+  // hiyerarşide kaldığı için her iki return dalında da render ediliyor.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "Kampanyalar", path: "/kampanyalar" },
+  ]);
 
   if (campaigns.length === 0) {
     return (
       <>
+        {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
         <PageHeader eyebrow="Kampanyalar" title="Kampanyalar" />
         <EmptyState
           icon={BadgePercent}
@@ -56,5 +66,10 @@ export default async function CampaignsPage() {
     );
   }
 
-  return <Campaigns headingLevel="h1" campaigns={campaigns} />;
+  return (
+    <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
+      <Campaigns headingLevel="h1" campaigns={campaigns} />
+    </>
+  );
 }

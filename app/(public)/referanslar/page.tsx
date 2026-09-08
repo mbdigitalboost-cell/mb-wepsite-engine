@@ -9,6 +9,8 @@ import { petraReferences } from "@/lib/data/petra/references";
 import { getClientReferences } from "@/lib/cms/adapters";
 import { isCmsRow, mapClientReferenceRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { ClientReferenceRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -61,9 +63,16 @@ export default async function ReferanslarPage() {
     ? mapClientReferenceRows(referencesResult as ClientReferenceRow[])
     : petraReferences;
   const references = [...allReferences].sort((a, b) => a.order - b.order);
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "Referanslar", path: "/referanslar" },
+  ]);
 
   return (
     <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <section className="relative overflow-hidden border-b border-white/10 py-20 lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute top-0 right-[-10%] h-[420px] w-[420px] rounded-full bg-brand-primary/10 blur-[130px]" />

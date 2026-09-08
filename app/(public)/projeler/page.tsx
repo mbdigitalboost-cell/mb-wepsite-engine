@@ -8,6 +8,8 @@ import { petraSiteWorksFull } from "@/lib/data/petra/site-works";
 import { getProjects } from "@/lib/cms/adapters";
 import { isCmsRow, mapProjectRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { ProjectRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -51,9 +53,16 @@ export default async function ProjectsPage() {
   const projects = isCmsRow((projectsResult as unknown[])[0])
     ? mapProjectRows(projectsResult as ProjectRow[])
     : petraProjects;
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "Projeler", path: "/projeler" },
+  ]);
 
   return (
     <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <PageHeader
         eyebrow="Projeler"
         title="Sahadaki Çalışmalarımız"

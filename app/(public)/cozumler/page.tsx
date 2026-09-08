@@ -4,6 +4,8 @@ import { petraSolutions } from "@/lib/data/petra/solutions";
 import { getSolutions } from "@/lib/cms/adapters";
 import { isCmsRow, mapSolutionRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { SolutionRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -39,6 +41,17 @@ export default async function SolutionsPage() {
   const solutions = isCmsRow((solutionsResult as unknown[])[0])
     ? mapSolutionRows(solutionsResult as SolutionRow[])
     : petraSolutions;
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "Çözümler", path: "/cozumler" },
+  ]);
 
-  return <Solutions headingLevel="h1" solutions={solutions} />;
+  return (
+    <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
+      <Solutions headingLevel="h1" solutions={solutions} />
+    </>
+  );
 }

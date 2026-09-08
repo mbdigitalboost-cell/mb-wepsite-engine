@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/ui/reveal";
 import { BtuCalculator } from "@/components/btu/btu-calculator";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 const ROUTE_KEY = "btu-hesaplama";
@@ -21,8 +23,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function BtuCalculatorPage() {
+  // Faz SEO-5: 4 legal sayfanın ve /cozumler/[slug]'ın zaten kullandığı
+  // AYNI Breadcrumb JSON-LD deseni.
+  const breadcrumbJsonLd = petraBreadcrumbStructuredData([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "BTU Hesaplama", path: "/btu-hesaplama" },
+  ]);
+
   return (
     <>
+      {breadcrumbJsonLd ? <JsonLd data={breadcrumbJsonLd} /> : null}
       <PageHeader
         eyebrow="BTU Hesaplama"
         title="Yaklaşık Klima İhtiyacınızı Hesaplayın"
