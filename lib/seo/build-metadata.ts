@@ -162,33 +162,46 @@ export function applyLayoutSeoOverrides(base: Metadata, seo: SeoSettingsRow | nu
  * homepage-specific in it — the 8 static pages' `generateMetadata()`
  * reuse it verbatim (with their own `staticMetadata` + `resolveStaticPageSeo`
  * result) instead of a second, duplicate merge function.
+ *
+ * Faz SEO-3: `openGraph.url` is now ALWAYS set from the page's final
+ * (possibly CMS-overridden) canonical — even when `seo` is null (the 7
+ * static pages with no `seo_settings` row today). Next's `metadataBase`
+ * resolves a relative `openGraph.url` exactly like it does
+ * `alternates.canonical`, so this stays correct if/when the custom
+ * domain (`NEXT_PUBLIC_SITE_URL`) ever changes again — no hardcoded
+ * domain here.
  */
 export function applyHomeSeoOverrides(base: Metadata, seo: SeoSettingsRow | null): Metadata {
-  if (!seo) return base;
-
   const merged: Metadata = { ...base };
 
-  if (seo.title) merged.title = { absolute: seo.title };
-  if (seo.description) merged.description = seo.description;
-  if (seo.canonical) merged.alternates = { ...(base.alternates ?? {}), canonical: seo.canonical };
+  if (seo) {
+    if (seo.title) merged.title = { absolute: seo.title };
+    if (seo.description) merged.description = seo.description;
+    if (seo.canonical) merged.alternates = { ...(base.alternates ?? {}), canonical: seo.canonical };
 
-  const baseOg = (base.openGraph ?? {}) as Record<string, unknown>;
-  merged.openGraph = {
-    ...baseOg,
-    ...(seo.title ? { title: seo.title } : {}),
-    ...(seo.description ? { description: seo.description } : {}),
-    ...(seo.og_image ? { images: [{ url: seo.og_image }] } : {}),
-  } as Metadata["openGraph"];
-
-  // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — openGraph için yukarıda
-  // yapılan aynı merge'in twitter için tekrarı, aynı seo.title/description
-  // kaynağından besleniyor.
-  if (seo.title || seo.description) {
-    merged.twitter = {
-      ...(base.twitter ?? {}),
+    const baseOg = (base.openGraph ?? {}) as Record<string, unknown>;
+    merged.openGraph = {
+      ...baseOg,
       ...(seo.title ? { title: seo.title } : {}),
       ...(seo.description ? { description: seo.description } : {}),
-    } as Metadata["twitter"];
+      ...(seo.og_image ? { images: [{ url: seo.og_image }] } : {}),
+    } as Metadata["openGraph"];
+
+    // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — openGraph için yukarıda
+    // yapılan aynı merge'in twitter için tekrarı, aynı seo.title/description
+    // kaynağından besleniyor.
+    if (seo.title || seo.description) {
+      merged.twitter = {
+        ...(base.twitter ?? {}),
+        ...(seo.title ? { title: seo.title } : {}),
+        ...(seo.description ? { description: seo.description } : {}),
+      } as Metadata["twitter"];
+    }
+  }
+
+  const canonical = merged.alternates?.canonical;
+  if (typeof canonical === "string") {
+    merged.openGraph = { ...(merged.openGraph ?? {}), url: canonical } as Metadata["openGraph"];
   }
 
   return merged;

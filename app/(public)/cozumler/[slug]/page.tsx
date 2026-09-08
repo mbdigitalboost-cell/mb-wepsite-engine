@@ -82,7 +82,18 @@ export async function generateMetadata({
     title: { absolute: seo.title },
     description: seo.description,
     alternates: { canonical: `/cozumler/${solution.slug}` },
-    ...(seo.ogImage ? { openGraph: { images: [{ url: seo.ogImage }] } } : {}),
+    // Faz SEO-3: `openGraph` artık HER ZAMAN dolduruluyor (title/description
+    // dahil) — önceden sadece `seo.ogImage` varsa set ediliyordu, yoksa
+    // `openGraph` hiç tanımlanmıyordu ve sayfa layout'un site-wide
+    // varsayılan og:title'ına düşüyordu (kendi başlığı yerine). Artık her
+    // durumda bu sayfanın KENDİ çözülmüş title/description'ı + mutlak
+    // olmayan (metadataBase ile çözülen) canonical URL'i kullanılıyor.
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      url: `/cozumler/${solution.slug}`,
+      ...(seo.ogImage ? { images: [{ url: seo.ogImage }] } : {}),
+    },
     // Faz 6F-4A-3.5 (Twitter gap düzeltmesi) — statik sayfaların OG için
     // zaten kullandığı deseni aynı seo.title/description kaynağıyla tekrarı.
     twitter: { title: seo.title, description: seo.description },

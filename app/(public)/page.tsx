@@ -27,7 +27,12 @@ import { petraReferences } from "@/lib/data/petra/references";
 import { petraProjects } from "@/lib/data/petra/projects";
 import { petraCampaigns } from "@/lib/data/petra/campaigns";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
-import { petraFaqStructuredData, petraLocalBusinessStructuredData } from "@/lib/seo/structured-data";
+import {
+  petraFaqStructuredData,
+  petraLocalBusinessStructuredData,
+  petraOrganizationStructuredData,
+  petraWebsiteStructuredData,
+} from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems, getBrands, getClientReferences, getProjects, getCampaigns } from "@/lib/cms/adapters";
 import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows, mapBrandRows, mapClientReferenceRows, mapProjectRows, mapCampaignRows } from "@/lib/cms/petra/mappers";
@@ -153,11 +158,20 @@ export default async function HomePage() {
   // riski yok, gerçek adres onaylandığında kod değişikliği gerekmeden
   // otomatik olarak render olacak.
   const localBusinessJsonLd = petraLocalBusinessStructuredData();
+  // Faz SEO-3: site-wide kimlik şemaları — homepage'de bir kez render
+  // ediliyor (FAQ/LocalBusiness ile aynı yerleşim deseni), asla `null`
+  // dönmüyorlar (LocalBusiness'in aksine, eksik/onaysız bir alana bağımlı
+  // değiller — sadece zaten confirmed olan site adı/URL/telefon/sosyal
+  // hesap kullanıyorlar).
+  const organizationJsonLd = petraOrganizationStructuredData();
+  const websiteJsonLd = petraWebsiteStructuredData();
 
   return (
     <>
       {faqJsonLd ? <JsonLd data={faqJsonLd} /> : null}
       {localBusinessJsonLd ? <JsonLd data={localBusinessJsonLd} /> : null}
+      <JsonLd data={organizationJsonLd} />
+      <JsonLd data={websiteJsonLd} />
       <Hero whatsappHref={whatsappHref} hero={hero} />
       <TrustBar />
       <Solutions solutions={solutions} />

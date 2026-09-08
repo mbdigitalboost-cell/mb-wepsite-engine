@@ -1,4 +1,4 @@
-import { petraContactInfo, petraSiteName } from "@/lib/data/petra/site-config";
+import { petraContactInfo, petraSiteName, petraSocialLinks } from "@/lib/data/petra/site-config";
 import { publicEnv } from "@/lib/config/env";
 import type { PetraFaq } from "@/lib/data/petra/types";
 
@@ -46,6 +46,42 @@ export function petraLocalBusinessStructuredData() {
     address: petraContactInfo.address,
     url: publicEnv.siteUrl,
     ...(petraContactInfo.serviceArea ? { areaServed: petraContactInfo.serviceArea } : {}),
+  };
+}
+
+/**
+ * Faz SEO-3: `logo`, `app/icon.png`'a (Faz favicon fazında Petra'nın
+ * kendi hero fotoğrafından çıkarılmış GERÇEK marka ikonu — bkz.
+ * PETRA_FAVICON_IMPLEMENTATION_REPORT.md §9) işaret ediyor —
+ * `petraBrandAssets.logoSrcDark/Light` hâlâ `null` (gerçek bir logo
+ * dosyası henüz sağlanmadı) olduğu için başka gerçek bir marka görseli
+ * yok; uydurma bir görsel yerine ZATEN CANLIDA OLAN bu ikonu kullanmak,
+ * hiçbir yeni varlık üretmeden `logo` alanını dolduruyor. `sameAs`,
+ * SADECE müşterinin gerçek/teyitli sosyal hesabı olan `petraSocialLinks`
+ * dizisinden geliyor — bugün tek satır (Instagram).
+ */
+export function petraOrganizationStructuredData() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: petraSiteName,
+    url: publicEnv.siteUrl,
+    logo: `${publicEnv.siteUrl}/icon.png`,
+    ...(petraContactInfo.phone ? { telephone: petraContactInfo.phone } : {}),
+    ...(petraContactInfo.address ? { address: petraContactInfo.address } : {}),
+    ...(petraSocialLinks.length > 0 ? { sameAs: petraSocialLinks.map((link) => link.url) } : {}),
+  };
+}
+
+/** Faz SEO-3: minimum `WebSite` şeması — sitelinks searchbox gibi ek
+ * özellikler (potentialAction) GERÇEK bir site-içi arama özelliği
+ * olmadığı için EKLENMEDİ (uydurma bir yetenek beyan etmemek için). */
+export function petraWebsiteStructuredData() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: petraSiteName,
+    url: publicEnv.siteUrl,
   };
 }
 
