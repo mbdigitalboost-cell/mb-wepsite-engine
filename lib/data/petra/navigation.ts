@@ -6,6 +6,7 @@ export const petraNavLinks: PetraNavLink[] = [
   { href: "/hizmetler", label: "Hizmetler" },
   { href: "/projeler", label: "Projeler" },
   { href: "/kampanyalar", label: "Kampanyalar" },
+  { href: "/referanslar", label: "Referanslar" },
   { href: "/hakkimizda", label: "Hakkımızda" },
   { href: "/iletisim", label: "İletişim" },
 ];
