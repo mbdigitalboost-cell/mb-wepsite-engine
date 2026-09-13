@@ -9,7 +9,7 @@ export const petraKvkkAydinlatmaMetni: PetraLegalDocument = {
   sections: [
     {
       heading: "1. Veri Sorumlusu",
-      body: "**Unvan:** Petra Mühendislik\n**Adres:** Yusuflar Mahallesi, Şekerdere Cad. No:29, Kahramanmaraş\n**E-posta:** servispetraklima@gmail.com\n**Telefon:** 0535 791 11 96",
+      body: "**Unvan:** Petra Mühendislik\n**Adres:** Yusuflar, Şekerdere Blv 29/A, 46000 Onikişubat/Kahramanmaraş\n**E-posta:** servispetraklima@gmail.com\n**Telefon:** 0535 791 11 96",
     },
     {
       heading: "2. İşlenebilecek Veriler",
@@ -29,9 +29,7 @@ export const petraKvkkAydinlatmaMetni: PetraLegalDocument = {
     },
     {
       heading: "6. İlgili Kişinin Hakları",
-      body: "KVKK'nın 11. maddesi kapsamında ilgili kişiler; verilerinin işlenip işlenmediğini öğrenme, bilgi talep etme, amacını ve aktarıldığı kişileri öğrenme, düzeltme, kanuni şartlar oluştuğunda silme/yok etme, ilgili işlemlerin üçüncü kişilere bildirilmesini isteme, otomatik analiz sonuçlarına itiraz etme ve kanuna aykırı işleme nedeniyle zarar doğması halinde giderim talep etme haklarına sahip olabilir.\n\nBaşvuru:\n**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nAdres: Yusuflar Mahallesi, Şekerdere Cad. No:29, Kahramanmaraş",
+      body: "KVKK'nın 11. maddesi kapsamında ilgili kişiler; verilerinin işlenip işlenmediğini öğrenme, bilgi talep etme, amacını ve aktarıldığı kişileri öğrenme, düzeltme, kanuni şartlar oluştuğunda silme/yok etme, ilgili işlemlerin üçüncü kişilere bildirilmesini isteme, otomatik analiz sonuçlarına itiraz etme ve kanuna aykırı işleme nedeniyle zarar doğması halinde giderim talep etme haklarına sahip olabilir.\n\nBaşvuru:\n**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nAdres: Yusuflar, Şekerdere Blv 29/A, 46000 Onikişubat/Kahramanmaraş",
     },
   ],
-  noticeAfterSections:
-    "Bu metin yayından önce Petra'nın gerçek veri işleme süreçleri ve şirket bilgileriyle karşılaştırılmalıdır.",
 };

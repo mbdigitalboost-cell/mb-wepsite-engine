@@ -6,8 +6,6 @@ export const petraGizlilikPolitikasi: PetraLegalDocument = {
   lastUpdated: "20.08.2026",
   intro:
     "Petra Mühendislik (“Petra”, “Şirket”, “biz”), web sitemizi ziyaret eden kullanıcıların gizliliğine önem verir. Bu politika, web sitesi ve site üzerinden sunulan iletişim/hizmet talepleri kapsamında bilgilerin nasıl işlenebileceğini açıklar.",
-  noticeBeforeSections:
-    "Yayına almadan önce Petra'nın gerçek ticari unvanı, adresi, e-posta adresi, telefonu ve fiilen kullandığı üçüncü taraf servisler doğrulanmalıdır.",
   sections: [
     {
       heading: "1. Toplanan Bilgiler",
@@ -31,7 +29,7 @@ export const petraGizlilikPolitikasi: PetraLegalDocument = {
     },
     {
       heading: "6. Başvuru",
-      body: "Kişisel verilerinizle ilgili talepleriniz için:\n\n**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nTelefon: 0535 791 11 96\nAdres: Yusuflar Mahallesi, Şekerdere Cad. No:29, Kahramanmaraş",
+      body: "Kişisel verilerinizle ilgili talepleriniz için:\n\n**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nTelefon: 0535 791 11 96\nAdres: Yusuflar, Şekerdere Blv 29/A, 46000 Onikişubat/Kahramanmaraş",
     },
     {
       heading: "7. Güncellemeler",

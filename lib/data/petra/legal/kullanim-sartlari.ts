@@ -37,9 +37,7 @@ export const petraKullanimSartlari: PetraLegalDocument = {
     },
     {
       heading: "8. İletişim",
-      body: "**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nTelefon: 0535 791 11 96\nAdres: Yusuflar Mahallesi, Şekerdere Cad. No:29, Kahramanmaraş",
+      body: "**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nTelefon: 0535 791 11 96\nAdres: Yusuflar, Şekerdere Blv 29/A, 46000 Onikişubat/Kahramanmaraş",
     },
   ],
-  noticeAfterSections:
-    "Bu metin web sitesi kullanım şartları için taslaktır. Petra'nın gerçek ticari yapısı ve hizmet modeli doğrultusunda hukukçu tarafından son kontrolden geçirilmesi önerilir.",
 };

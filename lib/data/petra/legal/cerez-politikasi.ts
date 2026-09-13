@@ -32,5 +32,4 @@ export const petraCerezPolitikasi: PetraLegalDocument = {
       body: "**Petra Mühendislik**\nE-posta: servispetraklima@gmail.com\nTelefon: 0535 791 11 96",
     },
   ],
-  noticeAfterSections: "Yayına almadan önce kullanılan tüm gerçek çerez ve üçüncü taraf servisler teknik olarak doğrulanmalıdır.",
 };
