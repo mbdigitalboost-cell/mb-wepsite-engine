@@ -5,11 +5,14 @@ import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/ui/reveal";
 import { petraServices, petraServicesBannerImage } from "@/lib/data/petra/services";
+import { petraServiceOfferings } from "@/lib/data/petra/service-offerings";
+import { petraServiceOfferingIcons, petraServiceOfferingIconFallback } from "@/lib/data/petra/service-offering-icons";
 import { getServices } from "@/lib/cms/adapters";
 import { isCmsRow, mapServiceRows } from "@/lib/cms/petra/mappers";
 import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
+import { Icon } from "@/components/ui/icon";
 import type { NamedContentRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -105,6 +108,46 @@ export default async function ServicesPage() {
               sayfasından inceleyebilirsiniz.
             </p>
           </Reveal>
+        </Container>
+      </section>
+
+      {/*
+        Faz D: müşteri tarafından doğrudan teyit edilen 5 somut hizmet
+        kategorisi (lib/data/petra/service-offerings.ts) — yukarıdaki
+        satış-süreci grid'inden (Satış/Keşif/Projelendirme/Kurulum/Teknik
+        Servis) AYRI, tek sayfada ek bir bölüm (yeni route yok, mevcut
+        /hizmetler URL'i aynı). CMS'e bağlı değil, statik — mevcut
+        `WhyPetra` bölümünün ikon-daire kart dilini (border, rounded,
+        hover lift) sadeleştirilmiş haliyle kullanıyor.
+      */}
+      <section className="border-t border-white/10 py-24 lg:py-32">
+        <Container>
+          <Reveal>
+            <h2 className="max-w-xl font-[family-name:var(--font-brand-heading)] text-[32px] leading-tight font-semibold text-white sm:text-[42px]">
+              Sunduğumuz Klima Hizmetleri
+            </h2>
+            <p className="mt-4 max-w-xl text-sm text-brand-muted">
+              Onikişubat, Kahramanmaraş ve çevresinde, aşağıdaki hizmet kategorilerinin her birinde yanınızdayız.
+            </p>
+          </Reveal>
+
+          <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {petraServiceOfferings.map((offering, index) => (
+              <Reveal key={offering.title} index={index}>
+                <div className="group h-full rounded-[var(--radius-brand)] border border-white/10 bg-white/[0.03] p-6 transition-[transform,border-color] duration-300 ease-[var(--motion-easing)] hover:-translate-y-1 hover:border-brand-primary/30 sm:p-7">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-brand-background/60 transition-transform duration-300 group-hover:scale-105">
+                    <Icon
+                      icon={petraServiceOfferingIcons[offering.title] ?? petraServiceOfferingIconFallback}
+                      size="md"
+                      className="text-brand-primary"
+                    />
+                  </span>
+                  <h3 className="mt-6 text-base font-semibold text-white">{offering.title}</h3>
+                  <p className="mt-2 text-sm text-brand-muted">{offering.description}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </Container>
       </section>
     </>

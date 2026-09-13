@@ -101,7 +101,7 @@ export function SiteFooter({
           </ul>
         </nav>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="text-sm font-semibold text-white">İletişim</h2>
           <ul className="mt-4 space-y-3 text-sm text-brand-muted">
             {phone ? (
@@ -138,16 +138,30 @@ export function SiteFooter({
               </li>
             ) : null}
             {address ?? serviceArea ? (
-              <li className="flex items-center gap-2">
-                <Icon icon={MapPin} size="sm" />
-                {address ?? serviceArea}
+              <li className="flex flex-col gap-2">
+                {/*
+                  Faz C düzeltmesi: adres artık 3 satıra kadar sarabilen
+                  gerçek bir sokak adresi (önceden kısa `serviceArea`
+                  metniydi) — tek bir `flex items-center` satırında ikon +
+                  adres + "Konumu Görüntüle" linkini yan yana tutmak,
+                  adres sarıldıkça linki komşu "Yasal" sütununun üzerine
+                  taşırıyordu (flex-nowrap, linki bir sonraki satıra
+                  düşürmüyor). Adres artık kendi satırında serbestçe
+                  sarıyor, harita linki AYRI, adresin altında, kendi pin
+                  ikonuyla ayrı bir satır — hiçbir komşu sütuna taşmıyor.
+                */}
+                <span className="flex items-start gap-2">
+                  <Icon icon={MapPin} size="sm" className="mt-0.5" />
+                  <span>{address ?? serviceArea}</span>
+                </span>
                 {mapUrl ? (
                   <a
                     href={mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-brand-primary hover:text-white"
+                    className="flex items-center gap-2 pl-6 text-brand-primary hover:text-white"
                   >
+                    <Icon icon={MapPin} size="sm" />
                     Konumu Görüntüle
                   </a>
                 ) : null}

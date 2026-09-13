@@ -3,6 +3,7 @@ import "server-only";
 import type { Metadata } from "next";
 import { getSeo } from "@/lib/cms/adapters";
 import type { SeoSettingsRow } from "@/lib/cms/customer-types";
+import { petraSiteName } from "@/lib/data/petra/site-config";
 
 /**
  * Resolves the CUSTOMER'S site-wide `seo_settings` row (page_id IS NULL
@@ -67,30 +68,50 @@ export interface ResolvedSolutionSeo {
  * SEO resolution. Deliberately NOT `resolveStaticPageSeo()`: that
  * function is `route_key`-scoped for the 8 static pages and has no
  * relationship to a solution's slug — using it here would silently look
- * up the wrong (or no) row. Uses `resolveSiteWideSeo()` instead, the
- * same site-wide `seo_settings` row every other page falls back to.
+ * up the wrong (or no) row. Uses `resolveSiteWideSeo()` for `ogImage`
+ * only (see below) — the same site-wide `seo_settings` row every other
+ * page falls back to.
  *
- * Per-field, 3-tier fallback (approved chain, not the 2-tier shape
- * `applyHomeSeoOverrides`/`applyLayoutSeoOverrides` use — those merge one
- * `SeoSettingsRow | null` onto an already-built `base: Metadata`; here
- * every field independently checks its own solution-level override first,
- * then the site-wide row, then the solution's own content field):
- *   title       = solution.seoTitle ?? siteWide.title ?? solution.title
- *   description = solution.seoDescription ?? siteWide.description ?? solution.description
- *   ogImage     = solution.seoOgImage ?? siteWide.og_image ?? null
- * `ogImage` NEVER falls back to the solution's own `image` — that asset
- * is typically a vertical 3:4 crop, not an OG-friendly aspect ratio (see
- * migration 0010's own comment). Canonical and robots are NOT part of
- * this resolver on purpose — canonical stays slug-derived
- * (`/cozumler/${slug}`) and robots stays inherited from the root public
- * layout; neither should ever be overridden by a solution or the
- * site-wide row.
+ * Faz D düzeltmesi (production'da doğrulanan bulgu): `title`/`description`
+ * ÖNCEDEN site-wide `seo_settings` satırına da düşüyordu
+ * (`solution.seoTitle ?? siteWide.title ?? solution.title`) — ama o satır
+ * `page_id IS NULL AND route_key IS NULL`, yani HOMEPAGE'e özel bir
+ * satır (bkz. `applyHomeSeoOverrides`'ın onu tam olarak bunun için
+ * kullanması). Petra'da bu satır GERÇEKTEN dolu olduğu için (homepage
+ * title'ı), HER `/cozumler/[slug]` sayfası kendi gerçek başlığı yerine
+ * homepage'in başlığını gösteriyordu — production'da doğrulandı
+ * (`Petra Mühendislik | Kahramanmaraş İklimlendirme Çözümleri`, TÜM
+ * solution sayfalarında AYNI). `title`/`description` artık SADECE
+ * solution'ın kendi alanlarına düşüyor (`solution.seoTitle ?? solution.title`),
+ * homepage'e ait site-wide satırı ASLA kullanmıyor — `solution.title` her
+ * zaman dolu (zorunlu alan) olduğu için bu zincir asla boş dönmez.
+ * Statik `solution.title` fallback'ine düşüldüğünde marka soneki
+ * (` | Petra Mühendislik`) BİLEREK elle ekleniyor: bu fonksiyonun
+ * döndürdüğü `title`, çağıran tarafta (`app/(public)/cozumler/[slug]/
+ * page.tsx`) HER ZAMAN `{ absolute: ... }` ile kullanılıyor (ebeveyn
+ * layout'un `"%s | Petra Mühendislik"` şablonunu bilerek atlıyor —
+ * yukarıdaki `siteWideSeo.title` hatasını tekrarlamamak için), yani bu
+ * sonek başka HİÇBİR yoldan eklenmiyor. Eklenmezse solution sayfaları
+ * (statik durumda) markasız, sitenin geri kalanıyla tutarsız bir title
+ * gösterirdi ("Split Klimalar" vs diğer her sayfadaki "X | Petra
+ * Mühendislik"). `solution.seoTitle` GERÇEK bir admin girdisiyse bu sonek
+ * EKLENMİYOR — admin kendi tam başlığını (marka adı dahil ya da hariç,
+ * kendi tercihiyle) yazmış sayılır, üzerine yazılmaz.
+ * `ogImage` tek istisna: site-wide `og_image`, `applyLayoutSeoOverrides`'ın
+ * felsefesiyle AYNI şekilde ("her route'a körlemesine uygulanabilir
+ * güvenli bir varlık") gerçekten güvenli bir genel varsayılan, o yüzden
+ * fallback zincirinde KALDI. `ogImage` yine solution'ın kendi `image`
+ * alanına DÜŞMÜYOR — o asset genelde dikey 3:4 kırpım, OG-uyumlu bir oran
+ * değil (bkz. migration 0010'un kendi yorumu). Canonical ve robots bu
+ * resolver'ın parçası DEĞİL — canonical slug-türetilmiş kalıyor
+ * (`/cozumler/${slug}`), robots root public layout'tan miras kalıyor;
+ * ikisi de ne solution ne site-wide satır tarafından override edilmemeli.
  */
 export async function resolveSolutionSeo(connectionKey: string, solution: SolutionSeoInput): Promise<ResolvedSolutionSeo> {
   const siteWideSeo = await resolveSiteWideSeo(connectionKey);
   return {
-    title: solution.seoTitle ?? siteWideSeo?.title ?? solution.title,
-    description: solution.seoDescription ?? siteWideSeo?.description ?? solution.description,
+    title: solution.seoTitle ?? `${solution.title} | ${petraSiteName}`,
+    description: solution.seoDescription ?? solution.description,
     ogImage: solution.seoOgImage ?? siteWideSeo?.og_image ?? null,
   };
 }

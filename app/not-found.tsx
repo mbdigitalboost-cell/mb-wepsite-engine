@@ -12,8 +12,16 @@ import { petraSiteName, petraTagline, petraContactInfo, petraSocialLinks } from 
 import { petraBrandAssets } from "@/lib/data/petra/brand-assets";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 
+// `title.absolute` (bir düz string DEĞİL) bilerek kullanılıyor: bu dosya
+// `(public)` route group'unun DIŞINDA olduğu için Petra'nın kendi title
+// template'ini (app/(public)/layout.tsx, "%s | Petra Mühendislik")
+// MİRAS ALMIYOR — bunun yerine ROOT app/layout.tsx'in jenerik
+// "%s | MB Digital Boost" template'i devreye giriyor ve düz bir string
+// title BU template'e sarılıyor (önceki hata: "Sayfa Bulunamadı | MB
+// Digital Boost" — müşteri sitesinde platform markası görünüyordu).
+// `absolute`, HER ata template'ini atlayıp yazılanı OLDUĞU GİBİ basar.
 export const metadata: Metadata = {
-  title: "Sayfa Bulunamadı",
+  title: { absolute: "Sayfa Bulunamadı | Petra Mühendislik" },
   robots: { index: false, follow: true },
 };
 
