@@ -1,6 +1,21 @@
-import { petraContactInfo, petraSiteName, petraSocialLinks } from "@/lib/data/petra/site-config";
+import {
+  petraAlternateName,
+  petraBusinessAddress,
+  petraContactInfo,
+  petraSiteName,
+  petraSocialLinks,
+} from "@/lib/data/petra/site-config";
 import { publicEnv } from "@/lib/config/env";
 import type { PetraFaq } from "@/lib/data/petra/types";
+
+/**
+ * Faz C: single shared `@id` for the site's one business identity —
+ * `petraLocalBusinessStructuredData()` and `petraOrganizationStructuredData()`
+ * both use it, but (per `app/(public)/page.tsx`) only ever ONE of the two
+ * is ever rendered on a given request, so the shared value never creates
+ * a duplicate/conflicting `@id` on the same page.
+ */
+const PETRA_BUSINESS_ID = `${publicEnv.siteUrl}/#business`;
 
 /**
  * JSON-LD builders. Each one returns `null` when it doesn't have enough
@@ -34,6 +49,15 @@ export function petraFaqStructuredData(faqs: PetraFaq[]) {
  * Only emits `LocalBusiness` once both a real address and phone number
  * are confirmed — a partial/best-guess LocalBusiness entry is worse than
  * none, since search engines treat it as a factual claim.
+ *
+ * Faz C: `address` now uses `petraBusinessAddress` (schema.org
+ * `PostalAddress`, see lib/data/petra/site-config.ts) instead of the
+ * plain `petraContactInfo.address` display string — Google expects a
+ * structured address object here, not free text. `geo` uses the same
+ * customer-supplied coordinates already embedded in `petraContactInfo.mapUrl`
+ * (confirmed 2026-08-17, unchanged). `@id` lets this and
+ * `petraOrganizationStructuredData()` share one entity identity even
+ * though (per app/(public)/page.tsx) they never render on the same page.
  */
 export function petraLocalBusinessStructuredData() {
   if (!petraContactInfo.address || !petraContactInfo.phone) return null;
@@ -41,11 +65,23 @@ export function petraLocalBusinessStructuredData() {
   return {
     "@context": "https://schema.org",
     "@type": "HVACBusiness",
+    "@id": PETRA_BUSINESS_ID,
     name: petraSiteName,
+    ...(petraAlternateName ? { alternateName: petraAlternateName } : {}),
     telephone: petraContactInfo.phone,
-    address: petraContactInfo.address,
     url: publicEnv.siteUrl,
+    logo: `${publicEnv.siteUrl}/icon.png`,
+    address: {
+      "@type": "PostalAddress",
+      ...petraBusinessAddress,
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: 37.58518,
+      longitude: 36.92165,
+    },
     ...(petraContactInfo.serviceArea ? { areaServed: petraContactInfo.serviceArea } : {}),
+    ...(petraSocialLinks.length > 0 ? { sameAs: petraSocialLinks.map((link) => link.url) } : {}),
   };
 }
 
@@ -64,6 +100,7 @@ export function petraOrganizationStructuredData() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": PETRA_BUSINESS_ID,
     name: petraSiteName,
     url: publicEnv.siteUrl,
     logo: `${publicEnv.siteUrl}/icon.png`,

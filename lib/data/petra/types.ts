@@ -18,12 +18,29 @@ export interface PetraContactInfo {
   workingHours: string | null;
   /**
    * Google Maps link built directly from customer-supplied GPS
-   * coordinates (not a resolved/typed street address — see
-   * `site-config.ts` for why `address` stays `null`). Renders as a
-   * "Konumu Görüntüle" link wherever contact details show, instead of
-   * inventing or guessing street-address text.
+   * coordinates (see `site-config.ts`'s `petraContactInfo` comment for
+   * the confirmation history). Renders as a "Konumu Görüntüle" link
+   * wherever contact details show, kept alongside (not replaced by) the
+   * plain-text `address` above.
    */
   mapUrl: string | null;
+}
+
+/**
+ * Structured-data-only decomposition of the confirmed business address
+ * (see `site-config.ts`'s `petraBusinessAddress`) — schema.org's
+ * `PostalAddress` shape. Kept separate from `PetraContactInfo.address`
+ * (a plain display string used by the footer/contact page) because the
+ * two have different consumers and schema.org has no "neighbourhood"
+ * property: the confirmed address's mahalle is folded into
+ * `streetAddress` here rather than dropped.
+ */
+export interface PetraPostalAddress {
+  streetAddress: string;
+  addressLocality: string;
+  addressRegion: string;
+  postalCode: string;
+  addressCountry: string;
 }
 
 export interface PetraSocialLink {

@@ -153,24 +153,26 @@ export default async function HomePage() {
 
   const whatsappHref = buildWhatsappHref(whatsapp);
   const faqJsonLd = petraFaqStructuredData(faqs);
-  // Faz 10: adres henüz onaylanmadığı için bu şu an her zaman `null`
-  // döner (bkz. lib/seo/structured-data.ts) — sahte bir işletme beyanı
-  // riski yok, gerçek adres onaylandığında kod değişikliği gerekmeden
-  // otomatik olarak render olacak.
+  // Faz C: adres artık teyitli olduğu için bu gerçek bir HVACBusiness
+  // objesi döndürüyor (bkz. lib/seo/structured-data.ts) — bu yüzden
+  // aşağıda `organizationJsonLd` ile KARŞILIKLI DIŞLAYICI render
+  // ediliyor: HVACBusiness zaten bir Organization olduğu için ikisi
+  // aynı sayfada aynı anda basılırsa aynı işletme için iki ayrı
+  // top-level entity beyan edilmiş olur (bkz.
+  // claude/PETRA_LOCALBUSINESS_FINAL_AUDIT.md §7). Adres tekrar `null`
+  // olursa (olmayacak, ama kod hâlâ bu durumu ele alıyor) otomatik
+  // olarak Organization'a geri döner.
   const localBusinessJsonLd = petraLocalBusinessStructuredData();
-  // Faz SEO-3: site-wide kimlik şemaları — homepage'de bir kez render
-  // ediliyor (FAQ/LocalBusiness ile aynı yerleşim deseni), asla `null`
-  // dönmüyorlar (LocalBusiness'in aksine, eksik/onaysız bir alana bağımlı
-  // değiller — sadece zaten confirmed olan site adı/URL/telefon/sosyal
-  // hesap kullanıyorlar).
+  // Faz SEO-3: site-wide kimlik şeması — homepage'de bir kez render
+  // ediliyor, `localBusinessJsonLd` doluyken YERİNE `HVACBusiness`
+  // basıldığı için (yukarıdaki yorum) ikisi asla aynı anda görünmüyor.
   const organizationJsonLd = petraOrganizationStructuredData();
   const websiteJsonLd = petraWebsiteStructuredData();
 
   return (
     <>
       {faqJsonLd ? <JsonLd data={faqJsonLd} /> : null}
-      {localBusinessJsonLd ? <JsonLd data={localBusinessJsonLd} /> : null}
-      <JsonLd data={organizationJsonLd} />
+      {localBusinessJsonLd ? <JsonLd data={localBusinessJsonLd} /> : <JsonLd data={organizationJsonLd} />}
       <JsonLd data={websiteJsonLd} />
       <Hero whatsappHref={whatsappHref} hero={hero} />
       <TrustBar />

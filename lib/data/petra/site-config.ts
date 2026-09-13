@@ -1,4 +1,4 @@
-import type { PetraContactInfo, PetraSocialLink } from "@/lib/data/petra/types";
+import type { PetraContactInfo, PetraPostalAddress, PetraSocialLink } from "@/lib/data/petra/types";
 
 export const petraSiteName = "Petra Mühendislik";
 
@@ -27,12 +27,15 @@ export const petraTagline = "İklimlendirmede mühendislik ve güven.";
  *   link (leading 0 instead of the 90 country code); this fixes that.
  * - `email`, `workingHours`: still `null` — not visible/confirmed in the
  *   Instagram source.
- * - `address`: still `null` — a candidate address IS visible in the
- *   screenshot ("Yusuflar Mahallesi, Şekerdere Caddesi No:29/A"), but the
- *   company reference doc flags conflicting formats (Cadde vs Bulvarı,
- *   No:29/A) as unresolved. Per instruction, this stays pending/unset
- *   rather than being written into contact info or structured data until
- *   the customer confirms one canonical format.
+ * - `address`: confirmed directly by the customer (2026-09-13) as the
+ *   canonical business address — "Yusuflar, Şekerdere Blv 29/A, 46000
+ *   Onikişubat/Kahramanmaraş". This resolves the previously-unresolved
+ *   Cadde-vs-Bulvarı ambiguity (an earlier Instagram-screenshot
+ *   candidate read "Yusuflar Mahallesi, Şekerdere Caddesi No:29/A" —
+ *   the customer's direct confirmation establishes it is "Blv"
+ *   (Bulvarı), not "Caddesi"). See `petraBusinessAddress` below for the
+ *   same address decomposed into schema.org's `PostalAddress` shape for
+ *   structured data.
  * - `mapUrl`: customer directly supplied GPS coordinates (2026-08-17,
  *   37.58518° K, 36.92165° D) to use in place of resolving the
  *   ambiguous street-address text above — a plain Google Maps
@@ -46,10 +49,27 @@ export const petraContactInfo: PetraContactInfo = {
   phoneDisplay: "0535 791 11 96",
   whatsapp: "+90 535 791 11 96",
   email: null,
-  address: null,
+  address: "Yusuflar, Şekerdere Blv 29/A, 46000 Onikişubat/Kahramanmaraş",
   serviceArea: "Onikişubat, Kahramanmaraş",
   workingHours: null,
   mapUrl: "https://www.google.com/maps?q=37.58518,36.92165",
+};
+
+/**
+ * Same confirmed address as `petraContactInfo.address` above, decomposed
+ * into schema.org's `PostalAddress` shape for `petraLocalBusinessStructuredData()`
+ * (lib/seo/structured-data.ts) — NOT consumed by the footer/contact page,
+ * which use the plain-text `petraContactInfo.address` instead. schema.org
+ * has no distinct "neighbourhood" property, so the confirmed mahalle
+ * ("Yusuflar") is folded into `streetAddress` alongside the bulvar/no
+ * rather than dropped.
+ */
+export const petraBusinessAddress: PetraPostalAddress = {
+  streetAddress: "Yusuflar, Şekerdere Blv. No:29/A",
+  addressLocality: "Onikişubat",
+  addressRegion: "Kahramanmaraş",
+  postalCode: "46000",
+  addressCountry: "TR",
 };
 
 /**
