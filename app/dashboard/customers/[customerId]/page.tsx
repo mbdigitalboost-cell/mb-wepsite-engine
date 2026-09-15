@@ -48,6 +48,18 @@ export default async function CustomerOverviewPage({
     .eq("customer_id", customerId)
     .order("name");
 
+  // Central Platform "stores" (Faz 2 commerce model — e.g. Taktikalp46).
+  // Deliberately separate from `websites` above (old per-customer-Supabase
+  // model — e.g. Petra) — see supabase/platform/migrations/0007_stores.sql
+  // header comment. Same customer_id-scoped query pattern as websites;
+  // RLS (`stores_select_member_or_admin`) is the real isolation boundary,
+  // this .eq() is a query-shape convenience, not the security check.
+  const { data: stores } = await supabase
+    .from("stores")
+    .select("id, name, slug, status, updated_at")
+    .eq("customer_id", customerId)
+    .order("name");
+
   let auditEntries: { id: string; action: string; created_at: string; actorLabel: string }[] = [];
   if (isAdmin) {
     const { data: logs } = await supabase
@@ -141,6 +153,51 @@ export default async function CustomerOverviewPage({
                   {isAdmin ? (
                     <Link
                       href={`/dashboard/customers/${customerId}/websites/${website.id}`}
+                      className="block hover:bg-brand-accent/5"
+                    >
+                      {row}
+                    </Link>
+                  ) : (
+                    row
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-8 border-t border-black/10 pt-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold tracking-tight">Mağazalar</h2>
+          {isAdmin ? (
+            <Button href="/dashboard/stores/new" size="sm" variant="outline">
+              Yeni Mağaza
+            </Button>
+          ) : null}
+        </div>
+
+        {!stores || stores.length === 0 ? (
+          <p className="mt-3 text-sm text-foreground/60">Henüz mağaza yok.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-black/10 rounded-lg border border-black/10">
+            {stores.map((store) => {
+              const row = (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium text-foreground">{store.name}</p>
+                    <p className="text-xs text-foreground/50">
+                      /{store.slug} · Son güncelleme: {formatDateTr(store.updated_at)}
+                    </p>
+                  </div>
+                  <StatusBadge status={store.status} />
+                </div>
+              );
+              return (
+                <li key={store.id}>
+                  {isAdmin ? (
+                    <Link
+                      href={`/dashboard/customers/${customerId}/stores/${store.id}`}
                       className="block hover:bg-brand-accent/5"
                     >
                       {row}
