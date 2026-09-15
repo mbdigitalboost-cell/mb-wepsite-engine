@@ -24,7 +24,13 @@ export async function createHomepageSectionAction(
 
   const parsed = homepageSectionFormSchema.safeParse({
     sectionTypeKey: formData.get("sectionTypeKey"),
-    internalLabel: formData.get("internalLabel"),
+    // add-section-form.tsx renders no <input name="internalLabel"> — for a
+    // key absent from the DOM, FormData.get() returns `null` (not undefined,
+    // not ""), which the schema's `.optional().or(z.literal(""))` union does
+    // NOT accept, always failing with Zod's own generic "Invalid input"
+    // fallback message. `?? ""` normalizes the missing-field case to the
+    // one value the schema already treats as "no internal label".
+    internalLabel: formData.get("internalLabel") ?? "",
     title: formData.get("title"),
     description: formData.get("description"),
     imageUrl: formData.get("imageUrl"),
@@ -111,7 +117,8 @@ export async function updateHomepageSectionAction(
 
   const parsed = homepageSectionFormSchema.safeParse({
     sectionTypeKey,
-    internalLabel: formData.get("internalLabel"),
+    // Same missing-DOM-field normalization as createHomepageSectionAction above.
+    internalLabel: formData.get("internalLabel") ?? "",
     title: formData.get("title"),
     description: formData.get("description"),
     imageUrl: formData.get("imageUrl"),
