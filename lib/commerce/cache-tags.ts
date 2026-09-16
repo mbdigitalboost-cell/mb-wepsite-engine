@@ -30,3 +30,18 @@ export function storeNavigationTag(storeId: string) {
 export function storeHomepageTag(storeId: string) {
   return `store:${storeId}:homepage`;
 }
+
+/** FAZ 2B — Brands admin CRUD. */
+export function storeBrandsTag(storeId: string) {
+  return `store:${storeId}:brands`;
+}
+
+/** FAZ 2B — Categories admin CRUD. */
+export function storeCategoriesTag(storeId: string) {
+  return `store:${storeId}:categories`;
+}
+
+/** FAZ 2B — Products admin CRUD. */
+export function storeProductsTag(storeId: string) {
+  return `store:${storeId}:products`;
+}
