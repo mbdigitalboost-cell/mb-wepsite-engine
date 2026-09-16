@@ -11,6 +11,31 @@ import type { ProductImageFormState } from "./form-state";
 
 const INVALID_PRODUCT_MESSAGE = "Geçersiz ürün.";
 const INVALID_VARIANT_MESSAGE = "Geçersiz varyant.";
+const INVALID_STORAGE_PATH_MESSAGE = "Geçersiz depolama yolu.";
+
+/**
+ * M-1 fix — productImageFormSchema only checks that storagePath is a
+ * non-empty string within a length limit; it has no concept of "this
+ * store" or "this product" (deliberately — it's a shared FAZ 2A schema,
+ * not route-aware, see its own file comment). updateProductImageAction's
+ * edit form carries storagePath through as a hidden field (image-form.tsx)
+ * so it round-trips unchanged in the normal case, but a hidden field is
+ * still attacker-editable client input — nothing before this point
+ * confirmed the submitted value actually belongs to THIS store/product,
+ * only that it's some string. This check closes that gap at the
+ * cheapest correct layer: an explicit, exact-prefix comparison against
+ * the canonical path this specific route already trusts (storeId/
+ * productId come from the route params bound into this action, never
+ * from formData — see createProductImageAction's own comment on the
+ * same point). No normalization, no silent rewrite — a mismatch is
+ * rejected outright, per FAZ 2C-1C M-1 fix instructions. Storage's own
+ * `product_images_storage_*` RLS (migration 0020/0021) remains the
+ * second, independent defense layer this was never meant to replace.
+ */
+function assertCanonicalStoragePath(storagePath: string, storeId: string, productId: string): boolean {
+  const expectedPrefix = `stores/${storeId}/products/${productId}/`;
+  return storagePath.startsWith(expectedPrefix);
+}
 
 /**
  * FAZ 2C-1 — no separate slug/sku here, so the only realistic 23505 is
@@ -208,6 +233,10 @@ export async function updateProductImageAction(
   const parsed = productImageFormSchema.safeParse(readProductImageFormValues(productId, formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
+  }
+
+  if (!assertCanonicalStoragePath(parsed.data.storagePath, storeId, productId)) {
+    return { error: INVALID_STORAGE_PATH_MESSAGE };
   }
 
   const validProduct = await assertProductBelongsToStore(productId, storeId);
