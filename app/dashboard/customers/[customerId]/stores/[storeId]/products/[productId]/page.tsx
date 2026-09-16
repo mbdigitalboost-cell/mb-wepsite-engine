@@ -61,6 +61,15 @@ export default async function EditProductPage({
         <DeleteProductButton productName={product.name} action={deleteAction} />
       </div>
 
+      <div className="mt-4">
+        <Link
+          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/images`}
+          className="text-sm text-brand-accent underline-offset-2 hover:underline"
+        >
+          Görseller →
+        </Link>
+      </div>
+
       <div className="mt-6">
         <ProductForm
           initialValues={{
