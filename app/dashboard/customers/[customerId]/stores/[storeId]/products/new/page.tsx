@@ -1,0 +1,51 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ProductForm } from "../product-form";
+import { createProductAction } from "../actions";
+
+export default async function NewProductPage({
+  params,
+}: {
+  params: Promise<{ customerId: string; storeId: string }>;
+}) {
+  const { customerId, storeId } = await params;
+  await requireStoreEditorAccess(storeId);
+
+  const supabase = await createSupabaseServerClient();
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id, name")
+    .eq("id", storeId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+  if (!store) notFound();
+
+  const [{ data: categories }, { data: brands }] = await Promise.all([
+    supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+    supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+  ]);
+
+  return (
+    <div>
+      <Link
+        href={`/dashboard/customers/${customerId}/stores/${storeId}/products`}
+        className="text-xs text-foreground/50 hover:text-foreground hover:underline"
+      >
+        ← {store.name} · Products
+      </Link>
+
+      <h1 className="mt-2 text-xl font-semibold tracking-tight">Yeni Ürün</h1>
+
+      <div className="mt-6">
+        <ProductForm
+          categoryOptions={categories ?? []}
+          brandOptions={brands ?? []}
+          action={createProductAction.bind(null, customerId, storeId)}
+          submitLabel="Ürün Oluştur"
+        />
+      </div>
+    </div>
+  );
+}
