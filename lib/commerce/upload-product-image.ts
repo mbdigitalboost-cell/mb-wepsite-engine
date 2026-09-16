@@ -7,6 +7,7 @@ import {
   PRODUCT_IMAGES_BUCKET,
   isAllowedProductImageMimeType,
 } from "@/lib/commerce/product-image-constants";
+import { verifyImageSignature } from "@/lib/commerce/product-image-signature";
 
 export interface UploadProductImageResult {
   storagePath?: string;
@@ -55,13 +56,27 @@ export async function uploadProductImage(params: {
       error: `Desteklenmeyen dosya türü: ${file.type || "bilinmiyor"}. Yalnızca JPEG, PNG, WebP veya GIF yükleyin.`,
     };
   }
+  const mimeType = file.type;
 
-  const storagePath = `stores/${storeId}/products/${productId}/${buildSafeFileName(file.name, file.type)}`;
+  // M-5 fix — client file.type, this MIME check, and the bucket's own
+  // allowed_mime_types all trust the SAME self-reported string; this is
+  // the first layer that actually looks at the file's real bytes. Runs
+  // BEFORE the Storage upload so a mismatched file never reaches Storage
+  // at all — no cleanup path is needed for this rejection (see
+  // lib/commerce/product-image-signature.ts's own doc comment for why a
+  // full decode-based check, e.g. via `sharp`, was deliberately NOT added
+  // here — see FAZ 2C-1C M-5 design review).
+  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!verifyImageSignature(header, mimeType)) {
+    return { error: "Dosya içeriği belirtilen türle eşleşmiyor." };
+  }
+
+  const storagePath = `stores/${storeId}/products/${productId}/${buildSafeFileName(file.name, mimeType)}`;
 
   const supabase = await createSupabaseServerClient();
   const { error: uploadError } = await supabase.storage
     .from(PRODUCT_IMAGES_BUCKET)
-    .upload(storagePath, file, { contentType: file.type, upsert: false });
+    .upload(storagePath, file, { contentType: mimeType, upsert: false });
 
   if (uploadError) {
     return { error: `Yükleme başarısız: ${uploadError.message}` };
