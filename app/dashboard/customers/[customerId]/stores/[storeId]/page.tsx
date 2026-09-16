@@ -12,6 +12,9 @@ const SUBMODULES = [
   { key: "branding", label: "Branding", description: "Renkler, tipografi, buton stili" },
   { key: "navigation", label: "Navigation", description: "Ana / Footer / Kategori menüleri" },
   { key: "homepage", label: "Homepage Builder", description: "Ana sayfa bölümleri" },
+  { key: "products", label: "Products", description: "Ürün kataloğu" },
+  { key: "categories", label: "Categories", description: "Ürün kategorileri" },
+  { key: "brands", label: "Brands", description: "Markalar" },
 ] as const;
 
 /**
