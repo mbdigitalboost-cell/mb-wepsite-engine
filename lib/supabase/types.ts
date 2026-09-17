@@ -1121,6 +1121,76 @@ export type Database = {
           },
         ];
       };
+      /**
+       * FAZ 2C-2, migration 0022_product_addons.sql. HENÜZ production'a uygulanmadı.
+       * Product-scoped opsiyonel ek parça/hizmet (variant ile KARIŞTIRILMAMALI — bkz.
+       * migration'ın kendi header yorumu). price_delta ana ürün/variant fiyatını EZMEZ,
+       * server-authoritative olarak üstüne eklenir (bkz. lib/commerce/pricing.ts, sonraki adım).
+       */
+      product_addons: {
+        Row: {
+          id: string;
+          store_id: string;
+          product_id: string;
+          name: string;
+          sku: string | null;
+          price_delta: number;
+          stock: number | null;
+          track_inventory: boolean;
+          image_url: string | null;
+          is_required: boolean;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          product_id: string;
+          name: string;
+          sku?: string | null;
+          price_delta?: number;
+          stock?: number | null;
+          track_inventory?: boolean;
+          image_url?: string | null;
+          is_required?: boolean;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          product_id?: string;
+          name?: string;
+          sku?: string | null;
+          price_delta?: number;
+          stock?: number | null;
+          track_inventory?: boolean;
+          image_url?: string | null;
+          is_required?: boolean;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_addons_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_addons_product_id_store_id_fkey";
+            columns: ["product_id", "store_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id", "store_id"];
+          },
+        ];
+      };
     };
     Views: {
       /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. Read-only projeksiyon — Insert/Update yok. */

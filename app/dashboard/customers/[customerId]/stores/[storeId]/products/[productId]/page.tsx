@@ -61,12 +61,24 @@ export default async function EditProductPage({
         <DeleteProductButton productName={product.name} action={deleteAction} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap gap-4">
         <Link
           href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/images`}
           className="text-sm text-brand-accent underline-offset-2 hover:underline"
         >
           Görseller →
+        </Link>
+        <Link
+          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/variants`}
+          className="text-sm text-brand-accent underline-offset-2 hover:underline"
+        >
+          Varyantlar →
+        </Link>
+        <Link
+          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/addons`}
+          className="text-sm text-brand-accent underline-offset-2 hover:underline"
+        >
+          Ek Parçalar →
         </Link>
       </div>
 
