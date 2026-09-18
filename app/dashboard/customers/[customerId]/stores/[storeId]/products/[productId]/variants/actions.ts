@@ -677,7 +677,23 @@ export async function setVariantOptionValuesAction(
   return { error: null };
 }
 
-/** Bound per-row via `.bind(null, customerId, storeId, productId, variantId, optionValueId)` — store_editor+ (removing a single assignment is reversible, same tier as the full replace above). */
+/**
+ * Bound per-row via `.bind(null, customerId, storeId, productId, variantId,
+ * optionValueId)` — store_editor+ (removing a single assignment is
+ * reversible, same tier as the full replace above).
+ *
+ * FAZ 2C-2.1 hardening: this action always received `productId` (the
+ * route already binds it), but — unlike setVariantOptionValuesAction
+ * right above it — never actually checked that `variantId` belongs to
+ * it. The DELETE itself is scoped to (variant_id, store_id), which is
+ * enough for tenant (cross-store) isolation via RLS, but NOT for
+ * cross-product isolation within the same store: a store_editor viewing
+ * Product A's variants page could otherwise remove an option-value link
+ * belonging to a variant of Product B in the same store, just by
+ * guessing/observing its id. assertVariantBelongsToProduct closes that
+ * gap the same way every other productId-bearing action in this file
+ * already does.
+ */
 export async function removeVariantOptionValueAction(
   customerId: string,
   storeId: string,
@@ -686,6 +702,9 @@ export async function removeVariantOptionValueAction(
   optionValueId: string,
 ): Promise<void> {
   const { user } = await requireStoreEditorAccess(storeId);
+
+  const validVariant = await assertVariantBelongsToProduct(variantId, productId, storeId);
+  if (!validVariant) return;
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
