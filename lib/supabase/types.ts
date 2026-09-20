@@ -785,6 +785,10 @@ export type Database = {
           name: string;
           slug: string;
           sku: string | null;
+          /** FAZ 2C-4 STEP 23, migration 0027_products_model_column.sql — DRAFT, NOT YET APPLIED. Nullable free-text (e.g. "TP9 SFx") for future brand/model storefront filtering — no dictionary/FK, see that migration's header for why. */
+          model: string | null;
+          /** FAZ 2C-6 STEP 25, migration 0028_products_barcode.sql — DRAFT, NOT YET APPLIED. Nullable, store-scoped-unique (`products_barcode_unique`) — no format enforced. Internal commerce field, never exposed in PublicProduct. */
+          barcode: string | null;
           short_description: string | null;
           description: string | null;
           price: number;
@@ -806,6 +810,8 @@ export type Database = {
           name: string;
           slug: string;
           sku?: string | null;
+          model?: string | null;
+          barcode?: string | null;
           short_description?: string | null;
           description?: string | null;
           price: number;
@@ -827,6 +833,8 @@ export type Database = {
           name?: string;
           slug?: string;
           sku?: string | null;
+          model?: string | null;
+          barcode?: string | null;
           short_description?: string | null;
           description?: string | null;
           price?: number;
@@ -1201,6 +1209,16 @@ export type Database = {
           locale: string;
           maintenance_mode: boolean;
           maintenance_message: string | null;
+        };
+        Relationships: [];
+      };
+      /** FAZ 2C-3, migration 0024_public_storefront_foundation.sql — DRAFT, NOT YET APPLIED to production. Read-only projection — Insert/Update yok. `status='active'` filtresi view tanımının kendisinde. */
+      store_public_stores: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          status: string;
         };
         Relationships: [];
       };

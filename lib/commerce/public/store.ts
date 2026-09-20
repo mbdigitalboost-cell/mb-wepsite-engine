@@ -9,28 +9,25 @@ export interface PublicStoreSummary {
 }
 
 /**
- * PHASE 2 public storefront read model — giriş noktası. `slug` public/
+ * FAZ 2C-3 — public storefront read model, giriş noktası. `slug` public/
  * hassas değil (zaten stores_slug_unique ile URL-benzeri bir değer).
- * Anon client + RLS'in `stores` üzerinde bugün (0007) hiç anon SELECT
- * politikası OLMADIĞINI unutmayın — yani bu fonksiyon bugün HER ZAMAN
- * null döner, çünkü `stores` tablosunun kendisi hâlâ dashboard-only.
  *
- * Bu KASITLI: Phase 2 kararı (madde 1) "storefront'un TAMAMINI kodlama,
- * sadece sözleşmeyi tasarla" idi. Gerçek bir storefront'un
- * `getStoreBySlug` çağırabilmesi için `stores` tablosuna da (SADECE id/
- * name/slug/status sütunlarını döndüren, dar bir) bir anon SELECT
- * politikası eklenmesi gerekecek — bu, bu fazın kapsamında YAPILMADI
- * (kullanıcının "stores tablosunu gereksiz büyütme" ve "minimum public
- * yüzey" ilkeleriyle, ayrı bir onay gerektiren bir RLS değişikliği).
- * Bu fonksiyon şimdiden doğru İMZAYLA burada duruyor ki o onay geldiğinde
- * sadece BİR satır (politika ekleme) yeterli olsun, adapter katmanı zaten
- * hazır olsun.
+ * Bu fonksiyon `stores` tablosunu ASLA DOĞRUDAN sorgulamaz — o tablonun
+ * hâlâ hiçbir anon SELECT policy'si yok (migration 0007'den beri hep
+ * dashboard-only). Bunun yerine `store_public_stores` VIEW'ını
+ * (migration 0024 — draft, henüz apply edilmedi) kullanır — bu view
+ * `store_public_settings`'in (migration 0009) AYNI desenini takip eder:
+ * SADECE id/name/slug/status, ASLA customer_id/supabase_connection_key/
+ * diğer internal alanlar; `status='active'` filtresi view tanımının
+ * kendisinde, uygulama katmanında tekrar edilmesine gerek yok (ama
+ * defense-in-depth için burada da bırakıldı — view'ın kendisi zaten pasif
+ * satırları döndürmüyor, bu `.eq` ek bir zarar vermiyor).
  */
 export async function getStoreBySlug(slug: string): Promise<PublicStoreSummary | null> {
   const client = createSupabasePublicClient();
 
   const { data, error } = await client
-    .from("stores")
+    .from("store_public_stores")
     .select("id, name, slug")
     .eq("slug", slug)
     .eq("status", "active")
