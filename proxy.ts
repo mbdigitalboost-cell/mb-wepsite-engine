@@ -19,7 +19,7 @@ import { updateSupabaseSession } from "@/lib/supabase/proxy";
  */
 const PANEL_ONLY_MODE = process.env.PANEL_ONLY_MODE === "true";
 
-const PANEL_ALLOWED_PATH_PREFIXES = ["/dashboard", "/login", "/auth", "/api", "/_next", "/favicon.ico"];
+const PANEL_ALLOWED_PATH_PREFIXES = ["/dashboard", "/login", "/auth", "/api", "/_next", "/favicon.ico", "/store"];
 
 function isPanelAllowedPath(pathname: string) {
   return PANEL_ALLOWED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
