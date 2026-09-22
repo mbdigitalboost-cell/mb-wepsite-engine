@@ -4,7 +4,17 @@ import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ProductForm } from "../product-form";
 import { createProductAction } from "../actions";
+import { ProductTabs } from "../[productId]/product-tabs";
 
+/**
+ * Create mode of the unified product screen (see [productId]/page.tsx's
+ * own doc comment). Only Temel Bilgiler is usable — there is no
+ * productId yet for Görseller/Varyantlar/Ek Ürün Alanları to attach to
+ * — the other 3 tabs render locked via ProductTabs's own `mode="create"`
+ * handling. On successful save, createProductAction (unchanged action
+ * logic, only its redirect target changed — see products/actions.ts)
+ * sends the admin straight to the new product's Görseller tab.
+ */
 export default async function NewProductPage({
   params,
 }: {
@@ -39,11 +49,17 @@ export default async function NewProductPage({
       <h1 className="mt-2 text-xl font-semibold tracking-tight">Yeni Ürün</h1>
 
       <div className="mt-6">
-        <ProductForm
-          categoryOptions={categories ?? []}
-          brandOptions={brands ?? []}
-          action={createProductAction.bind(null, customerId, storeId)}
-          submitLabel="Ürün Oluştur"
+        <ProductTabs
+          mode="create"
+          initialTab="basic"
+          basicContent={
+            <ProductForm
+              categoryOptions={categories ?? []}
+              brandOptions={brands ?? []}
+              action={createProductAction.bind(null, customerId, storeId)}
+              submitLabel="Ürün Oluştur"
+            />
+          }
         />
       </div>
     </div>

@@ -6,13 +6,39 @@ import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
 import { updateProductAction, toggleProductActiveAction, deleteProductAction } from "../actions";
+import { ProductTabs, isProductTabKey, type ProductTabKey } from "./product-tabs";
+import { ImagesTab } from "./images-tab";
+import { VariantsTab } from "./variants-tab";
+import { AddonsTab } from "./addons-tab";
 
+/**
+ * Unified product create/edit screen (tabbed) — Temel Bilgiler /
+ * Görseller / Varyantlar / Ek Ürün Alanları all on this one page now,
+ * instead of separate /images, /variants, /addons routes only reachable
+ * after the product was already saved. `?tab=` picks the initially
+ * active tab (createProductAction now redirects here with `?tab=images`
+ * on successful create, so a brand-new product lands the admin straight
+ * on Görseller — see products/actions.ts).
+ *
+ * All 4 tabs' data is fetched on every load of this page, regardless of
+ * which one is initially active — a deliberate, accepted trade-off:
+ * switching tabs is then a pure client-side render with zero extra
+ * requests (see product-tabs.tsx), and the extra queries this costs on
+ * page load are cheap at this catalog's scale (a handful of images/
+ * variants/addons per product). No new server action or query logic was
+ * written for this — images-tab.tsx/variants-tab.tsx/addons-tab.tsx are
+ * the original images/variants/addons page.tsx bodies, moved here
+ * unchanged; every action still lives in its own original actions.ts.
+ */
 export default async function EditProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string; productId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { customerId, storeId, productId } = await params;
+  const { tab } = await searchParams;
   await requireStoreAccess(storeId);
 
   const supabase = await createSupabaseServerClient();
@@ -34,6 +60,7 @@ export default async function EditProductPage({
 
   const toggleActive = toggleProductActiveAction.bind(null, customerId, storeId, productId, !product.is_active);
   const deleteAction = deleteProductAction.bind(null, customerId, storeId, productId);
+  const initialTab: ProductTabKey = isProductTabKey(tab) ? tab : "basic";
 
   return (
     <div>
@@ -61,50 +88,42 @@ export default async function EditProductPage({
         <DeleteProductButton productName={product.name} action={deleteAction} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-4">
-        <Link
-          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/images`}
-          className="text-sm text-brand-accent underline-offset-2 hover:underline"
-        >
-          Görseller →
-        </Link>
-        <Link
-          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/variants`}
-          className="text-sm text-brand-accent underline-offset-2 hover:underline"
-        >
-          Varyantlar →
-        </Link>
-        <Link
-          href={`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}/addons`}
-          className="text-sm text-brand-accent underline-offset-2 hover:underline"
-        >
-          Ek Parçalar →
-        </Link>
-      </div>
-
       <div className="mt-6">
-        <ProductForm
-          initialValues={{
-            name: product.name,
-            slug: product.slug,
-            sku: product.sku ?? "",
-            shortDescription: product.short_description ?? "",
-            description: product.description ?? "",
-            categoryId: product.category_id ?? "",
-            brandId: product.brand_id ?? "",
-            price: Number(product.price),
-            compareAtPrice: product.compare_at_price === null ? "" : Number(product.compare_at_price),
-            stock: product.stock,
-            sortOrder: product.sort_order,
-            seoTitle: product.seo_title ?? "",
-            seoDescription: product.seo_description ?? "",
-          }}
-          initialTrackInventory={product.track_inventory}
-          initialIsActive={product.is_active}
-          categoryOptions={categories ?? []}
-          brandOptions={brands ?? []}
-          action={updateProductAction.bind(null, customerId, storeId, productId)}
-          submitLabel="Değişiklikleri Kaydet"
+        <ProductTabs
+          mode="edit"
+          initialTab={initialTab}
+          basicContent={
+            <ProductForm
+              initialValues={{
+                name: product.name,
+                slug: product.slug,
+                sku: product.sku ?? "",
+                barcode: product.barcode ?? "",
+                model: product.model ?? "",
+                shortDescription: product.short_description ?? "",
+                description: product.description ?? "",
+                categoryId: product.category_id ?? "",
+                brandId: product.brand_id ?? "",
+                price: Number(product.price),
+                compareAtPrice: product.compare_at_price === null ? "" : Number(product.compare_at_price),
+                stock: product.stock,
+                sortOrder: product.sort_order,
+                seoTitle: product.seo_title ?? "",
+                seoDescription: product.seo_description ?? "",
+              }}
+              initialTrackInventory={product.track_inventory}
+              initialIsActive={product.is_active}
+              categoryOptions={categories ?? []}
+              brandOptions={brands ?? []}
+              action={updateProductAction.bind(null, customerId, storeId, productId)}
+              submitLabel="Değişiklikleri Kaydet"
+            />
+          }
+          imagesContent={<ImagesTab customerId={customerId} storeId={storeId} productId={productId} />}
+          variantsContent={<VariantsTab customerId={customerId} storeId={storeId} productId={productId} />}
+          addonsContent={
+            <AddonsTab customerId={customerId} storeId={storeId} productId={productId} basePrice={Number(product.price)} />
+          }
         />
       </div>
     </div>

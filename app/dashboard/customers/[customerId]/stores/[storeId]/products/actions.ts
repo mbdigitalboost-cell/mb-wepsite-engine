@@ -25,6 +25,7 @@ function toFriendlyError(error: { code?: string | null; message: string }): stri
   if (error.code === "23505") {
     if (error.message.includes("products_slug_unique")) return "Bu slug bu mağazada zaten kullanılıyor.";
     if (error.message.includes("products_sku_unique")) return "Bu SKU bu mağazada zaten kullanılıyor.";
+    if (error.message.includes("products_barcode_unique")) return "Bu barkod bu mağazada zaten kullanılıyor.";
     return "Bu değer bu mağazada zaten kullanılıyor.";
   }
   return `Kaydedilemedi: ${error.message}`;
@@ -35,6 +36,8 @@ function readProductFormValues(formData: FormData) {
     name: formData.get("name"),
     slug: formData.get("slug"),
     sku: formData.get("sku"),
+    barcode: formData.get("barcode"),
+    model: formData.get("model"),
     shortDescription: formData.get("shortDescription"),
     description: formData.get("description"),
     categoryId: formData.get("categoryId"),
@@ -109,6 +112,8 @@ export async function createProductAction(
       name: parsed.data.name,
       slug: parsed.data.slug,
       sku: parsed.data.sku,
+      barcode: parsed.data.barcode || null,
+      model: parsed.data.model || null,
       short_description: parsed.data.shortDescription || null,
       description: parsed.data.description || null,
       price: parsed.data.price,
@@ -141,7 +146,10 @@ export async function createProductAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
   revalidateTag(storeProductsTag(storeId), "max");
-  redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${product.id}`);
+  // Unified tabbed product screen: land the admin on the Görseller tab
+  // right after creating a product, since that's typically the next
+  // thing they add — see [productId]/page.tsx / product-tabs.tsx.
+  redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${product.id}?tab=images`);
 }
 
 /** store_editor+ (RLS: products_update_editor_tier). Also handles the is_active toggle when submitted through the full form (a separate lighter-weight toggleProductActiveAction exists for the detail page's standalone toggle button). */
@@ -171,6 +179,8 @@ export async function updateProductAction(
       name: parsed.data.name,
       slug: parsed.data.slug,
       sku: parsed.data.sku,
+      barcode: parsed.data.barcode || null,
+      model: parsed.data.model || null,
       short_description: parsed.data.shortDescription || null,
       description: parsed.data.description || null,
       price: parsed.data.price,
