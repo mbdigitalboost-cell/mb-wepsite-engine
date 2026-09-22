@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/proxy";
+import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
 
 /**
  * Faz 14 (panel domain ayrımı): this codebase is deployed twice from the
@@ -25,7 +26,35 @@ function isPanelAllowedPath(pathname: string) {
   return PANEL_ALLOWED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+/**
+ * Domain-bazlı mağaza yönlendirmesi (2026-09 karar: Petra tarzı "her
+ * müşteriye ayrı branch + ayrı Vercel projesi" yerine tek deployment +
+ * host-bazlı rewrite — yeni müşteri eklemek için kod/deployment
+ * çoğaltmaya gerek kalmasın diye). STORE_DOMAINS'te (bkz.
+ * lib/commerce/public/store-domains.ts) kayıtlı bir domain'den istek
+ * gelirse, ziyaretçiye HİÇ GÖRÜNMEDEN /store/<slug>'a rewrite edilir —
+ * adres çubuğunda her zaman kendi domain'i görünür, /store/<slug> asla
+ * görünmez. PANEL_ONLY_MODE kontrolünden ÖNCE çalışır ve eşleşirse hemen
+ * döner, böylece bir custom domain ziyaretçisi PANEL_ONLY_MODE ne olursa
+ * olsun asla /login'e düşmez. STORE_DOMAINS boşken (henüz hiç domain
+ * eklenmemişken) bu fonksiyon her zaman null döner — yani bu değişiklik
+ * bir domain gerçekten eklenene kadar mevcut davranışı SIFIR etkiler.
+ */
+function rewriteForStoreDomain(request: NextRequest): NextResponse | null {
+  const hostname = request.headers.get("host")?.split(":")[0]?.toLowerCase() ?? "";
+  const storeSlug = STORE_DOMAINS[hostname];
+  if (!storeSlug) return null;
+
+  const url = request.nextUrl.clone();
+  const suffix = url.pathname === "/" ? "" : url.pathname;
+  url.pathname = `/store/${storeSlug}${suffix}`;
+  return NextResponse.rewrite(url);
+}
+
 export async function proxy(request: NextRequest) {
+  const domainRewrite = rewriteForStoreDomain(request);
+  if (domainRewrite) return domainRewrite;
+
   if (PANEL_ONLY_MODE && !isPanelAllowedPath(request.nextUrl.pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
