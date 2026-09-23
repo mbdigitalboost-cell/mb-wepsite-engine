@@ -9,6 +9,8 @@ interface ProductFormValues {
   name: string;
   slug: string;
   sku: string;
+  barcode: string;
+  model: string;
   shortDescription: string;
   description: string;
   categoryId: string;
@@ -25,6 +27,8 @@ const EMPTY_VALUES: ProductFormValues = {
   name: "",
   slug: "",
   sku: "",
+  barcode: "",
+  model: "",
   shortDescription: "",
   description: "",
   categoryId: "",
@@ -107,16 +111,45 @@ export function ProductForm({
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-1 min-w-[150px]">
+          <label htmlFor={`${formId}-sku`} className="mb-1.5 block text-sm font-medium text-foreground">
+            SKU
+          </label>
+          <input
+            id={`${formId}-sku`}
+            name="sku"
+            type="text"
+            required
+            defaultValue={initialValues.sku}
+            className={inputClasses}
+          />
+        </div>
+        <div className="flex-1 min-w-[150px]">
+          <label htmlFor={`${formId}-barcode`} className="mb-1.5 block text-sm font-medium text-foreground">
+            Barkod <span className="text-foreground/40">(opsiyonel)</span>
+          </label>
+          <input
+            id={`${formId}-barcode`}
+            name="barcode"
+            type="text"
+            defaultValue={initialValues.barcode}
+            placeholder="ör. 8699xxxxxxxxx"
+            className={inputClasses}
+          />
+        </div>
+      </div>
+
       <div>
-        <label htmlFor={`${formId}-sku`} className="mb-1.5 block text-sm font-medium text-foreground">
-          SKU
+        <label htmlFor={`${formId}-model`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Model <span className="text-foreground/40">(opsiyonel)</span>
         </label>
         <input
-          id={`${formId}-sku`}
-          name="sku"
+          id={`${formId}-model`}
+          name="model"
           type="text"
-          required
-          defaultValue={initialValues.sku}
+          defaultValue={initialValues.model}
+          placeholder="ör. TP9 SFx"
           className={inputClasses}
         />
       </div>

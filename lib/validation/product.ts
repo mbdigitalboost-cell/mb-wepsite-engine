@@ -44,6 +44,15 @@ export const productFormSchema = z
       .max(150)
       .regex(slugRegex, "Slug yalnızca küçük harf, rakam ve tire (-) içerebilir."),
     sku: z.string().trim().min(1, "SKU zorunlu.").max(100),
+    /** FAZ 2C-4 STEP 23 — free-text model attribute (e.g. "TP9 SFx"), mirrors migration 0027_products_model_column.sql's nullable `model` column. No fixed-list enforcement here (see that migration's own header for why). */
+    model: z.string().trim().max(150).optional().or(z.literal("")),
+    /**
+     * FAZ 2C-6 STEP 25 — nullable barcode, mirrors migration
+     * 0028_products_barcode.sql's `barcode` column. Deliberately no format
+     * regex (EAN-13/UPC-A/Code128/manufacturer-specific can all show up) —
+     * only a safe max length, same `.max(100)` ceiling as `sku`.
+     */
+    barcode: z.string().trim().max(100).optional().or(z.literal("")),
     shortDescription: z.string().trim().max(500).optional().or(z.literal("")),
     description: z.string().trim().max(5000).optional().or(z.literal("")),
     /** Nullable relations — same-store correctness enforced by the DB composite FK, not here. */
