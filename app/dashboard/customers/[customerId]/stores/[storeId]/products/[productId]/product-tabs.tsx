@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-
-export type ProductTabKey = "basic" | "images" | "variants" | "addons";
+import type { ProductTabKey } from "./product-tab-keys";
 
 const TAB_LABELS: Record<ProductTabKey, string> = {
   basic: "Temel Bilgiler",
@@ -12,10 +11,6 @@ const TAB_LABELS: Record<ProductTabKey, string> = {
 };
 
 const TAB_ORDER: ProductTabKey[] = ["basic", "images", "variants", "addons"];
-
-export function isProductTabKey(value: string | undefined): value is ProductTabKey {
-  return value === "basic" || value === "images" || value === "variants" || value === "addons";
-}
 
 interface ProductTabsProps {
   /**

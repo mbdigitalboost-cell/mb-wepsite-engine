@@ -213,7 +213,20 @@ export default async function StoreProductsPage({
          */
         <form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>
           <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
-            <select name="bulkAction" defaultValue="activate" className={`${inputClasses} h-8 w-auto py-0 text-xs`}>
+            {/*
+              A standalone class string, NOT `${inputClasses} h-8 w-auto py-0
+              text-xs` — inputClasses already bakes in `w-full`/`py-2.5`, and
+              concatenating on top to override them left the winner up to
+              Tailwind's own generated-CSS order rather than source order,
+              which is what actually clipped this element visually. Same
+              base look (border/rounded/focus ring) as inputClasses, just
+              with its own non-conflicting compact sizing utilities.
+            */}
+            <select
+              name="bulkAction"
+              defaultValue="activate"
+              className="h-8 w-auto rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground transition-colors focus-visible:border-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20"
+            >
               <option value="activate">Seçilenleri Aktif Yap</option>
               <option value="deactivate">Seçilenleri Pasif Yap</option>
             </select>

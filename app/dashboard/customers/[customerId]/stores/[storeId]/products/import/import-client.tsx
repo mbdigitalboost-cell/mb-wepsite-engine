@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type ChangeEvent } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ImportPreviewState, ImportCommitState } from "./form-state";
 
@@ -69,12 +70,21 @@ export function ImportClient({ validateAction, commitAction }: ImportClientProps
         <label htmlFor="import-file" className="mb-1.5 block text-sm font-medium text-foreground">
           CSV veya XLSX Dosyası
         </label>
+        {/*
+          Tailwind's `file:` pseudo-element classes style just the native
+          "Dosya Seç" sub-button the browser renders inside this input —
+          unstyled, that part is easy to miss (looks like plain grey system
+          text, not a button). The selected-filename text after it stays
+          native/unstyled, which is standard and expected. Disabled while
+          isPending so the file can't be swapped mid-submit.
+        */}
         <input
           id="import-file"
           type="file"
           accept=".csv,.xlsx"
           onChange={handleFileChange}
-          className="block text-sm text-foreground/70"
+          disabled={isPending}
+          className="block w-full text-sm text-foreground/70 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-black/15 file:bg-black/5 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground file:transition-colors hover:file:bg-black/10 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <p className="mt-1.5 text-xs text-foreground/50">
           Kabul edilen biçimler: .csv, .xlsx (maks. 2MB, maks. 500 satır). Makro içeren .xlsm ve eski .xls/.xlsb
@@ -83,7 +93,14 @@ export function ImportClient({ validateAction, commitAction }: ImportClientProps
 
         <div className="mt-3">
           <Button type="button" size="sm" variant="outline" disabled={!file || isPending} onClick={handlePreview}>
-            {isPending ? "İşleniyor..." : "Önizle"}
+            {isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                İşleniyor...
+              </>
+            ) : (
+              "Önizle"
+            )}
           </Button>
         </div>
       </div>
@@ -149,7 +166,14 @@ export function ImportClient({ validateAction, commitAction }: ImportClientProps
           ) : null}
 
           <Button type="button" size="sm" disabled={validRows.length === 0 || isPending} onClick={handleCommit}>
-            {isPending ? "İçe aktarılıyor..." : `İçe Aktar (${validRows.length} satır)`}
+            {isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                İçe aktarılıyor...
+              </>
+            ) : (
+              `İçe Aktar (${validRows.length} satır)`
+            )}
           </Button>
         </div>
       ) : null}
