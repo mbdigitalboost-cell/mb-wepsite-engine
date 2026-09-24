@@ -5,7 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
-import { updateProductAction, toggleProductActiveAction, deleteProductAction } from "../actions";
+import { DuplicateProductButton } from "../duplicate-product-button";
+import { updateProductAction, toggleProductActiveAction, deleteProductAction, duplicateProductAction } from "../actions";
 import { ProductTabs, isProductTabKey, type ProductTabKey } from "./product-tabs";
 import { ImagesTab } from "./images-tab";
 import { VariantsTab } from "./variants-tab";
@@ -60,6 +61,11 @@ export default async function EditProductPage({
 
   const toggleActive = toggleProductActiveAction.bind(null, customerId, storeId, productId, !product.is_active);
   const deleteAction = deleteProductAction.bind(null, customerId, storeId, productId);
+  // Same DuplicateProductButton component as the list page — it renders a
+  // bare formAction submit button (no own <form>, see its own doc comment,
+  // designed to nest inside the list page's bulk-select form), so here it
+  // needs a small wrapping <form> of its own, same shape as toggleActive's.
+  const duplicateAction = duplicateProductAction.bind(null, customerId, storeId, productId);
   const initialTab: ProductTabKey = isProductTabKey(tab) ? tab : "basic";
 
   return (
@@ -84,6 +90,9 @@ export default async function EditProductPage({
           >
             {product.is_active ? "Pasifleştir" : "Aktifleştir"}
           </button>
+        </form>
+        <form action={duplicateAction}>
+          <DuplicateProductButton action={duplicateAction} />
         </form>
         <DeleteProductButton productName={product.name} action={deleteAction} />
       </div>

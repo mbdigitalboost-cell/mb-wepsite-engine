@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inputClasses } from "@/lib/utils/input-classes";
+import { bulkUpdateProductsAction, duplicateProductAction } from "./actions";
+import { DuplicateProductButton } from "./duplicate-product-button";
 
 interface ProductRow {
   id: string;
@@ -195,29 +197,59 @@ export default async function StoreProductsPage({
           {q || sp.categoryId || sp.brandId || sp.active ? "Filtrelere uyan ürün yok." : "Henüz ürün yok."}
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-black/10 rounded-lg border border-black/10">
-          {rows.map((product) => (
-            <li key={product.id}>
-              <Link
-                href={`${basePath}/${product.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-brand-accent/5"
-              >
-                <span>
-                  <span className="font-medium text-foreground">{product.name}</span>{" "}
-                  <span className="text-xs text-foreground/50">/{product.slug}</span>
-                  {product.sku ? <span className="ml-2 text-xs text-foreground/50">SKU: {product.sku}</span> : null}
-                </span>
-                <span className="flex items-center gap-3 text-xs text-foreground/50">
-                  {product.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
-                  <span>Stok: {product.stock}</span>
-                  <Badge variant={product.is_active ? "solid" : "outline"}>
-                    {product.is_active ? "Aktif" : "Pasif"}
-                  </Badge>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        /**
+         * FAZ 2B-P1 — Toplu seçim/işlem formu. Bu, filtre formundan (yukarıda,
+         * method="get") tamamen AYRI bir <form> — biri GET/query-string,
+         * diğeri POST/server action, aynı DOM'da iç içe olamazlar (nested
+         * <form> geçersizdir), bu yüzden ikisi kardeş elemanlar. İçindeki
+         * <Link>ler normal şekilde çalışmaya devam eder — bir <form>,
+         * içindeki <a> etiketlerinin navigasyonunu etkilemez, sadece
+         * checkbox/select/button gibi form alanlarını toplar.
+         */
+        <form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>
+          <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
+            <select name="bulkAction" defaultValue="activate" className={`${inputClasses} h-8 w-auto py-0 text-xs`}>
+              <option value="activate">Seçilenleri Aktif Yap</option>
+              <option value="deactivate">Seçilenleri Pasif Yap</option>
+            </select>
+            <Button type="submit" size="sm" variant="outline">
+              Uygula
+            </Button>
+            <span>Kalıcı silme, ürün detay sayfasından tek tek yapılır.</span>
+          </div>
+
+          <ul className="mt-2 divide-y divide-black/10 rounded-lg border border-black/10">
+            {rows.map((product) => (
+              <li key={product.id} className="flex items-center gap-1 px-2">
+                <input
+                  type="checkbox"
+                  name="productIds"
+                  value={product.id}
+                  aria-label={`${product.name} seç`}
+                  className="h-4 w-4 shrink-0 rounded border-black/20"
+                />
+                <Link
+                  href={`${basePath}/${product.id}`}
+                  className="flex flex-1 flex-wrap items-center justify-between gap-2 px-2 py-3 text-sm hover:bg-brand-accent/5"
+                >
+                  <span>
+                    <span className="font-medium text-foreground">{product.name}</span>{" "}
+                    <span className="text-xs text-foreground/50">/{product.slug}</span>
+                    {product.sku ? <span className="ml-2 text-xs text-foreground/50">SKU: {product.sku}</span> : null}
+                  </span>
+                  <span className="flex items-center gap-3 text-xs text-foreground/50">
+                    {product.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
+                    <span>Stok: {product.stock}</span>
+                    <Badge variant={product.is_active ? "solid" : "outline"}>
+                      {product.is_active ? "Aktif" : "Pasif"}
+                    </Badge>
+                  </span>
+                </Link>
+                <DuplicateProductButton action={duplicateProductAction.bind(null, customerId, storeId, product.id)} />
+              </li>
+            ))}
+          </ul>
+        </form>
       )}
 
       {totalPages > 1 ? (

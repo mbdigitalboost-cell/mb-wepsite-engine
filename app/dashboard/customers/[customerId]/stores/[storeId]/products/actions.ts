@@ -284,3 +284,196 @@ export async function deleteProductAction(customerId: string, storeId: string, p
   revalidateTag(storeProductsTag(storeId), "max");
   redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
 }
+
+/**
+ * FAZ 2B-P1 (admin güçlendirme yol haritası) — Ürün kopyalama.
+ * store_editor+ (create ile aynı tier — geri alınabilir, cascade riski
+ * yok: kopya kendi bağımsız satırı).
+ *
+ * Sadece temel ürün alanlarını ve variant_id=null olan (yani ürün
+ * geneline ait, belirli bir varyanta özel olmayan) görselleri kopyalar.
+ * Varyantlar/ek ürün alanları (option_groups/option_values/
+ * product_variants/product_addons) bu ilk sürümde BİLEREK kopyalanmıyor:
+ * Taktikalp46'da şu an hiç varyant/addon yok, ve gerçek bir kopyalama
+ * orada birden fazla junction tablosuna (variant_option_values dahil)
+ * yazmayı gerektirir — çok daha yüksek riskli bir işlem. Gerçek katalog
+ * verisiyle ihtiyaç görülürse P1.5 olarak eklenir (bkz.
+ * ADMIN_URUN_YONETIMI_ANALIZ_VE_YOL_HARITASI.md).
+ *
+ * Kopyada bilinçli varsayılanlar (Shopify'ın "Duplicate"ı da aynı
+ * mantıkla taslak/pasif bir kopya oluşturuyor):
+ *   - slug/sku: ikisi de (store_id, col) üzerinde unique — "-kopya" /
+ *     "-KOPYA" son ekiyle benzersizleştirilir; bu da çakışırsa (aynı ürün
+ *     birden fazla kez kopyalanmışsa) kısa rastgele bir son ek eklenip
+ *     BİR kez daha denenir.
+ *   - barcode: NULL'a çekilir — fiziksel bir barkodun iki farklı ürün
+ *     satırında görünmesi yanlış olur.
+ *   - is_active: false, stock: 0 — admin fiyat/SKU/stoğu gözden geçirip
+ *     kendi isteğiyle aktif etmeden müşteri tarafında görünmesin diye.
+ */
+export async function duplicateProductAction(customerId: string, storeId: string, productId: string): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const supabase = await createSupabaseServerClient();
+  const { data: source, error: fetchError } = await supabase
+    .from("products")
+    .select(
+      "name, slug, sku, model, short_description, description, category_id, brand_id, price, compare_at_price, track_inventory, sort_order, seo_title, seo_description",
+    )
+    .eq("id", productId)
+    .eq("store_id", storeId)
+    .maybeSingle();
+
+  if (fetchError || !source) {
+    console.error("[products] duplicate: source product not found:", fetchError?.message);
+    return;
+  }
+
+  // Narrowed into its own const: `source`'s `!source` null-check above only
+  // narrows its type in THIS function's body, not inside the nested
+  // insertCopy() closure below (TS doesn't propagate closure-captured
+  // narrowing) — `src` carries the already-narrowed, definitely-non-null
+  // type into that closure instead.
+  const src = source;
+  const baseSlug = `${src.slug}-kopya`;
+  const baseSku = `${src.sku}-KOPYA`;
+
+  function insertCopy(slug: string, sku: string) {
+    return supabase
+      .from("products")
+      .insert({
+        store_id: storeId,
+        category_id: src.category_id,
+        brand_id: src.brand_id,
+        name: `${src.name} (Kopya)`,
+        slug,
+        sku,
+        barcode: null,
+        model: src.model,
+        short_description: src.short_description,
+        description: src.description,
+        price: src.price,
+        compare_at_price: src.compare_at_price,
+        stock: 0,
+        track_inventory: src.track_inventory,
+        is_active: false,
+        sort_order: src.sort_order,
+        seo_title: src.seo_title,
+        seo_description: src.seo_description,
+      })
+      .select("id")
+      .single();
+  }
+
+  let { data: copy, error: insertError } = await insertCopy(baseSlug, baseSku);
+
+  // Aynı ürün birden fazla kez kopyalanmışsa "-kopya"/"-KOPYA" da
+  // çakışabilir (23505 unique_violation) — kısa rastgele bir son ekle BİR
+  // kez daha dene. İkinci deneme de başarısız olursa (çok düşük ihtimal)
+  // aşağıdaki genel hata kontrolüne düşer ve sessizce durur.
+  if (insertError?.code === "23505") {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    ({ data: copy, error: insertError } = await insertCopy(`${baseSlug}-${suffix}`, `${baseSku}-${suffix}`));
+  }
+
+  if (insertError || !copy) {
+    console.error("[products] duplicate: insert failed:", insertError?.message);
+    return;
+  }
+
+  const { data: images } = await supabase
+    .from("product_images")
+    .select("storage_path, alt_text, sort_order, is_primary")
+    .eq("product_id", productId)
+    .eq("store_id", storeId)
+    .is("variant_id", null);
+
+  if (images && images.length > 0) {
+    const { error: imagesError } = await supabase.from("product_images").insert(
+      images.map((image) => ({
+        store_id: storeId,
+        product_id: copy!.id,
+        storage_path: image.storage_path,
+        alt_text: image.alt_text,
+        sort_order: image.sort_order,
+        is_primary: image.is_primary,
+      })),
+    );
+    if (imagesError) {
+      // Ürünün kendisi zaten oluşturuldu — görsel kopyalama başarısız olsa
+      // bile admin devam edebilsin, sadece logla. Görselleri Görseller
+      // sekmesinden manuel ekleyebilir.
+      console.error("[products] duplicate: image copy failed:", imagesError.message);
+    }
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "product.create",
+    entityType: "product",
+    entityId: copy.id,
+    metadata: { duplicatedFrom: productId, slug: baseSlug, sku: baseSku },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
+  revalidateTag(storeProductsTag(storeId), "max");
+  redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${copy.id}`);
+}
+
+const BULK_PRODUCT_ACTIONS = new Set(["activate", "deactivate"]);
+
+/**
+ * FAZ 2B-P1 — Ürün listesinde çoklu seçim + toplu aktif/pasif yapma.
+ * store_editor+ (toggleProductActiveAction ile aynı tier — reversible).
+ *
+ * Kalıcı silme BİLEREK bu toplu action'a dahil edilmedi: cascade'li ve
+ * geri alınamaz bir işlemi "birden fazla ürünü tek tıkla sil" haline
+ * getirmenin riski, tek tek delete-product-button.tsx'in kendi
+ * window.confirm()'üyle sınırlı kalmalı.
+ *
+ * Bound edilmiyor — products/page.tsx'te doğrudan
+ * `<form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>`
+ * olarak kullanılıyor; seçili productId'ler ve seçilen işlem FormData
+ * üzerinden (checkbox'lar + bir <select>) geliyor.
+ */
+export async function bulkUpdateProductsAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const productIds = formData.getAll("productIds").map(String).filter(Boolean);
+  const bulkAction = String(formData.get("bulkAction") ?? "");
+
+  if (productIds.length === 0 || !BULK_PRODUCT_ACTIONS.has(bulkAction)) {
+    return;
+  }
+
+  const nextActive = bulkAction === "activate";
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("products")
+    .update({ is_active: nextActive })
+    // Row-id filtresi TEK BAŞINA asla güvenilmez — store_id her zaman
+    // AND'lenir, bu dosyadaki her update ile aynı disiplin. `.in()` ile
+    // birden fazla id, ama hepsi aynı store_id şartına tabi — başka bir
+    // mağazanın ürün id'si buraya sızsa bile hiçbir satırı etkilemez.
+    .in("id", productIds)
+    .eq("store_id", storeId);
+
+  if (error) {
+    console.error("[products] bulk update failed:", error.message);
+    return;
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "product.update",
+    entityType: "product",
+    entityId: null,
+    metadata: { bulk: true, bulkAction, productIds, isActive: nextActive },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
+  revalidateTag(storeProductsTag(storeId), "max");
+}
