@@ -7,29 +7,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { productFormSchema } from "@/lib/validation/product";
 import { storeProductsTag } from "@/lib/commerce/cache-tags";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { toFriendlyError } from "@/lib/commerce/product-errors";
 import type { ProductFormState } from "./form-state";
 
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
 const INVALID_BRAND_MESSAGE = "Geçersiz marka.";
-
-/**
- * Postgres unique_violation (23505) on either products_slug_unique or
- * products_sku_unique (both (store_id, col)) -> distinct friendly
- * messages, per constraint name in the error message (same technique
- * every PostgrestError-consuming action in this codebase relies on since
- * the client doesn't expose a structured constraint field). Anything else
- * falls back to the same `Kaydedilemedi: ${error.message}` shape as
- * brands/categories.
- */
-function toFriendlyError(error: { code?: string | null; message: string }): string {
-  if (error.code === "23505") {
-    if (error.message.includes("products_slug_unique")) return "Bu slug bu mağazada zaten kullanılıyor.";
-    if (error.message.includes("products_sku_unique")) return "Bu SKU bu mağazada zaten kullanılıyor.";
-    if (error.message.includes("products_barcode_unique")) return "Bu barkod bu mağazada zaten kullanılıyor.";
-    return "Bu değer bu mağazada zaten kullanılıyor.";
-  }
-  return `Kaydedilemedi: ${error.message}`;
-}
 
 function readProductFormValues(formData: FormData) {
   return {

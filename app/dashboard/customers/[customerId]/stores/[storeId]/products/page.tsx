@@ -131,9 +131,14 @@ export default async function StoreProductsPage({
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Products</h1>
-        <Button href={`${basePath}/new`} size="sm">
-          Yeni Ürün
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button href={`${basePath}/import`} size="sm" variant="outline">
+            İçe Aktar
+          </Button>
+          <Button href={`${basePath}/new`} size="sm">
+            Yeni Ürün
+          </Button>
+        </div>
       </div>
       <p className="mt-1 text-sm text-foreground/60">
         Ürün kataloğu. store_editor+ ekleyip düzenleyebilir; kalıcı silme store_admin+&apos;e ayrılmış.
