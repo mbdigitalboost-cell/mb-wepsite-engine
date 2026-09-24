@@ -1,16 +1,9 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { enrollTotpFactor, verifyTotpCode, unenrollTotpFactor, type EnrollTotpResult } from "@/lib/auth/mfa";
+import { enrollTotpFactor, verifyTotpCode, unenrollTotpFactor } from "@/lib/auth/mfa";
 import { logAuditEvent } from "@/lib/auth/audit-log";
-
-export interface MfaActionState {
-  error: string | null;
-  enrollment: EnrollTotpResult | null;
-  enrolled: boolean;
-}
-
-export const initialMfaActionState: MfaActionState = { error: null, enrollment: null, enrolled: false };
+import type { MfaActionState } from "./mfa-action-state";
 
 /** Starts enrollment: creates an unverified TOTP factor and returns its QR code/secret for the client to show. */
 export async function startMfaEnrollmentAction(): Promise<MfaActionState> {

@@ -4,12 +4,8 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/lib/utils/input-classes";
-import {
-  startMfaEnrollmentAction,
-  confirmMfaEnrollmentAction,
-  disableMfaAction,
-  initialMfaActionState,
-} from "./mfa-actions";
+import { startMfaEnrollmentAction, confirmMfaEnrollmentAction, disableMfaAction } from "./mfa-actions";
+import { initialMfaActionState } from "./mfa-action-state";
 import type { TotpFactorSummary } from "@/lib/auth/mfa";
 
 /**
