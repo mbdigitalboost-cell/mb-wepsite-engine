@@ -260,6 +260,11 @@ export async function VariantsTab({
                         {variant.name}
                         {variant.sku ? <span className="ml-2 text-xs text-foreground/50">SKU: {variant.sku}</span> : null}
                       </p>
+                      {valueIds.length === 0 ? (
+                        <p className="mt-1.5 text-xs text-amber-600">
+                          ⚠ Hiç seçenek atanmamış — mağaza vitrininde seçilemeyeceği için gösterilmeyecek.
+                        </p>
+                      ) : null}
                       {valueIds.length > 0 ? (
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {valueIds.map((vid) => {

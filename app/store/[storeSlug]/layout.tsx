@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { CartProvider } from "@/components/commerce/public/cart/cart-context";
+import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 
 /**
  * Per-store tab title. Without this, every /store/[storeSlug]/** page
@@ -32,6 +34,34 @@ export async function generateMetadata({
   };
 }
 
-export default function StoreLayout({ children }: LayoutProps<"/store/[storeSlug]">) {
-  return children;
+/**
+ * FAZ 1 (mağaza sepeti/configurator) — now also resolves the store a
+ * second time (see generateMetadata's own comment above for why a second
+ * small query here is an accepted cost, not an oversight) to mount
+ * CartProvider (keyed by storeSlug, see cart-context.tsx) and StoreHeader
+ * around every page in this route tree. A store that fails to resolve
+ * here (deleted/renamed between requests, or slug simply doesn't exist)
+ * falls through to `children` rendering the page's OWN notFound() —
+ * every page under this tree already re-resolves the store itself and
+ * calls notFound(), so this layout doesn't duplicate that 404 logic, it
+ * just renders bare `children` (no header) rather than guessing a name.
+ */
+export default async function StoreLayout({
+  children,
+  params,
+}: {
+  children: LayoutProps<"/store/[storeSlug]">["children"];
+  params: Promise<{ storeSlug: string }>;
+}) {
+  const { storeSlug } = await params;
+  const store = await getStoreBySlug(storeSlug);
+
+  if (!store) return children;
+
+  return (
+    <CartProvider storeSlug={storeSlug}>
+      <StoreHeader storeSlug={storeSlug} storeName={store.name} />
+      {children}
+    </CartProvider>
+  );
 }

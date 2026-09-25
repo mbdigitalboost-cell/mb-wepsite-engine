@@ -1,22 +1,22 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { getPublicProductBySlug, getPublicProductImages } from "@/lib/commerce/public/products";
+import {
+  getPublicProductBySlug,
+  getPublicProductImages,
+  getPublicProductOptions,
+  getPublicProductVariants,
+  getPublicProductAddons,
+} from "@/lib/commerce/public/products";
 import { Container } from "@/components/ui/container";
-
-function formatPrice(value: number) {
-  return value.toLocaleString("tr-TR", { style: "currency", currency: "TRY" });
-}
+import { ProductConfigurator } from "./product-configurator";
 
 /**
- * FAZ 2C-3 STEP 22 — product detail. No cart action, no variant/
- * configurator selection UI yet (see the marked boundary below) — this
- * phase only proves store → product → images resolves correctly and
- * renders real data.
- *
- * `stock` is never rendered — see lib/commerce/public/products.ts's own
- * field-contract comment for why (raw inventory counts aren't exposed to
- * the storefront in this first version).
+ * FAZ 2C-3 STEP 22, configurator mounted in FAZ 1 (mağaza sepeti) —
+ * product detail. `stock` (raw count) is never rendered — see
+ * lib/commerce/public/products.ts's own field-contract comment for why
+ * (raw inventory counts aren't exposed to the storefront); ProductConfigurator
+ * only ever shows a derived inStock boolean, at the variant/addon level.
  */
 export default async function StoreProductPage({
   params,
@@ -31,7 +31,12 @@ export default async function StoreProductPage({
   const product = await getPublicProductBySlug(store.id, productSlug);
   if (!product) notFound();
 
-  const images = await getPublicProductImages(store.id, product.id);
+  const [images, optionGroups, variants, addons] = await Promise.all([
+    getPublicProductImages(store.id, product.id),
+    getPublicProductOptions(store.id, product.id),
+    getPublicProductVariants(store.id, product.id),
+    getPublicProductAddons(store.id, product.id),
+  ]);
   const primaryImage = images.find((image) => image.isPrimary) ?? images[0] ?? null;
 
   return (
@@ -86,13 +91,6 @@ export default async function StoreProductPage({
           ) : null}
           <h1 className="text-2xl font-semibold text-foreground">{product.name}</h1>
 
-          <div className="mt-2 flex items-baseline gap-3">
-            <span className="text-xl font-semibold text-foreground">{formatPrice(product.price)}</span>
-            {product.compareAtPrice ? (
-              <span className="text-sm text-foreground/40 line-through">{formatPrice(product.compareAtPrice)}</span>
-            ) : null}
-          </div>
-
           {product.shortDescription ? (
             <p className="mt-4 text-sm text-foreground/70">{product.shortDescription}</p>
           ) : null}
@@ -101,14 +99,24 @@ export default async function StoreProductPage({
           ) : null}
 
           {/*
-            FAZ 2C-3 STEP 22 — configurator/variant selection boundary.
-            Variant + option-group tables are now anon-readable (migration
-            0024, draft), but no selection UI or server-authoritative
-            pricing engine exists yet ("henüz configurator UI'ını tam
-            uygulama" — explicit scope limit). This comment marks the
-            intended mount point for that future work; nothing renders
-            here today.
+            FAZ 1 (mağaza sepeti/configurator) — the single price display
+            for this page now lives inside ProductConfigurator itself (it
+            starts at product.price/compareAtPrice and updates live as
+            option/addon selections change) — the static price block that
+            used to sit here was removed rather than kept alongside it, to
+            avoid ever showing two numbers that could disagree.
           */}
+          <ProductConfigurator
+            productId={product.id}
+            productSlug={product.slug}
+            productName={product.name}
+            productPrice={product.price}
+            productCompareAtPrice={product.compareAtPrice}
+            imageUrl={primaryImage?.url ?? null}
+            optionGroups={optionGroups}
+            variants={variants}
+            addons={addons}
+          />
         </div>
       </div>
     </Container>

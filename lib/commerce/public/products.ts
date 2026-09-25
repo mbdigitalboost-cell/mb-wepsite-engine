@@ -47,6 +47,50 @@ export interface PublicProduct {
   seoDescription: string | null;
 }
 
+/** FAZ 1 (mağaza sepeti/configurator) — a single selectable value within an option group (e.g. "Kırmızı"). */
+export interface PublicOptionValue {
+  id: string;
+  value: string;
+  sortOrder: number;
+}
+
+/** FAZ 1 — an option group (e.g. "Renk") with its nested, ordered values. */
+export interface PublicOptionGroup {
+  id: string;
+  name: string;
+  sortOrder: number;
+  values: PublicOptionValue[];
+}
+
+/**
+ * FAZ 1 — a sellable variant, resolved for the storefront configurator.
+ * `price`/`compareAtPrice` mirror the DB's own nullable "inherit the
+ * parent product's price" contract exactly (migration 0018's own table
+ * comment) — resolving that inheritance is the CALLER's job (see
+ * lib/commerce/pricing.ts), never done here. `sku`/raw `stock` withheld,
+ * same field-contract reasoning as `PublicProduct` — `inStock` is the
+ * only inventory signal exposed.
+ */
+export interface PublicProductVariant {
+  id: string;
+  name: string;
+  price: number | null;
+  compareAtPrice: number | null;
+  inStock: boolean;
+  /** option_value ids this variant is composed of — always >= 1 (see getPublicProductVariants's own filtering). */
+  optionValueIds: string[];
+}
+
+/** FAZ 1 — an optional add-on (e.g. "Yan Cep +100"). `priceDelta` is added ON TOP of the active price, never a standalone/absolute price. */
+export interface PublicProductAddon {
+  id: string;
+  name: string;
+  priceDelta: number;
+  imageUrl: string | null;
+  isRequired: boolean;
+  inStock: boolean;
+}
+
 export interface PublicProductImage {
   id: string;
   productId: string;
@@ -246,4 +290,166 @@ export async function getPublicProductImages(storeId: string, productId: string)
       };
     }),
   );
+}
+
+/**
+ * FAZ 1 (mağaza sepeti/configurator) — this product's option groups +
+ * nested values, for the storefront configurator. RLS
+ * (`option_groups_select_public_active`/`option_values_select_public_active`,
+ * migration 0024, live in production) is the real visibility gate — both
+ * already require the parent product to be `is_active` and the store to
+ * be publicly visible, so no extra filter is added here.
+ *
+ * Two queries total, never N+1: option_values is fetched ONCE for every
+ * group id in a single `.in()` call, then nested via a Map lookup — same
+ * fetch-once-then-Map-lookup shape as attachBrandsToProducts above.
+ */
+export async function getPublicProductOptions(storeId: string, productId: string): Promise<PublicOptionGroup[]> {
+  const client = createSupabasePublicClient();
+
+  const { data: groups, error: groupsError } = await client
+    .from("option_groups")
+    .select("id, name, sort_order")
+    .eq("store_id", storeId)
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true });
+
+  if (groupsError) {
+    console.error("[commerce/public] getPublicProductOptions failed (groups):", groupsError.message);
+    return [];
+  }
+  if (!groups || groups.length === 0) return [];
+
+  const groupIds = groups.map((g) => g.id);
+  const { data: values, error: valuesError } = await client
+    .from("option_values")
+    .select("id, option_group_id, value, sort_order")
+    .eq("store_id", storeId)
+    .in("option_group_id", groupIds)
+    .order("sort_order", { ascending: true });
+
+  if (valuesError) {
+    console.error("[commerce/public] getPublicProductOptions failed (values):", valuesError.message);
+    // Groups without any values are useless to the configurator (nothing
+    // to select) — same fail-soft posture as the rest of this file, but
+    // returning an empty array here (not `groups` with empty `values`)
+    // avoids the configurator rendering an unselectable empty group.
+    return [];
+  }
+
+  const valuesByGroupId = new Map<string, PublicOptionValue[]>();
+  for (const v of values ?? []) {
+    const list = valuesByGroupId.get(v.option_group_id) ?? [];
+    list.push({ id: v.id, value: v.value, sortOrder: v.sort_order });
+    valuesByGroupId.set(v.option_group_id, list);
+  }
+
+  return groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    sortOrder: g.sort_order,
+    values: valuesByGroupId.get(g.id) ?? [],
+  }));
+}
+
+/**
+ * FAZ 1 — this product's sellable variants, resolved for the storefront
+ * configurator. RLS (`product_variants_select_public_active`, migration
+ * 0018) already requires the variant's OWN `is_active` AND the parent
+ * product's `is_active` — no extra filter added here, same as every other
+ * function in this file.
+ *
+ * DELIBERATE FILTER — a variant with ZERO option_value links (e.g. a row
+ * created via createProductVariantAction but never assigned any option
+ * values through setVariantOptionValuesAction — a real state, confirmed
+ * against Taktikalp46's own test data) has no way to be selected through
+ * the option-group UI at all, so it's dropped here rather than reaching
+ * the configurator as an unreachable, confusing entry. See variants-tab.tsx
+ * for the matching admin-side warning that flags this same state.
+ *
+ * Two queries total: variant_option_values fetched ONCE for every variant
+ * id in a single `.in()` call, then grouped via a Map — same shape as
+ * getPublicProductOptions above.
+ */
+export async function getPublicProductVariants(storeId: string, productId: string): Promise<PublicProductVariant[]> {
+  const client = createSupabasePublicClient();
+
+  const { data: variants, error: variantsError } = await client
+    .from("product_variants")
+    .select("id, name, price, compare_at_price, stock, sort_order")
+    .eq("store_id", storeId)
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true });
+
+  if (variantsError) {
+    console.error("[commerce/public] getPublicProductVariants failed (variants):", variantsError.message);
+    return [];
+  }
+  if (!variants || variants.length === 0) return [];
+
+  const variantIds = variants.map((v) => v.id);
+  const { data: links, error: linksError } = await client
+    .from("variant_option_values")
+    .select("variant_id, option_value_id")
+    .eq("store_id", storeId)
+    .in("variant_id", variantIds);
+
+  if (linksError) {
+    console.error("[commerce/public] getPublicProductVariants failed (links):", linksError.message);
+    return [];
+  }
+
+  const optionValueIdsByVariant = new Map<string, string[]>();
+  for (const link of links ?? []) {
+    const list = optionValueIdsByVariant.get(link.variant_id) ?? [];
+    list.push(link.option_value_id);
+    optionValueIdsByVariant.set(link.variant_id, list);
+  }
+
+  return variants
+    .map((v) => ({
+      id: v.id,
+      name: v.name,
+      price: v.price === null ? null : Number(v.price),
+      compareAtPrice: v.compare_at_price === null ? null : Number(v.compare_at_price),
+      inStock: v.stock > 0,
+      optionValueIds: optionValueIdsByVariant.get(v.id) ?? [],
+    }))
+    .filter((v) => v.optionValueIds.length > 0);
+}
+
+/**
+ * FAZ 1 — this product's optional add-ons. RLS
+ * (`product_addons_select_public_active`, migration 0022) already
+ * requires `is_active` on both the add-on and the parent product — no
+ * extra filter added here.
+ *
+ * `inStock`: unlike product_variants (no track_inventory column at all —
+ * stock is always tracked there), product_addons DOES have its own
+ * `track_inventory` flag (migration 0022) — when it's false, `stock` is
+ * irrelevant/may be null, so the add-on is always treated as in stock.
+ */
+export async function getPublicProductAddons(storeId: string, productId: string): Promise<PublicProductAddon[]> {
+  const client = createSupabasePublicClient();
+
+  const { data, error } = await client
+    .from("product_addons")
+    .select("id, name, price_delta, stock, track_inventory, image_url, is_required")
+    .eq("store_id", storeId)
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("[commerce/public] getPublicProductAddons failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    priceDelta: Number(a.price_delta),
+    imageUrl: a.image_url,
+    isRequired: a.is_required,
+    inStock: !a.track_inventory || (a.stock !== null && a.stock > 0),
+  }));
 }
