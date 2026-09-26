@@ -142,3 +142,44 @@ export async function getPublicBrandModels(storeId: string, brandId: string): Pr
 
   return [...models].sort((a, b) => a.localeCompare(b, "tr"));
 }
+
+/**
+ * FAZ 7.2 — "Silahını Seç" brand picker's own read model: brands actually
+ * represented among a STORE's active, publicly-visible products (not just
+ * "every brand row this store has", which could include a brand with zero
+ * products left after all its products were deactivated/deleted). Same
+ * two-query, no-N+1 shape as getPublicBrandsForCategory above, just
+ * without the categoryId narrowing — this is that function's store-wide
+ * sibling, not a replacement for it.
+ */
+export async function getPublicBrandsWithProducts(storeId: string): Promise<PublicBrand[]> {
+  const client = createSupabasePublicClient();
+
+  const { data: productRows, error: productsError } = await client
+    .from("products")
+    .select("brand_id")
+    .eq("store_id", storeId)
+    .not("brand_id", "is", null);
+
+  if (productsError) {
+    console.error("[commerce/public] getPublicBrandsWithProducts product lookup failed:", productsError.message);
+    return [];
+  }
+
+  const brandIds = [...new Set((productRows ?? []).map((row) => row.brand_id).filter((id): id is string => id !== null))];
+  if (brandIds.length === 0) return [];
+
+  const { data: brandRows, error: brandsError } = await client
+    .from("brands")
+    .select(BRAND_COLUMNS)
+    .eq("store_id", storeId)
+    .in("id", brandIds)
+    .order("name", { ascending: true });
+
+  if (brandsError) {
+    console.error("[commerce/public] getPublicBrandsWithProducts brand lookup failed:", brandsError.message);
+    return [];
+  }
+
+  return (brandRows ?? []).map(mapBrand);
+}

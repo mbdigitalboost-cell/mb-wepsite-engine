@@ -7,6 +7,7 @@ import { getPublicProducts } from "@/lib/commerce/public/products";
 import { StoreHomepageSections } from "@/components/commerce/public/homepage-sections/store-homepage-sections";
 import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { Container } from "@/components/ui/container";
+import { Button } from "@/components/ui/button";
 
 /**
  * FAZ 2C-3 STEP 22 — Taktikalp46 / multi-tenant commerce storefront
@@ -52,6 +53,30 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
       </Container>
 
       <StoreHomepageSections sections={sections} />
+
+      {/*
+        FAZ 7.2 — checked first, per that phase's own explicit "silip
+        yeniden icat etme" instruction: queried this store's own
+        store_homepage_sections rows directly and confirmed neither button
+        exists there (the store's one "cta" section has an empty config
+        and a null link_url — that section type has no button support at
+        all, only "hero" does, see homepage-section.ts's own config
+        schemas) nor anywhere else in this codebase (grepped for the exact
+        Turkish text first). These two buttons are therefore added here,
+        plain and NOT wired into the generic, tenant-agnostic
+        StoreHomepageSections renderer above (deliberately — that
+        component has no opinion on which tenant it belongs to, and
+        "Silahını Seç" is Taktikalp46-specific copy, not a generic CMS
+        section type this phase was asked to build).
+      */}
+      <Container className="flex flex-wrap gap-3 py-6">
+        <Button href={`/store/${storeSlug}/silahini-sec`} size="lg">
+          Silahını Seç
+        </Button>
+        <Button href={`/store/${storeSlug}/kategoriler`} size="lg" variant="outline">
+          Tüm Kategoriler
+        </Button>
+      </Container>
 
       <Container className="py-10">
         <h2 className="text-lg font-semibold text-foreground">Ürünler</h2>
