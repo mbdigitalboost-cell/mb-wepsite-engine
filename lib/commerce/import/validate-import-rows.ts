@@ -114,8 +114,22 @@ export async function validateImportRows(storeId: string, rawRows: RawImportRow[
     return { ok: false, error: `Referans veriler okunamadı: ${message}` };
   }
 
-  const categoriesByName = new Map((categoriesResult.data ?? []).map((c) => [c.name, c]));
-  const brandsByName = new Map((brandsResult.data ?? []).map((b) => [b.name, b]));
+  // FAZ 8 — case-insensitive, Turkish-locale-aware name matching. Plain
+  // `.toLowerCase()` is wrong here specifically because of Turkish
+  // casing: "CANİK".toLowerCase() (default/English rules) produces
+  // "cani̇k" (a plain "i" plus a combining dot above, U+0069 U+0307) —
+  // NOT the ASCII "canik" a store's own brand row would actually have —
+  // because default JS casing treats dotted İ (U+0130) as a special case
+  // fold rather than İ→i. `.toLocaleLowerCase("tr")` applies Turkish's
+  // real casing rules (İ→i, I→ı) and is what actually makes "Canik" /
+  // "CANİK" / "canik" all resolve to the same brand, matching this
+  // phase's own "case-insensitive isim eşleştirmesi" requirement — a
+  // plain `.toLowerCase()` would have silently kept rejecting the exact
+  // all-caps style an admin is likely to type in Excel.
+  const categoriesByName = new Map(
+    (categoriesResult.data ?? []).map((c) => [c.name.toLocaleLowerCase("tr"), c]),
+  );
+  const brandsByName = new Map((brandsResult.data ?? []).map((b) => [b.name.toLocaleLowerCase("tr"), b]));
   const productsBySku = new Map(
     (productsResult.data ?? []).filter((p): p is typeof p & { sku: string } => Boolean(p.sku)).map((p) => [p.sku, p]),
   );
@@ -137,12 +151,12 @@ export async function validateImportRows(storeId: string, rawRows: RawImportRow[
       };
     }
 
-    const parent = categoriesByName.get(categoryName);
+    const parent = categoriesByName.get(categoryName.toLocaleLowerCase("tr"));
     if (!parent) return { id: null, error: `Kategori bulunamadı: "${categoryName}".` };
 
     if (!subcategoryName) return { id: parent.id, error: null };
 
-    const child = categoriesByName.get(subcategoryName);
+    const child = categoriesByName.get(subcategoryName.toLocaleLowerCase("tr"));
     if (!child) return { id: null, error: `Alt kategori bulunamadı: "${subcategoryName}".` };
     if (child.parent_id !== parent.id) {
       return { id: null, error: `Alt kategori "${subcategoryName}", "${categoryName}" kategorisine ait değil.` };
@@ -152,7 +166,7 @@ export async function validateImportRows(storeId: string, rawRows: RawImportRow[
 
   function resolveBrandId(brandName: string): { id: string | null; error: string | null } {
     if (!brandName) return { id: null, error: null };
-    const brand = brandsByName.get(brandName);
+    const brand = brandsByName.get(brandName.toLocaleLowerCase("tr"));
     if (!brand) return { id: null, error: `Marka bulunamadı: "${brandName}".` };
     return { id: brand.id, error: null };
   }
