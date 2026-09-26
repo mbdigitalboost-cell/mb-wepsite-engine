@@ -55,8 +55,10 @@ export async function createOrderAction(
     customerEmail: formData.get("customerEmail") || undefined,
     addressCity: formData.get("addressCity"),
     addressDistrict: formData.get("addressDistrict"),
+    addressNeighborhood: formData.get("addressNeighborhood"),
     addressLine: formData.get("addressLine"),
     note: formData.get("note") || undefined,
+    paymentMethod: formData.get("paymentMethod"),
   });
   if (!parsedCustomer.success) {
     return { status: "error", error: parsedCustomer.error.issues[0]?.message ?? "Geçersiz form.", orderNumber: null };
@@ -219,8 +221,10 @@ export async function createOrderAction(
       customer_email: parsedCustomer.data.customerEmail || null,
       address_city: parsedCustomer.data.addressCity,
       address_district: parsedCustomer.data.addressDistrict,
+      address_neighborhood: parsedCustomer.data.addressNeighborhood,
       address_line: parsedCustomer.data.addressLine,
       note: parsedCustomer.data.note || null,
+      payment_method: parsedCustomer.data.paymentMethod,
       subtotal,
     })
     .select("id, order_number")

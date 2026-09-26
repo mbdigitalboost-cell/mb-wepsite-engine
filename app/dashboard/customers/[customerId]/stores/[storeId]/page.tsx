@@ -6,6 +6,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EditStoreForm } from "./edit-store-form";
 import { setStoreStatusAction } from "@/app/dashboard/stores/actions";
 
+// FAZ 2.6 — "orders" removed from here: it now has its own top-level
+// "Siparişler" entry point above this grid (see the JSX below), not a
+// card inside the "Mağazayı Düzenle" submodule grid anymore.
 const SUBMODULES = [
   { key: "profile", label: "Store Profile", description: "Kimlik, iletişim, sosyal medya" },
   { key: "settings", label: "Store Settings", description: "Para birimi, KDV, bakım modu" },
@@ -15,7 +18,6 @@ const SUBMODULES = [
   { key: "products", label: "Products", description: "Ürün kataloğu" },
   { key: "categories", label: "Categories", description: "Ürün kategorileri" },
   { key: "brands", label: "Brands", description: "Markalar" },
-  { key: "orders", label: "Orders", description: "Müşteri siparişleri" },
 ] as const;
 
 /**
@@ -81,26 +83,49 @@ export default async function StoreDetailPage({
         </form>
       ) : null}
 
-      <div className="mt-8 border-t border-black/10 pt-6">
-        <h2 className="text-sm font-semibold tracking-tight">Mağaza Yönetimi</h2>
-        <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {SUBMODULES.map((submodule) => (
-            <li key={submodule.key}>
-              <Link
-                href={`/dashboard/customers/${customerId}/stores/${storeId}/${submodule.key}`}
-                className="block rounded-lg border border-black/10 px-4 py-3 text-sm hover:bg-brand-accent/5"
-              >
-                <p className="font-medium text-foreground">
-                  {submodule.label}
-                  {submodule.key === "orders" && pendingOrderCount ? (
-                    <span className="ml-2 text-xs font-semibold text-brand-accent">— {pendingOrderCount} yeni</span>
-                  ) : null}
-                </p>
-                <p className="mt-0.5 text-xs text-foreground/50">{submodule.description}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      {/*
+        FAZ 2.6 — two big, unmistakable entry points, replacing "Orders"
+        as just another equal-weight card in the submodule grid below.
+        "Siparişler" is a direct link (no extra click to reach the list
+        that actually needs checking often); "Mağazayı Düzenle" is a
+        native <details> disclosure (zero client JS, same pattern already
+        used for the "Düzenle" sections in variants-tab.tsx) that reveals
+        the existing submodule grid — scope of this change is deliberately
+        just this page, not a dashboard-wide sidebar (a separate, larger
+        piece of work).
+      */}
+      <div className="mt-8 grid grid-cols-1 gap-4 border-t border-black/10 pt-6 sm:grid-cols-2">
+        <Link
+          href={`/dashboard/customers/${customerId}/stores/${storeId}/orders`}
+          className="block rounded-lg border-2 border-black/10 p-6 transition-colors hover:border-brand-accent/40 hover:bg-brand-accent/5"
+        >
+          <p className="text-sm font-medium text-foreground/60">Siparişler</p>
+          <p className={`mt-1 text-3xl font-semibold ${pendingOrderCount ? "text-brand-accent" : "text-foreground"}`}>
+            {pendingOrderCount ?? 0}
+          </p>
+          <p className="mt-1 text-xs text-foreground/50">{pendingOrderCount ? "yeni sipariş" : "yeni sipariş yok"}</p>
+        </Link>
+
+        <details className="rounded-lg border-2 border-black/10 p-6">
+          <summary className="cursor-pointer list-none">
+            <p className="text-sm font-medium text-foreground/60">Mağazayı Düzenle</p>
+            <p className="mt-1 text-sm text-foreground">Products, Branding, Navigation ve diğer ayarlar</p>
+          </summary>
+
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SUBMODULES.map((submodule) => (
+              <li key={submodule.key}>
+                <Link
+                  href={`/dashboard/customers/${customerId}/stores/${storeId}/${submodule.key}`}
+                  className="block rounded-lg border border-black/10 px-4 py-3 text-sm hover:bg-brand-accent/5"
+                >
+                  <p className="font-medium text-foreground">{submodule.label}</p>
+                  <p className="mt-0.5 text-xs text-foreground/50">{submodule.description}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
 
       {isAdmin ? (

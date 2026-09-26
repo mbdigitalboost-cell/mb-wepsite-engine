@@ -1225,9 +1225,11 @@ export type Database = {
           address_city: string;
           address_district: string;
           address_line: string;
+          address_neighborhood: string | null;
           note: string | null;
           subtotal: number;
           payment_status: PaymentStatus;
+          payment_method: string | null;
           paid_at: string | null;
           carrier: string | null;
           tracking_number: string | null;
@@ -1246,9 +1248,11 @@ export type Database = {
           address_city: string;
           address_district: string;
           address_line: string;
+          address_neighborhood?: string | null;
           note?: string | null;
           subtotal: number;
           payment_status?: PaymentStatus;
+          payment_method?: string | null;
           paid_at?: string | null;
           carrier?: string | null;
           tracking_number?: string | null;
@@ -1267,9 +1271,11 @@ export type Database = {
           address_city?: string;
           address_district?: string;
           address_line?: string;
+          address_neighborhood?: string | null;
           note?: string | null;
           subtotal?: number;
           payment_status?: PaymentStatus;
+          payment_method?: string | null;
           paid_at?: string | null;
           carrier?: string | null;
           tracking_number?: string | null;

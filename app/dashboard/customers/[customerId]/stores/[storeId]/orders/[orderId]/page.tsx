@@ -145,7 +145,11 @@ export default async function StoreOrderDetailPage({
           <p className="mt-3 text-sm text-foreground">
             {order.address_line}
             <br />
-            {order.address_district} / {order.address_city}
+            {/* address_neighborhood is nullable — FAZ 2.6 (migration 0030) added it after this store's first orders already existed; "-" for those, never treated as an error. */}
+            {order.address_neighborhood ?? "-"}, {order.address_district} / {order.address_city}
+          </p>
+          <p className="mt-2 text-xs text-foreground/50">
+            Ödeme Yöntemi: {order.payment_method ?? "-"}
           </p>
 
           {canEditShipping ? (
