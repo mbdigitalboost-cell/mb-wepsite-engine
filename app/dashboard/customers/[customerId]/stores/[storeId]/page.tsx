@@ -15,6 +15,7 @@ const SUBMODULES = [
   { key: "products", label: "Products", description: "Ürün kataloğu" },
   { key: "categories", label: "Categories", description: "Ürün kategorileri" },
   { key: "brands", label: "Brands", description: "Markalar" },
+  { key: "orders", label: "Orders", description: "Müşteri siparişleri" },
 ] as const;
 
 /**
@@ -35,7 +36,7 @@ export default async function StoreDetailPage({
   const { isAdmin } = await requireStoreAccess(storeId);
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: customer }, { data: store }] = await Promise.all([
+  const [{ data: customer }, { data: store }, { count: pendingOrderCount }] = await Promise.all([
     supabase.from("customers").select("id, name").eq("id", customerId).maybeSingle(),
     supabase
       .from("stores")
@@ -43,6 +44,10 @@ export default async function StoreDetailPage({
       .eq("id", storeId)
       .eq("customer_id", customerId)
       .maybeSingle(),
+    // FAZ 2.5 — same store_id + status='pending' count as orders/page.tsx's
+    // own badge, fetched here too so the owner notices a new order without
+    // opening the Orders submodule first.
+    supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", storeId).eq("status", "pending"),
   ]);
 
   if (!customer || !store) notFound();
@@ -85,7 +90,12 @@ export default async function StoreDetailPage({
                 href={`/dashboard/customers/${customerId}/stores/${storeId}/${submodule.key}`}
                 className="block rounded-lg border border-black/10 px-4 py-3 text-sm hover:bg-brand-accent/5"
               >
-                <p className="font-medium text-foreground">{submodule.label}</p>
+                <p className="font-medium text-foreground">
+                  {submodule.label}
+                  {submodule.key === "orders" && pendingOrderCount ? (
+                    <span className="ml-2 text-xs font-semibold text-brand-accent">— {pendingOrderCount} yeni</span>
+                  ) : null}
+                </p>
                 <p className="mt-0.5 text-xs text-foreground/50">{submodule.description}</p>
               </Link>
             </li>

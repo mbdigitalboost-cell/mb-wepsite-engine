@@ -67,6 +67,10 @@ export type StoreStatus = "active" | "inactive";
 export type StoreTaxMode = "included" | "excluded" | "disabled";
 /** Phase 2, migration 0010_store_branding_navigation.sql. */
 export type StoreButtonStyle = "rounded" | "square" | "pill";
+/** FAZ 2, migration 0029_orders.sql. */
+export type OrderStatus = "pending" | "confirmed" | "preparing" | "shipped" | "completed" | "cancelled";
+/** FAZ 2.5, migration 0029_orders.sql — independent of OrderStatus, see that enum's own comment. */
+export type PaymentStatus = "unpaid" | "paid" | "refunded";
 export type StoreColorMode = "light" | "dark" | "system";
 export type StoreNavigationMenuType = "main" | "footer" | "category";
 /**
@@ -1199,6 +1203,216 @@ export type Database = {
           },
         ];
       };
+      /**
+       * FAZ 2, migration 0029_orders.sql. No anon RLS policy at all (any
+       * operation) — written EXCLUSIVELY via createSupabaseAdminClient()
+       * from app/store/[storeSlug]/sepet/actions.ts. store_editor+ can
+       * SELECT/UPDATE (status/payment_status/carrier/tracking_number in
+       * practice); no DELETE for any role (permanent audit trail).
+       * payment_status/paid_at/carrier/tracking_number/shipped_at are
+       * FAZ 2.5 additions, folded into this same migration before it was
+       * ever applied.
+       */
+      orders: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_number: number;
+          status: OrderStatus;
+          customer_name: string;
+          customer_phone: string;
+          customer_email: string | null;
+          address_city: string;
+          address_district: string;
+          address_line: string;
+          note: string | null;
+          subtotal: number;
+          payment_status: PaymentStatus;
+          paid_at: string | null;
+          carrier: string | null;
+          tracking_number: string | null;
+          shipped_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          order_number?: number;
+          status?: OrderStatus;
+          customer_name: string;
+          customer_phone: string;
+          customer_email?: string | null;
+          address_city: string;
+          address_district: string;
+          address_line: string;
+          note?: string | null;
+          subtotal: number;
+          payment_status?: PaymentStatus;
+          paid_at?: string | null;
+          carrier?: string | null;
+          tracking_number?: string | null;
+          shipped_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          order_number?: number;
+          status?: OrderStatus;
+          customer_name?: string;
+          customer_phone?: string;
+          customer_email?: string | null;
+          address_city?: string;
+          address_district?: string;
+          address_line?: string;
+          note?: string | null;
+          subtotal?: number;
+          payment_status?: PaymentStatus;
+          paid_at?: string | null;
+          carrier?: string | null;
+          tracking_number?: string | null;
+          shipped_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /**
+       * FAZ 2, migration 0029_orders.sql. product_name/variant_label/
+       * unit_price/line_total are SNAPSHOTS taken at order-creation time —
+       * never re-read live from products/product_variants afterward.
+       * product_id/variant_id are nullable (ON DELETE SET NULL) so a later
+       * product/variant deletion never destroys this historical row.
+       */
+      order_items: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_id: string;
+          product_id: string | null;
+          variant_id: string | null;
+          product_name: string;
+          variant_label: string | null;
+          unit_price: number;
+          quantity: number;
+          line_total: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          order_id: string;
+          product_id?: string | null;
+          variant_id?: string | null;
+          product_name: string;
+          variant_label?: string | null;
+          unit_price: number;
+          quantity: number;
+          line_total: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          order_id?: string;
+          product_id?: string | null;
+          variant_id?: string | null;
+          product_name?: string;
+          variant_label?: string | null;
+          unit_price?: number;
+          quantity?: number;
+          line_total?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_order_id_store_id_fkey";
+            columns: ["order_id", "store_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id", "store_id"];
+          },
+          {
+            foreignKeyName: "order_items_product_id_store_id_fkey";
+            columns: ["product_id", "store_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id", "store_id"];
+          },
+          {
+            foreignKeyName: "order_items_variant_id_store_id_fkey";
+            columns: ["variant_id", "store_id"];
+            referencedRelation: "product_variants";
+            referencedColumns: ["id", "store_id"];
+          },
+        ];
+      };
+      /**
+       * FAZ 2, migration 0029_orders.sql. addon_name/price_delta are
+       * SNAPSHOTS, same reasoning as order_items.
+       */
+      order_item_addons: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_item_id: string;
+          addon_id: string | null;
+          addon_name: string;
+          price_delta: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          order_item_id: string;
+          addon_id?: string | null;
+          addon_name: string;
+          price_delta: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          order_item_id?: string;
+          addon_id?: string | null;
+          addon_name?: string;
+          price_delta?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_item_addons_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_addons_order_item_id_store_id_fkey";
+            columns: ["order_item_id", "store_id"];
+            referencedRelation: "order_items";
+            referencedColumns: ["id", "store_id"];
+          },
+          {
+            foreignKeyName: "order_item_addons_addon_id_store_id_fkey";
+            columns: ["addon_id", "store_id"];
+            referencedRelation: "product_addons";
+            referencedColumns: ["id", "store_id"];
+          },
+        ];
+      };
     };
     Views: {
       /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. Read-only projeksiyon — Insert/Update yok. */
@@ -1229,6 +1443,8 @@ export type Database = {
       website_status: WebsiteStatus;
       app_role: AppRole;
       store_status: StoreStatus;
+      order_status: OrderStatus;
+      payment_status: PaymentStatus;
     };
     CompositeTypes: Record<string, never>;
   };
