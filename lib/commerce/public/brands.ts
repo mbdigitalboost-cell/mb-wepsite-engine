@@ -107,3 +107,38 @@ export async function getPublicBrandsForCategory(storeId: string, categoryId: st
 
   return (brandRows ?? []).map(mapBrand);
 }
+
+/**
+ * FAZ 7.1 — infrastructure only, no UI calls this yet (Faz 7.2's own
+ * storefront flow is the intended caller — a future "önce marka, sonra
+ * model seç" picker). DISTINCT, non-empty `model` values among a brand's
+ * products in this store, alphabetically sorted. Same fail-soft contract
+ * and the same "RLS is the real gate" posture as getPublicProducts (this
+ * file's sibling, lib/commerce/public/products.ts) — no extra
+ * `is_active` filter here either, migration 0017's own
+ * `products_select_public_active` policy already restricts anon rows to
+ * active products on a publicly-visible store.
+ */
+export async function getPublicBrandModels(storeId: string, brandId: string): Promise<string[]> {
+  const client = createSupabasePublicClient();
+
+  const { data, error } = await client
+    .from("products")
+    .select("model")
+    .eq("store_id", storeId)
+    .eq("brand_id", brandId)
+    .not("model", "is", null);
+
+  if (error) {
+    console.error("[commerce/public] getPublicBrandModels failed:", error.message);
+    return [];
+  }
+
+  const models = new Set<string>();
+  for (const row of data ?? []) {
+    const trimmed = row.model?.trim();
+    if (trimmed) models.add(trimmed);
+  }
+
+  return [...models].sort((a, b) => a.localeCompare(b, "tr"));
+}

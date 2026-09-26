@@ -13,6 +13,8 @@ interface ProductRow {
   name: string;
   slug: string;
   sku: string | null;
+  model: string | null;
+  brand_id: string | null;
   price: number;
   stock: number;
   is_active: boolean;
@@ -98,7 +100,7 @@ export default async function StoreProductsPage({
 
   let query = supabase
     .from("products")
-    .select("id, name, slug, sku, price, stock, is_active", { count: "exact" })
+    .select("id, name, slug, sku, model, brand_id, price, stock, is_active", { count: "exact" })
     .eq("store_id", storeId);
 
   const q = sp.q?.trim();
@@ -116,6 +118,10 @@ export default async function StoreProductsPage({
     .range(offset, offset + PAGE_SIZE - 1);
 
   const rows = (products ?? []) as ProductRow[];
+  // FAZ 7.1 — reuses the `brands` list already fetched above for the
+  // filter dropdown (id, name) instead of a second query just to label
+  // each row's brand_id.
+  const brandNameById = new Map((brands ?? []).map((brand) => [brand.id, brand.name]));
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/products`;
@@ -254,6 +260,10 @@ export default async function StoreProductsPage({
                     <span className="font-medium text-foreground">{product.name}</span>{" "}
                     <span className="text-xs text-foreground/50">/{product.slug}</span>
                     {product.sku ? <span className="ml-2 text-xs text-foreground/50">SKU: {product.sku}</span> : null}
+                    {product.brand_id && brandNameById.get(product.brand_id) ? (
+                      <span className="ml-2 text-xs text-foreground/50">Marka: {brandNameById.get(product.brand_id)}</span>
+                    ) : null}
+                    {product.model ? <span className="ml-2 text-xs text-foreground/50">Model: {product.model}</span> : null}
                   </span>
                   <span className="flex items-center gap-3 text-xs text-foreground/50">
                     {product.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
