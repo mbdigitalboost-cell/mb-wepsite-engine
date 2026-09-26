@@ -30,7 +30,7 @@ const DEMO_ROW: (string | number)[] = [
   "SİLAH KILIFLARI",
   "",
   "CANİK",
-  "TP9 SFx",
+  "TP9, TP9SF",
   "Örnek kısa açıklama",
   "Örnek uzun açıklama",
   1500,

@@ -141,7 +141,7 @@ export async function commitImportAction(
       slug: result.data.slug,
       sku: result.data.sku,
       barcode: result.data.barcode,
-      model: result.data.model,
+      models: result.data.models,
       short_description: result.data.shortDescription,
       description: result.data.description,
       price: result.data.price,

@@ -789,8 +789,8 @@ export type Database = {
           name: string;
           slug: string;
           sku: string | null;
-          /** FAZ 2C-4 STEP 23, migration 0027_products_model_column.sql — DRAFT, NOT YET APPLIED. Nullable free-text (e.g. "TP9 SFx") for future brand/model storefront filtering — no dictionary/FK, see that migration's header for why. */
-          model: string | null;
+          /** FAZ 9, migration 0034_products_models_array.sql — replaces FAZ 2C-4 STEP 23's single-value `model` (migration 0027). Nullable free-text array (e.g. {"TP9", "TP9 SFx"}) for brand/model storefront filtering — no dictionary/FK, see that migration's header for why. */
+          models: string[] | null;
           /** FAZ 2C-6 STEP 25, migration 0028_products_barcode.sql — DRAFT, NOT YET APPLIED. Nullable, store-scoped-unique (`products_barcode_unique`) — no format enforced. Internal commerce field, never exposed in PublicProduct. */
           barcode: string | null;
           short_description: string | null;
@@ -814,7 +814,7 @@ export type Database = {
           name: string;
           slug: string;
           sku?: string | null;
-          model?: string | null;
+          models?: string[] | null;
           barcode?: string | null;
           short_description?: string | null;
           description?: string | null;
@@ -837,7 +837,7 @@ export type Database = {
           name?: string;
           slug?: string;
           sku?: string | null;
-          model?: string | null;
+          models?: string[] | null;
           barcode?: string | null;
           short_description?: string | null;
           description?: string | null;

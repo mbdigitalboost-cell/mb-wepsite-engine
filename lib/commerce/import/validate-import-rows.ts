@@ -15,7 +15,7 @@ export interface ValidImportRow {
     slug: string;
     sku: string;
     barcode: string | null;
-    model: string | null;
+    models: string[] | null;
     shortDescription: string | null;
     description: string | null;
     categoryId: string | null;
@@ -52,6 +52,23 @@ const FORMULA_INJECTION_PREFIXES = ["=", "+", "-", "@", "\t", "\r"];
 
 function hasFormulaInjectionRisk(value: string): boolean {
   return value.length > 0 && FORMULA_INJECTION_PREFIXES.some((prefix) => value.startsWith(prefix));
+}
+
+/**
+ * FAZ 9 — Model sütunu artık virgül/noktalı virgülle ayrılmış birden fazla
+ * değer alabilir (ör. "TP9, TP9SF"). Her parça trim edilir, boş parçalar
+ * atılır, tekrarlar elenir. Marka/kategori eşleştirmesindeki Faz 8'in
+ * case-insensitive fix'ine BİLEREK dokunulmadı (bu fazın kendi
+ * instruction'ı) — model hâlâ serbest metin, sabit bir listeye karşı
+ * doğrulanmıyor, o yüzden "bulunamadı" hatası da yok, sadece temizlik.
+ */
+function parseModelsField(raw: string | undefined): string[] {
+  if (!raw) return [];
+  const parts = raw
+    .split(/[,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return [...new Set(parts)];
 }
 
 function parseBooleanField(raw: string | undefined): { value: boolean; error: string | null } {
@@ -259,7 +276,7 @@ export async function validateImportRows(storeId: string, rawRows: RawImportRow[
       name,
       slug,
       sku,
-      model: v["Model"] ?? "",
+      models: parseModelsField(v["Model"]),
       shortDescription: v["Kısa Açıklama"] ?? "",
       description: v["Açıklama"] ?? "",
       categoryId: categoryId ?? "",
@@ -325,7 +342,7 @@ export async function validateImportRows(storeId: string, rawRows: RawImportRow[
         slug: parsed.data.slug,
         sku: parsed.data.sku,
         barcode: parsed.data.barcode || null,
-        model: parsed.data.model || null,
+        models: parsed.data.models.length > 0 ? parsed.data.models : null,
         shortDescription: parsed.data.shortDescription || null,
         description: parsed.data.description || null,
         categoryId: parsed.data.categoryId || null,

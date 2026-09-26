@@ -44,8 +44,15 @@ export const productFormSchema = z
       .max(150)
       .regex(slugRegex, "Slug yalnızca küçük harf, rakam ve tire (-) içerebilir."),
     sku: z.string().trim().min(1, "SKU zorunlu.").max(100),
-    /** FAZ 2C-4 STEP 23 — free-text model attribute (e.g. "TP9 SFx"), mirrors migration 0027_products_model_column.sql's nullable `model` column. No fixed-list enforcement here (see that migration's own header for why). */
-    model: z.string().trim().max(150).optional().or(z.literal("")),
+    /**
+     * FAZ 9 — çoklu model desteği (migration 0034_products_models_array.sql,
+     * replacing FAZ 2C-4 STEP 23's single-value `model`). Still free text,
+     * no fixed-list enforcement (same reasoning as before, just applied to
+     * each array element) — trim/dedupe/empty-filtering already happens in
+     * actions.ts's readProductFormValues before this schema ever sees the
+     * array, so this only bounds each element's length and the total count.
+     */
+    models: z.array(z.string().trim().min(1).max(150)).max(20, "En fazla 20 model girilebilir."),
     /**
      * FAZ 2C-6 STEP 25 — nullable barcode, mirrors migration
      * 0028_products_barcode.sql's `barcode` column. Deliberately no format

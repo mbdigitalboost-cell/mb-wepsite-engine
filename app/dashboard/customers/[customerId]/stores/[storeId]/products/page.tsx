@@ -13,7 +13,7 @@ interface ProductRow {
   name: string;
   slug: string;
   sku: string | null;
-  model: string | null;
+  models: string[] | null;
   brand_id: string | null;
   price: number;
   stock: number;
@@ -100,7 +100,7 @@ export default async function StoreProductsPage({
 
   let query = supabase
     .from("products")
-    .select("id, name, slug, sku, model, brand_id, price, stock, is_active", { count: "exact" })
+    .select("id, name, slug, sku, models, brand_id, price, stock, is_active", { count: "exact" })
     .eq("store_id", storeId);
 
   const q = sp.q?.trim();
@@ -263,7 +263,9 @@ export default async function StoreProductsPage({
                     {product.brand_id && brandNameById.get(product.brand_id) ? (
                       <span className="ml-2 text-xs text-foreground/50">Marka: {brandNameById.get(product.brand_id)}</span>
                     ) : null}
-                    {product.model ? <span className="ml-2 text-xs text-foreground/50">Model: {product.model}</span> : null}
+                    {product.models && product.models.length > 0 ? (
+                      <span className="ml-2 text-xs text-foreground/50">Model: {product.models.join(", ")}</span>
+                    ) : null}
                   </span>
                   <span className="flex items-center gap-3 text-xs text-foreground/50">
                     {product.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}

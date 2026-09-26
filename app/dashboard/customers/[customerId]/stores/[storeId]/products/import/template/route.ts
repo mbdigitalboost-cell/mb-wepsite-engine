@@ -35,7 +35,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cus
     "SİLAH KILIFLARI",
     "",
     "CANİK",
-    "TP9 SFx",
+    "TP9, TP9SF",
     "Örnek kısa açıklama",
     "Örnek uzun açıklama",
     "1500.00",

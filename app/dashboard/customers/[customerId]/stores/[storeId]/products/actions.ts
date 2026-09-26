@@ -13,13 +13,27 @@ import type { ProductFormState } from "./form-state";
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
 const INVALID_BRAND_MESSAGE = "Geçersiz marka.";
 
+/**
+ * FAZ 9 — `models` arrives as one FormData entry per tag (product-form.tsx
+ * renders a hidden `<input name="models">` per selected model), so
+ * `.getAll(...)` — not `.get(...)` — collects all of them. Trimmed,
+ * emptied-filtered, and deduped here, before productFormSchema ever sees
+ * the array — the schema itself only bounds element length/count (see its
+ * own comment), it doesn't need to re-clean what this function already
+ * cleaned.
+ */
+function readModelsField(formData: FormData): string[] {
+  const raw = formData.getAll("models").map((value) => String(value).trim()).filter(Boolean);
+  return [...new Set(raw)];
+}
+
 function readProductFormValues(formData: FormData) {
   return {
     name: formData.get("name"),
     slug: formData.get("slug"),
     sku: formData.get("sku"),
     barcode: formData.get("barcode"),
-    model: formData.get("model"),
+    models: readModelsField(formData),
     shortDescription: formData.get("shortDescription"),
     description: formData.get("description"),
     categoryId: formData.get("categoryId"),
@@ -95,7 +109,7 @@ export async function createProductAction(
       slug: parsed.data.slug,
       sku: parsed.data.sku,
       barcode: parsed.data.barcode || null,
-      model: parsed.data.model || null,
+      models: parsed.data.models.length > 0 ? parsed.data.models : null,
       short_description: parsed.data.shortDescription || null,
       description: parsed.data.description || null,
       price: parsed.data.price,
@@ -162,7 +176,7 @@ export async function updateProductAction(
       slug: parsed.data.slug,
       sku: parsed.data.sku,
       barcode: parsed.data.barcode || null,
-      model: parsed.data.model || null,
+      models: parsed.data.models.length > 0 ? parsed.data.models : null,
       short_description: parsed.data.shortDescription || null,
       description: parsed.data.description || null,
       price: parsed.data.price,
@@ -300,7 +314,7 @@ export async function duplicateProductAction(customerId: string, storeId: string
   const { data: source, error: fetchError } = await supabase
     .from("products")
     .select(
-      "name, slug, sku, model, short_description, description, category_id, brand_id, price, compare_at_price, track_inventory, sort_order, seo_title, seo_description",
+      "name, slug, sku, models, short_description, description, category_id, brand_id, price, compare_at_price, track_inventory, sort_order, seo_title, seo_description",
     )
     .eq("id", productId)
     .eq("store_id", storeId)
@@ -331,7 +345,7 @@ export async function duplicateProductAction(customerId: string, storeId: string
         slug,
         sku,
         barcode: null,
-        model: src.model,
+        models: src.models,
         short_description: src.short_description,
         description: src.description,
         price: src.price,

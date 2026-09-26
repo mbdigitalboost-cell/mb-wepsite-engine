@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getStoreModelsByBrand } from "@/lib/commerce/product-models-by-brand";
 import { ProductForm } from "../product-form";
 import { createProductAction } from "../actions";
 import { ProductTabs } from "../[productId]/product-tabs";
@@ -32,9 +33,10 @@ export default async function NewProductPage({
     .maybeSingle();
   if (!store) notFound();
 
-  const [{ data: categories }, { data: brands }] = await Promise.all([
+  const [{ data: categories }, { data: brands }, modelsByBrand] = await Promise.all([
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+    getStoreModelsByBrand(storeId),
   ]);
 
   return (
@@ -56,6 +58,7 @@ export default async function NewProductPage({
             <ProductForm
               categoryOptions={categories ?? []}
               brandOptions={brands ?? []}
+              modelsByBrand={modelsByBrand}
               action={createProductAction.bind(null, customerId, storeId)}
               submitLabel="Ürün Oluştur"
             />

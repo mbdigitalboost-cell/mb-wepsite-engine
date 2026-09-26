@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { initialProductFormState, type ProductFormState } from "./form-state";
 import { inputClasses } from "@/lib/utils/input-classes";
@@ -10,7 +10,7 @@ interface ProductFormValues {
   slug: string;
   sku: string;
   barcode: string;
-  model: string;
+  models: string[];
   shortDescription: string;
   description: string;
   categoryId: string;
@@ -28,7 +28,7 @@ const EMPTY_VALUES: ProductFormValues = {
   slug: "",
   sku: "",
   barcode: "",
-  model: "",
+  models: [],
   shortDescription: "",
   description: "",
   categoryId: "",
@@ -52,6 +52,8 @@ interface ProductFormProps {
   initialIsActive?: boolean;
   categoryOptions: RelationOption[];
   brandOptions: RelationOption[];
+  /** FAZ 9 — brandId -> previously-used models in this store (lib/commerce/product-models-by-brand.ts), used only for the "önceden kullanılmış modeller" suggestion chips below — never enforced as a fixed list. */
+  modelsByBrand: Record<string, string[]>;
   action: (prevState: ProductFormState, formData: FormData) => Promise<ProductFormState>;
   submitLabel: string;
 }
@@ -66,6 +68,15 @@ interface ProductFormProps {
  * own direction — content-form.tsx's convention instead). store_id is
  * deliberately NOT a field here — tenant scope is bound into the `action`
  * prop by the caller.
+ *
+ * FAZ 9 — `models` (was a single text input) is now a tag list: type a
+ * value and press Enter/"Ekle", or click a suggestion chip drawn from
+ * `modelsByBrand[brandId]` (this brand's previously-used models in this
+ * store). Each tag renders its own hidden `<input name="models">` so
+ * `formData.getAll("models")` on the server collects the whole list — no
+ * client-side JSON serialization needed. Still fully free text: a
+ * suggestion is a convenience, never a constraint (typing a brand-new
+ * model name works exactly the same as clicking a suggestion).
  */
 export function ProductForm({
   initialValues = EMPTY_VALUES,
@@ -73,11 +84,36 @@ export function ProductForm({
   initialIsActive = true,
   categoryOptions,
   brandOptions,
+  modelsByBrand,
   action,
   submitLabel,
 }: ProductFormProps) {
   const [state, formAction, pending] = useActionState(action, initialProductFormState);
   const formId = useId();
+
+  const [models, setModels] = useState<string[]>(initialValues.models);
+  const [modelInput, setModelInput] = useState("");
+  // Mirrors the brand <select> below (which stays uncontrolled via
+  // defaultValue, like every other field in this form) purely so the model
+  // suggestion list can react to a brand change — this state never drives
+  // the select's own displayed value.
+  const [brandId, setBrandId] = useState(initialValues.brandId);
+
+  const suggestions = useMemo(() => {
+    const usedForBrand = modelsByBrand[brandId] ?? [];
+    return usedForBrand.filter((model) => !models.includes(model));
+  }, [modelsByBrand, brandId, models]);
+
+  function addModel(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setModels((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setModelInput("");
+  }
+
+  function removeModel(value: string) {
+    setModels((prev) => prev.filter((model) => model !== value));
+  }
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
@@ -141,17 +177,68 @@ export function ProductForm({
       </div>
 
       <div>
-        <label htmlFor={`${formId}-model`} className="mb-1.5 block text-sm font-medium text-foreground">
-          Model <span className="text-foreground/40">(opsiyonel)</span>
+        <label htmlFor={`${formId}-modelInput`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Modeller <span className="text-foreground/40">(opsiyonel)</span>
         </label>
-        <input
-          id={`${formId}-model`}
-          name="model"
-          type="text"
-          defaultValue={initialValues.model}
-          placeholder="ör. TP9 SFx"
-          className={inputClasses}
-        />
+        <div className="flex gap-2">
+          <input
+            id={`${formId}-modelInput`}
+            type="text"
+            value={modelInput}
+            onChange={(e) => setModelInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addModel(modelInput);
+              }
+            }}
+            placeholder="ör. TP9 — yazıp Enter'a basın veya Ekle'ye tıklayın"
+            className={inputClasses}
+          />
+          <Button type="button" variant="outline" size="sm" onClick={() => addModel(modelInput)}>
+            Ekle
+          </Button>
+        </div>
+
+        {models.length > 0 ? (
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {models.map((model) => (
+              <li
+                key={model}
+                className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-black/5 px-3 py-1 text-xs text-foreground"
+              >
+                <input type="hidden" name="models" value={model} />
+                {model}
+                <button
+                  type="button"
+                  onClick={() => removeModel(model)}
+                  aria-label={`${model} modelini kaldır`}
+                  className="text-foreground/40 hover:text-red-600"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {suggestions.length > 0 ? (
+          <div className="mt-2">
+            <p className="text-xs text-foreground/50">Bu markada daha önce kullanılmış modeller:</p>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {suggestions.map((model) => (
+                <button
+                  key={model}
+                  type="button"
+                  onClick={() => addModel(model)}
+                  className="rounded-full border border-black/10 px-3 py-1 text-xs text-foreground/70 transition-colors hover:border-black/20 hover:bg-brand-accent/5"
+                >
+                  + {model}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -207,6 +294,7 @@ export function ProductForm({
             id={`${formId}-brandId`}
             name="brandId"
             defaultValue={initialValues.brandId}
+            onChange={(e) => setBrandId(e.target.value)}
             className={inputClasses}
           >
             <option value="">— Yok —</option>

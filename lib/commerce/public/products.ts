@@ -33,8 +33,8 @@ export interface PublicProduct {
    * the pre-existing fields are unaffected — backward compatible.
    */
   brand: PublicBrand | null;
-  /** FAZ 2C-4 STEP 23 — free-text model attribute (e.g. "TP9 SFx"), migration 0027_products_model_column.sql (draft). Exposed so a future brand/model filter UI has the data ready; no filter UI built this phase. */
-  model: string | null;
+  /** FAZ 9 — free-text model attribute(s) (e.g. ["TP9", "TP9 SFx"]), migration 0034_products_models_array.sql (replacing FAZ 2C-4 STEP 23's single-value `model`). `null` when the product has none. */
+  models: string[] | null;
   name: string;
   slug: string;
   shortDescription: string | null;
@@ -103,7 +103,7 @@ export interface PublicProductImage {
 }
 
 const PRODUCT_COLUMNS =
-  "id, store_id, category_id, brand_id, model, name, slug, short_description, description, price, compare_at_price, is_active, sort_order, seo_title, seo_description";
+  "id, store_id, category_id, brand_id, models, name, slug, short_description, description, price, compare_at_price, is_active, sort_order, seo_title, seo_description";
 
 type MappedProduct = Omit<PublicProduct, "brand">;
 
@@ -112,7 +112,7 @@ function mapProduct(row: {
   store_id: string;
   category_id: string | null;
   brand_id: string | null;
-  model: string | null;
+  models: string[] | null;
   name: string;
   slug: string;
   short_description: string | null;
@@ -129,7 +129,7 @@ function mapProduct(row: {
     storeId: row.store_id,
     categoryId: row.category_id,
     brandId: row.brand_id,
-    model: row.model,
+    models: row.models,
     name: row.name,
     slug: row.slug,
     shortDescription: row.short_description,
@@ -175,15 +175,21 @@ async function attachBrandsToProducts(products: MappedProduct[], storeId: string
  * RLS (migration 0017's `products_select_public_active`) already restricts
  * anon rows to `is_active = true` on a publicly-visible store — `categoryId`/
  * `brandId`/`model` are additional, optional narrowing filters for the
- * category grid and future brand/model filtering (STEP 33), not a security
- * boundary. `brandId` is a resolved id (callers resolve a `?brand=` slug via
- * getPublicBrandBySlug first, same store-scoped-resolution-before-filtering
- * pattern the category route already uses) — this function never accepts a
- * raw slug itself. `model` matches the free-text `products.model` column
- * exactly (`.eq`, not a slug) — see brands.ts/this file's own STEP 33 notes
- * on why an exact match was chosen over a slugified one. Both values reach
- * Postgres only through the Supabase query builder's own parameterized
- * `.eq()` — never string-interpolated into raw SQL.
+ * category grid and brand/model filtering (STEP 33, wired in by Faz 7.2),
+ * not a security boundary. `brandId` is a resolved id (callers resolve a
+ * `?brand=` slug via getPublicBrandBySlug first, same store-scoped-
+ * resolution-before-filtering pattern the category route already uses) —
+ * this function never accepts a raw slug itself.
+ *
+ * FAZ 9 — `model` still means "products whose model LIST includes this
+ * value" (the param name/shape callers pass is unchanged), but
+ * `products.model` (single text) became `products.models` (text[],
+ * migration 0034_products_models_array.sql), so the match is now
+ * `.contains("models", [options.model])` — Supabase-js's array-containment
+ * operator (`models @> ARRAY[value]` in Postgres), not `.eq`. Still reaches
+ * Postgres only through the query builder's own parameterized operator —
+ * never string-interpolated into raw SQL — and migration 0034's own GIN
+ * index on `models` is what keeps this fast instead of a sequential scan.
  */
 export async function getPublicProducts(
   storeId: string,
@@ -199,7 +205,7 @@ export async function getPublicProducts(
     query = query.eq("brand_id", options.brandId);
   }
   if (options.model) {
-    query = query.eq("model", options.model);
+    query = query.contains("models", [options.model]);
   }
 
   const { data, error } = await query.order("sort_order", { ascending: true });

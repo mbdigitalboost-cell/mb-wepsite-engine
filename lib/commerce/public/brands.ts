@@ -109,9 +109,15 @@ export async function getPublicBrandsForCategory(storeId: string, categoryId: st
 }
 
 /**
- * FAZ 7.1 — infrastructure only, no UI calls this yet (Faz 7.2's own
- * storefront flow is the intended caller — a future "önce marka, sonra
- * model seç" picker). DISTINCT, non-empty `model` values among a brand's
+ * FAZ 7.1 — infrastructure only when first written, wired into
+ * /silahini-sec/[brandSlug] since Faz 7.2. FAZ 9 — `products.model`
+ * (single text) became `products.models` (text[], migration
+ * 0034_products_models_array.sql) so a product can list more than one
+ * model; this function now flattens every matching row's `models` array
+ * client-side (no server-side `unnest` — the Supabase-js query builder has
+ * no operator for that, and this stays consistent with every other
+ * lib/commerce/public/* function's "no raw SQL" posture) before
+ * deduping/sorting. DISTINCT, non-empty values across ALL of a brand's
  * products in this store, alphabetically sorted. Same fail-soft contract
  * and the same "RLS is the real gate" posture as getPublicProducts (this
  * file's sibling, lib/commerce/public/products.ts) — no extra
@@ -124,10 +130,10 @@ export async function getPublicBrandModels(storeId: string, brandId: string): Pr
 
   const { data, error } = await client
     .from("products")
-    .select("model")
+    .select("models")
     .eq("store_id", storeId)
     .eq("brand_id", brandId)
-    .not("model", "is", null);
+    .not("models", "is", null);
 
   if (error) {
     console.error("[commerce/public] getPublicBrandModels failed:", error.message);
@@ -136,8 +142,10 @@ export async function getPublicBrandModels(storeId: string, brandId: string): Pr
 
   const models = new Set<string>();
   for (const row of data ?? []) {
-    const trimmed = row.model?.trim();
-    if (trimmed) models.add(trimmed);
+    for (const model of row.models ?? []) {
+      const trimmed = model?.trim();
+      if (trimmed) models.add(trimmed);
+    }
   }
 
   return [...models].sort((a, b) => a.localeCompare(b, "tr"));

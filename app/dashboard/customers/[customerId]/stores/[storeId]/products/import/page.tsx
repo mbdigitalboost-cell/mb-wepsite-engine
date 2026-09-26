@@ -45,7 +45,8 @@ export default async function ProductImportPage({
         CSV veya XLSX dosyasından ürün ekleyin/güncelleyin. SKU eşleşirse mevcut ürün güncellenir, eşleşmezse yeni
         ürün oluşturulur. Dosyada olmayan mevcut ürünler asla değiştirilmez veya silinmez. Kategori/marka önceden
         oluşturulmuş olmalı (büyük/küçük harf önemli değil) — import otomatik yeni kategori/marka oluşturmaz. Model
-        sütunu serbest metindir (ör. &quot;TP9&quot;, &quot;TP9SF&quot;), boş bırakılabilir.
+        sütunu serbest metindir, boş bırakılabilir; virgülle ayırarak birden fazla model yazılabilir (ör.
+        &quot;TP9, TP9SF&quot;).
       </p>
 
       <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-foreground/50">

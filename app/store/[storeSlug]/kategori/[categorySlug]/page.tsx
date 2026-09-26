@@ -29,8 +29,9 @@ import { Container } from "@/components/ui/container";
  * `?brand=` is given but doesn't resolve to a real brand in THIS store,
  * the result is an empty product list (not "ignore the filter and show
  * everything" — an unresolvable filter should never silently widen the
- * results). `?model=` matches `products.model` by exact value (no
- * slugifying — see products.ts's own comment on that decision).
+ * results). `?model=` matches when a product's `models` array CONTAINS
+ * this exact value (FAZ 9 — a product can now have more than one model),
+ * no slugifying — see products.ts's own comment on that decision.
  */
 export default async function StoreCategoryPage({
   params,

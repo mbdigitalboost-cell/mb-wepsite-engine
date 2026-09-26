@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireStoreAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getStoreModelsByBrand } from "@/lib/commerce/product-models-by-brand";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
@@ -52,10 +53,11 @@ export default async function EditProductPage({
     .maybeSingle();
   if (!store) notFound();
 
-  const [{ data: product }, { data: categories }, { data: brands }] = await Promise.all([
+  const [{ data: product }, { data: categories }, { data: brands }, modelsByBrand] = await Promise.all([
     supabase.from("products").select("*").eq("id", productId).eq("store_id", storeId).maybeSingle(),
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+    getStoreModelsByBrand(storeId),
   ]);
 
   if (!product) notFound();
@@ -109,7 +111,7 @@ export default async function EditProductPage({
                 slug: product.slug,
                 sku: product.sku ?? "",
                 barcode: product.barcode ?? "",
-                model: product.model ?? "",
+                models: product.models ?? [],
                 shortDescription: product.short_description ?? "",
                 description: product.description ?? "",
                 categoryId: product.category_id ?? "",
@@ -125,6 +127,7 @@ export default async function EditProductPage({
               initialIsActive={product.is_active}
               categoryOptions={categories ?? []}
               brandOptions={brands ?? []}
+              modelsByBrand={modelsByBrand}
               action={updateProductAction.bind(null, customerId, storeId, productId)}
               submitLabel="Değişiklikleri Kaydet"
             />
