@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { publicEnv } from "@/lib/config/env";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
 import { storePasswordResetRequestSchema } from "@/lib/validation/store-customer";
@@ -52,7 +52,7 @@ export async function requestPasswordResetAction(
     return { status: "sent", error: null };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const redirectTo = `${publicEnv.siteUrl}/auth/callback?next=${encodeURIComponent(`/store/${storeSlug}/hesap/sifre-guncelle`)}`;
   await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 

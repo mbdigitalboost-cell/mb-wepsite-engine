@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { setPasswordFormSchema } from "@/lib/validation/invite";
 import type { UpdatePasswordState } from "./form-state";
 
@@ -19,7 +19,7 @@ export async function updatePasswordAction(
   _prevState: UpdatePasswordState,
   formData: FormData,
 ): Promise<UpdatePasswordState> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

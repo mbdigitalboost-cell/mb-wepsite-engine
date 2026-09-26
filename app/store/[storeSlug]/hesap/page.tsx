@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { formatPrice } from "@/lib/utils/format-price";
 import type { OrderStatus } from "@/lib/supabase/types";
@@ -32,7 +32,7 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

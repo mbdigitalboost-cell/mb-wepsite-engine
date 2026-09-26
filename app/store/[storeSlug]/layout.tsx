@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 
@@ -67,7 +67,7 @@ export default async function StoreLayout({
   // Supabase reads here are native `fetch()` calls the old cache model
   // could even apply to), so this doesn't newly make anything dynamic that
   // wasn't already.
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

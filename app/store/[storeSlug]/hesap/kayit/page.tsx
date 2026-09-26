@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { SignupForm } from "./signup-form";
 
@@ -16,7 +16,7 @@ export default async function StoreSignupPage({ params }: { params: Promise<{ st
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

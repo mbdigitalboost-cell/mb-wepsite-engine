@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { CartList } from "./cart-list";
 import type { InitialCustomer } from "./checkout-form";
@@ -25,7 +25,7 @@ import type { InitialCustomer } from "./checkout-form";
  * empty strings, same as before this phase existed.
  */
 async function loadInitialCustomer(storeId: string): Promise<InitialCustomer | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

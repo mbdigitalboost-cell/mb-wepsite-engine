@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { resolveSafeNextPath } from "@/lib/security/safe-redirect";
 
 /**
@@ -33,8 +34,20 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = resolveSafeNextPath(searchParams.get("next"));
 
+  // FAZ 5.1c — this route is shared by two audiences: the admin
+  // invite/password-reset flow (`next` like `/dashboard` or
+  // `/auth/set-password`) and, since Faz 5.1, the storefront's own
+  // password-reset flow (`next` like `/store/[slug]/hesap/sifre-guncelle`
+  // — see app/store/[storeSlug]/hesap/sifremi-unuttum/actions.ts). The
+  // code must be exchanged into whichever cookie namespace that `next`
+  // destination actually reads from (lib/supabase/storefront-server.ts's
+  // own comment explains why the two are now separate at all) — otherwise
+  // a storefront password-reset link would establish its session in the
+  // ADMIN's cookie space instead, exactly the cross-contamination this
+  // phase fixed everywhere else.
+  const supabase = next.startsWith("/store/") ? await createSupabaseStorefrontServerClient() : await createSupabaseServerClient();
+
   if (code) {
-    const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {

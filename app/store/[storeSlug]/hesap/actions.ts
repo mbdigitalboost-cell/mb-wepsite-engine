@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import type { AuthError, User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import type { Database } from "@/lib/supabase/types";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
 import { storeSignupFormSchema } from "@/lib/validation/store-customer";
@@ -155,7 +155,7 @@ export async function signupAction(
     return { status: "error", error: RATE_LIMITED_ERROR };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   // FAZ 5.1b — name/address also go into Supabase Auth's own
   // user_metadata (not just store_customers below), specifically so
   // they're not lost if email confirmation is required — see
@@ -228,7 +228,7 @@ export async function loginAction(
     return { error: RATE_LIMITED_ERROR };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
@@ -246,7 +246,7 @@ export async function loginAction(
 }
 
 export async function logoutAction(storeSlug: string): Promise<void> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   await supabase.auth.signOut();
   redirect(`/store/${storeSlug}`);
 }

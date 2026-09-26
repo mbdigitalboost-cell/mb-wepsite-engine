@@ -12,7 +12,7 @@ import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/pub
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
 import { checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { CheckoutFormState } from "./form-state";
 
@@ -210,7 +210,7 @@ export async function createOrderAction(
   // client input. Anonymous/guest checkout is unaffected: `user` is simply
   // null when there's no session, and customer_user_id stays null on the
   // insert below — identical to Faz 2's original behavior.
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
