@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
@@ -68,13 +69,23 @@ export default async function StoreLayout({
   // could even apply to), so this doesn't newly make anything dynamic that
   // wasn't already.
   const supabase = await createSupabaseStorefrontServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    allCategories,
+  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id)]);
+
+  // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
+  // simple list per that phase's own "basit bir panel" spec); getPublicCategories
+  // returns every category (top-level AND children — see its own comment),
+  // same query kategori/[categorySlug]/page.tsx already uses, just filtered
+  // here rather than reinventing a new "top-level only" query.
+  const topLevelCategories = allCategories.filter((category) => category.parentId === null);
 
   return (
     <CartProvider storeSlug={storeSlug}>
-      <StoreHeader storeSlug={storeSlug} storeName={store.name} isLoggedIn={Boolean(user)} />
+      <StoreHeader storeSlug={storeSlug} storeName={store.name} isLoggedIn={Boolean(user)} categories={topLevelCategories} />
       {children}
     </CartProvider>
   );
