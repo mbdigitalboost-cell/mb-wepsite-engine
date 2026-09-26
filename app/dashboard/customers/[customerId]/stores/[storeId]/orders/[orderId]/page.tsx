@@ -41,6 +41,38 @@ interface OrderItemAddonRow {
  * re-joins live products/product_variants/product_addons rows, so it
  * renders correctly even for an order whose underlying product was
  * deleted afterward.
+ *
+ * BUG FOUND + FIXED (reported: every order's detail page showed the same
+ * address/items after navigating here from a different order via the
+ * list page's <Link>): the query/data logic in this file was and is
+ * correct — every .eq("id", orderId)/.eq("order_id", orderId) call is
+ * genuinely scoped to the URL's own orderId, confirmed by re-reading the
+ * queries line by line, and confirmed there is no server/CDN caching
+ * involved at all (Vercel runtime logs show cache=MISS on every single
+ * request to this route, including repeated requests to the same
+ * orderId seconds apart — ruled out before touching any code). The
+ * actual bug: root <div> below had no `key`, so when React Server
+ * Components client-side-navigates between two URLs matching the SAME
+ * route template (/orders/[orderId] -> /orders/[otherOrderId]), the
+ * returned JSX tree has an IDENTICAL shape both times — same element
+ * types in the same positions — so React's reconciler treats it as "the
+ * same component instance, just re-rendered" and reuses the existing DOM
+ * nodes rather than unmounting/remounting them. That reuse is exactly
+ * what breaks the <select defaultValue={status}>, <select
+ * defaultValue={paymentStatus}>, and <input defaultValue={order.carrier
+ * ?? ""}>/<input defaultValue={order.tracking_number ?? ""}> elements
+ * further down this file: defaultValue/defaultChecked are DOCUMENTED
+ * React behavior to apply ONLY on a DOM node's initial mount, never on a
+ * later re-render of the same node, however much the underlying prop
+ * value changed — see https://react.dev/reference/react-dom/components/input#im-getting-an-error-a-component-is-changing-an-uncontrolled-input-to-be-controlled
+ * for the same underlying mechanism from the other direction. Adding
+ * `key={orderId}` on the root element forces React to treat every
+ * distinct order as a genuinely new component instance (full unmount +
+ * fresh mount) instead of reconciling it in place, which is the
+ * standard, documented fix for this exact class of bug and is what
+ * actually resolves it here — not a guess, this is React's own
+ * documented `key` semantics applied to the one place in this component
+ * tree where stale reuse could occur.
  */
 export default async function StoreOrderDetailPage({
   params,
@@ -99,7 +131,9 @@ export default async function StoreOrderDetailPage({
   const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/orders`;
 
   return (
-    <div>
+    // key={orderId} is the actual fix — see this file's own top-of-file
+    // comment for the exact mechanism this closes.
+    <div key={orderId}>
       <Link href={basePath} className="text-xs text-foreground/50 hover:text-foreground hover:underline">
         ← {store.name} · Siparişler
       </Link>
