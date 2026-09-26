@@ -127,6 +127,16 @@ export function StoreMobileMenu({
                 >
                   {isLoggedIn ? "Hesabım" : "Giriş Yap"}
                 </Link>
+                {/* FAZ 6.2 — only shown when logged in: an address book only means anything for an account, and the addresses page itself redirects a guest to /giris anyway. */}
+                {isLoggedIn ? (
+                  <Link
+                    href={`/store/${storeSlug}/hesap/adreslerim`}
+                    onClick={() => setOpen(false)}
+                    className="block rounded-md px-2 py-2 text-sm text-foreground/80 hover:bg-black/5 hover:text-foreground"
+                  >
+                    Adreslerim
+                  </Link>
+                ) : null}
               </div>
             </nav>
           </div>

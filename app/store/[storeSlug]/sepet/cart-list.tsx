@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils/format-price";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
-import { CheckoutForm, type InitialCustomer } from "./checkout-form";
+import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkout-form";
 
 /**
  * FAZ 1 (mağaza sepeti/configurator) — item list renders purely from
@@ -21,9 +21,11 @@ import { CheckoutForm, type InitialCustomer } from "./checkout-form";
 export function CartList({
   storeSlug,
   initialCustomer,
+  savedAddresses,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
+  savedAddresses: SavedAddress[];
 }) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
 
@@ -104,7 +106,7 @@ export function CartList({
         </>
       )}
 
-      <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} />
+      <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
     </div>
   );
 }

@@ -38,3 +38,31 @@ export const storePasswordResetRequestSchema = z.object({
 });
 
 export type StorePasswordResetRequestInput = z.infer<typeof storePasswordResetRequestSchema>;
+
+/**
+ * FAZ 6.2 — backs app/store/[storeSlug]/hesap/adreslerim's add/edit forms
+ * (migration 0033's store_customer_addresses). label/recipientName/phone
+ * are genuinely optional (`.optional().or(z.literal(""))`, same pattern
+ * as checkoutFormSchema's own customerEmail/note in lib/validation/order.ts)
+ * — the address form sends "" for an empty optional field, not omit it.
+ *
+ * addressCity/addressDistrict/addressNeighborhood/addressLine use the
+ * EXACT same required-ness and messages as storeSignupFormSchema's own
+ * copy above (itself a deliberate copy of checkoutFormSchema's rules) —
+ * migration 0033 marks address_neighborhood nullable at the DB level, but
+ * this schema still requires it: a Turkish delivery address needs a
+ * mahalle in practice, matching every other address form in this
+ * codebase (checkout, signup) that also requires it despite the same
+ * DB-level nullability.
+ */
+export const storeAddressFormSchema = z.object({
+  label: z.string().trim().max(50, "Etiket çok uzun.").optional().or(z.literal("")),
+  recipientName: z.string().trim().max(200, "Alıcı adı çok uzun.").optional().or(z.literal("")),
+  phone: z.string().trim().max(30, "Telefon çok uzun.").optional().or(z.literal("")),
+  addressCity: z.string().trim().min(1, "İl zorunlu.").max(100),
+  addressDistrict: z.string().trim().min(1, "İlçe zorunlu.").max(100),
+  addressNeighborhood: z.string().trim().min(1, "Mahalle zorunlu.").max(150),
+  addressLine: z.string().trim().min(1, "Adres zorunlu.").max(500),
+});
+
+export type StoreAddressFormInput = z.infer<typeof storeAddressFormSchema>;

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
@@ -52,11 +53,19 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
           <h1 className="text-2xl font-semibold text-foreground">Hesabım</h1>
           <p className="mt-1 text-sm text-foreground/60">{user.email}</p>
         </div>
-        <form action={logoutAction.bind(null, storeSlug)}>
-          <button type="submit" className="text-sm text-foreground/60 underline-offset-2 hover:text-foreground hover:underline">
-            Çıkış Yap
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/store/${storeSlug}/hesap/adreslerim`}
+            className="text-sm text-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Adreslerim
+          </Link>
+          <form action={logoutAction.bind(null, storeSlug)}>
+            <button type="submit" className="text-sm text-foreground/60 underline-offset-2 hover:text-foreground hover:underline">
+              Çıkış Yap
+            </button>
+          </form>
+        </div>
       </div>
 
       <h2 className="mt-8 text-sm font-semibold text-foreground/70">Siparişlerim</h2>

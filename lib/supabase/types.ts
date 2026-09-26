@@ -1490,6 +1490,84 @@ export type Database = {
           },
         ];
       };
+      /**
+       * FAZ 6.2, migration 0033_store_customer_addresses.sql. A signed-in
+       * customer's saved delivery addresses, scoped per store. At most one
+       * is_default=true per store_customer_id (partial unique index, DB
+       * level — see that migration's own comment). label/recipient_name/
+       * phone all nullable — a saved address doesn't have to name a
+       * different recipient or carry its own phone number.
+       */
+      store_customer_addresses: {
+        Row: {
+          id: string;
+          user_id: string;
+          store_customer_id: string;
+          store_id: string;
+          label: string | null;
+          recipient_name: string | null;
+          phone: string | null;
+          address_city: string;
+          address_district: string;
+          address_neighborhood: string | null;
+          address_line: string;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          store_customer_id: string;
+          store_id: string;
+          label?: string | null;
+          recipient_name?: string | null;
+          phone?: string | null;
+          address_city: string;
+          address_district: string;
+          address_neighborhood?: string | null;
+          address_line: string;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          store_customer_id?: string;
+          store_id?: string;
+          label?: string | null;
+          recipient_name?: string | null;
+          phone?: string | null;
+          address_city?: string;
+          address_district?: string;
+          address_neighborhood?: string | null;
+          address_line?: string;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_customer_addresses_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_customer_addresses_store_customer_id_fkey";
+            columns: ["store_customer_id"];
+            referencedRelation: "store_customers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_customer_addresses_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. Read-only projeksiyon — Insert/Update yok. */

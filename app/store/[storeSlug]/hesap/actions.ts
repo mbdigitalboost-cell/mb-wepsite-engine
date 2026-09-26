@@ -86,31 +86,45 @@ function extractProfileMetaFromUser(user: User): StoreCustomerProfileFields {
  * conflict-path UPDATE never overwrites an existing, possibly more
  * recently synced value (see createOrderAction's own address-sync
  * comment) with nothing.
+ *
+ * FAZ 6.2 — exported (was private to this file) and now returns the
+ * store_customers row's own id, so app/store/[storeSlug]/hesap/adreslerim/actions.ts
+ * can call it to guarantee the FK target (store_customer_addresses
+ * .store_customer_id) exists before inserting an address, self-healing
+ * the same "reached this store via a different store's login, no row
+ * here yet" edge case hesap/page.tsx's own comment already describes.
  */
-async function ensureStoreCustomerLink(
+export async function ensureStoreCustomerLink(
   supabase: SupabaseClient<Database>,
   storeId: string,
   userId: string,
   email: string,
   profile?: StoreCustomerProfileFields,
-): Promise<void> {
-  const { error } = await supabase.from("store_customers").upsert(
-    {
-      user_id: userId,
-      store_id: storeId,
-      email,
-      ...(profile?.fullName !== undefined ? { full_name: profile.fullName } : {}),
-      ...(profile?.addressCity !== undefined ? { address_city: profile.addressCity } : {}),
-      ...(profile?.addressDistrict !== undefined ? { address_district: profile.addressDistrict } : {}),
-      ...(profile?.addressNeighborhood !== undefined ? { address_neighborhood: profile.addressNeighborhood } : {}),
-      ...(profile?.addressLine !== undefined ? { address_line: profile.addressLine } : {}),
-    },
-    { onConflict: "user_id,store_id" },
-  );
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("store_customers")
+    .upsert(
+      {
+        user_id: userId,
+        store_id: storeId,
+        email,
+        ...(profile?.fullName !== undefined ? { full_name: profile.fullName } : {}),
+        ...(profile?.addressCity !== undefined ? { address_city: profile.addressCity } : {}),
+        ...(profile?.addressDistrict !== undefined ? { address_district: profile.addressDistrict } : {}),
+        ...(profile?.addressNeighborhood !== undefined ? { address_neighborhood: profile.addressNeighborhood } : {}),
+        ...(profile?.addressLine !== undefined ? { address_line: profile.addressLine } : {}),
+      },
+      { onConflict: "user_id,store_id" },
+    )
+    .select("id")
+    .single();
 
   if (error) {
     console.error("[store/hesap] failed to link store_customers row:", error.message);
+    return null;
   }
+
+  return data.id;
 }
 
 function mapSignupError(error: AuthError): string {

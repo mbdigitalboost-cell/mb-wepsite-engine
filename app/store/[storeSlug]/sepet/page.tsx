@@ -3,7 +3,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { CartList } from "./cart-list";
-import type { InitialCustomer } from "./checkout-form";
+import type { InitialCustomer, SavedAddress } from "./checkout-form";
 
 /**
  * FAZ 5.1 — pre-fills checkout step 1 for a signed-in customer. email
@@ -24,14 +24,29 @@ import type { InitialCustomer } from "./checkout-form";
  * a customer with neither a profile nor a prior order here, simply gets
  * empty strings, same as before this phase existed.
  */
-async function loadInitialCustomer(storeId: string): Promise<InitialCustomer | null> {
+/**
+ * FAZ 6.2 — `savedAddresses` is a SEPARATE, additive data source from
+ * `initialCustomer` above (migration 0033's store_customer_addresses,
+ * not store_customers/orders) — checkout-form.tsx decides how the two
+ * interact (a saved address, if any default exists, takes priority over
+ * the plain profile/last-order fallback for the ADDRESS fields
+ * specifically). Ordered default-first, then newest-first, so
+ * `savedAddresses[0]` is always the sensible "pick this one" default when
+ * one exists. Empty for a guest or a customer with no saved addresses —
+ * checkout-form.tsx shows no selector at all in that case, leaving Faz
+ * 5.1b's own behavior completely unchanged, per this phase's own
+ * explicit "bunu bozma" instruction.
+ */
+async function loadCheckoutPrefill(
+  storeId: string,
+): Promise<{ initialCustomer: InitialCustomer | null; savedAddresses: SavedAddress[] }> {
   const supabase = await createSupabaseStorefrontServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) return { initialCustomer: null, savedAddresses: [] };
 
-  const [{ data: profile }, { data: lastOrder }] = await Promise.all([
+  const [{ data: profile }, { data: lastOrder }, { data: addresses }] = await Promise.all([
     supabase
       .from("store_customers")
       .select("full_name, address_city, address_district, address_neighborhood, address_line")
@@ -46,16 +61,36 @@ async function loadInitialCustomer(storeId: string): Promise<InitialCustomer | n
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("store_customer_addresses")
+      .select("id, label, recipient_name, phone, address_city, address_district, address_neighborhood, address_line, is_default")
+      .eq("store_id", storeId)
+      .eq("user_id", user.id)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   return {
-    name: profile?.full_name ?? lastOrder?.customer_name ?? "",
-    phone: lastOrder?.customer_phone ?? "",
-    email: user.email ?? "",
-    addressCity: profile?.address_city ?? lastOrder?.address_city ?? "",
-    addressDistrict: profile?.address_district ?? lastOrder?.address_district ?? "",
-    addressNeighborhood: profile?.address_neighborhood ?? lastOrder?.address_neighborhood ?? "",
-    addressLine: profile?.address_line ?? lastOrder?.address_line ?? "",
+    initialCustomer: {
+      name: profile?.full_name ?? lastOrder?.customer_name ?? "",
+      phone: lastOrder?.customer_phone ?? "",
+      email: user.email ?? "",
+      addressCity: profile?.address_city ?? lastOrder?.address_city ?? "",
+      addressDistrict: profile?.address_district ?? lastOrder?.address_district ?? "",
+      addressNeighborhood: profile?.address_neighborhood ?? lastOrder?.address_neighborhood ?? "",
+      addressLine: profile?.address_line ?? lastOrder?.address_line ?? "",
+    },
+    savedAddresses: (addresses ?? []).map((address) => ({
+      id: address.id,
+      label: address.label,
+      recipientName: address.recipient_name,
+      phone: address.phone,
+      addressCity: address.address_city,
+      addressDistrict: address.address_district,
+      addressNeighborhood: address.address_neighborhood,
+      addressLine: address.address_line,
+      isDefault: address.is_default,
+    })),
   };
 }
 
@@ -74,12 +109,12 @@ export default async function StoreCartPage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const initialCustomer = await loadInitialCustomer(store.id);
+  const { initialCustomer, savedAddresses } = await loadCheckoutPrefill(store.id);
 
   return (
     <Container className="py-10">
       <h1 className="text-2xl font-semibold text-foreground">Sepetim</h1>
-      <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} />
+      <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
     </Container>
   );
 }

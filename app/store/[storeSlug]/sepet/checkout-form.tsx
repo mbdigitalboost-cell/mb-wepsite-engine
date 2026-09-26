@@ -39,6 +39,19 @@ export interface InitialCustomer {
   addressLine: string;
 }
 
+/** FAZ 6.2 — see sepet/page.tsx's loadCheckoutPrefill for how this is sourced (migration 0033's store_customer_addresses). */
+export interface SavedAddress {
+  id: string;
+  label: string | null;
+  recipientName: string | null;
+  phone: string | null;
+  addressCity: string;
+  addressDistrict: string;
+  addressNeighborhood: string | null;
+  addressLine: string;
+  isDefault: boolean;
+}
+
 /**
  * FAZ 2.6 — 2-step checkout wizard, replacing Faz 2's single-screen form.
  * Step 1 ("Teslimat Bilgisi") collects contact + il/ilçe (cascading
@@ -59,30 +72,47 @@ export interface InitialCustomer {
 export function CheckoutForm({
   storeSlug,
   initialCustomer,
+  savedAddresses,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
+  savedAddresses: SavedAddress[];
 }) {
   const { items, clear } = useCart();
   const [state, formAction, isPending] = useActionState(createOrderAction.bind(null, storeSlug), initialCheckoutFormState);
   const clearedForOrderNumber = useRef<number | null>(null);
 
   const [step, setStep] = useState<Step>(1);
-  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? "");
-  const [customerPhone, setCustomerPhone] = useState(initialCustomer?.phone ?? "");
+
+  // FAZ 6.2 — savedAddresses is already sorted default-first, newest-next
+  // (see loadCheckoutPrefill), so [0] is always the sensible "pick this
+  // one" pre-selection when a default was deleted but other addresses
+  // remain. Empty when there are none — every "??"/"||" fallback below
+  // then falls straight through to Faz 5.1b's own initialCustomer-based
+  // seeding, unchanged, exactly per this phase's own "kayıtlı adresi
+  // YOKSA mevcut davranış AYNEN kalsın" instruction.
+  const defaultAddress = useMemo(() => savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0] ?? null, [savedAddresses]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddress ? defaultAddress.id : "new");
+
+  const [customerName, setCustomerName] = useState(defaultAddress?.recipientName || initialCustomer?.name || "");
+  const [customerPhone, setCustomerPhone] = useState(defaultAddress?.phone || initialCustomer?.phone || "");
   const [customerEmail, setCustomerEmail] = useState(initialCustomer?.email ?? "");
-  // FAZ 5.1b — seeded from initialCustomer's NAME fields (findProvinceByName
-  // resolves the name to an id, only used to seed provinceId/districtId's
-  // own useState below — initialCustomer doesn't change after this
+  // FAZ 5.1b — seeded from a NAME field (findProvinceByName resolves the
+  // name to an id, only used to seed provinceId/districtId's own useState
+  // below — neither initialCustomer nor defaultAddress change after this
   // component mounts, so this effectively only ever runs once).
-  const initialProvince = useMemo(() => findProvinceByName(initialCustomer?.addressCity), [initialCustomer?.addressCity]);
+  const seedAddressCity = defaultAddress?.addressCity ?? initialCustomer?.addressCity;
+  const seedAddressDistrict = defaultAddress?.addressDistrict ?? initialCustomer?.addressDistrict;
+  const initialProvince = useMemo(() => findProvinceByName(seedAddressCity), [seedAddressCity]);
   const [provinceId, setProvinceId] = useState(initialProvince ? String(initialProvince.id) : "");
   const [districtId, setDistrictId] = useState(() => {
-    const district = initialProvince?.districts.find((d) => d.name === initialCustomer?.addressDistrict);
+    const district = initialProvince?.districts.find((d) => d.name === seedAddressDistrict);
     return district ? String(district.id) : "";
   });
-  const [addressNeighborhood, setAddressNeighborhood] = useState(initialCustomer?.addressNeighborhood ?? "");
-  const [addressLine, setAddressLine] = useState(initialCustomer?.addressLine ?? "");
+  const [addressNeighborhood, setAddressNeighborhood] = useState(
+    defaultAddress?.addressNeighborhood ?? initialCustomer?.addressNeighborhood ?? "",
+  );
+  const [addressLine, setAddressLine] = useState(defaultAddress?.addressLine ?? initialCustomer?.addressLine ?? "");
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -127,6 +157,39 @@ export function CheckoutForm({
   // already covers this case, this component adds nothing to it.
   if (items.length === 0) return null;
 
+  /**
+   * FAZ 6.2 — picking a different saved address (or "Yeni adres gir")
+   * fills the fields, which then stay fully editable — this function only
+   * sets initial values for the chosen option, it doesn't lock anything.
+   * Selecting "Yeni adres gir" clears only the ADDRESS fields (il/ilçe/
+   * mahalle/adres); name/phone/email are left as they are — switching to
+   * a new delivery address doesn't imply the shopper's own name/phone
+   * changed too.
+   */
+  function handleAddressChoice(id: string) {
+    setSelectedAddressId(id);
+
+    if (id === "new") {
+      setProvinceId("");
+      setDistrictId("");
+      setAddressNeighborhood("");
+      setAddressLine("");
+      return;
+    }
+
+    const address = savedAddresses.find((a) => a.id === id);
+    if (!address) return;
+
+    setCustomerName(address.recipientName ?? "");
+    setCustomerPhone(address.phone ?? "");
+    const province = findProvinceByName(address.addressCity);
+    setProvinceId(province ? String(province.id) : "");
+    const district = province?.districts.find((d) => d.name === address.addressDistrict);
+    setDistrictId(district ? String(district.id) : "");
+    setAddressNeighborhood(address.addressNeighborhood ?? "");
+    setAddressLine(address.addressLine);
+  }
+
   function handleContinue() {
     if (!customerPhone.trim() || !provinceId || !districtId || !addressNeighborhood.trim() || !addressLine.trim()) {
       setStep1Error("Lütfen telefon, il, ilçe, mahalle ve adres alanlarını doldurun.");
@@ -152,6 +215,44 @@ export function CheckoutForm({
             <p role="alert" className="text-sm text-red-600">
               {step1Error}
             </p>
+          ) : null}
+
+          {savedAddresses.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Teslimat Adresi</p>
+              {savedAddresses.map((address) => (
+                <label
+                  key={address.id}
+                  className="flex items-start gap-2 rounded-md border border-black/10 p-3 text-sm hover:border-black/20"
+                >
+                  <input
+                    type="radio"
+                    name="savedAddressChoice"
+                    checked={selectedAddressId === address.id}
+                    onChange={() => handleAddressChoice(address.id)}
+                    className="mt-0.5 h-4 w-4 border-black/20"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">{address.label || `${address.addressCity} adresi`}</span>
+                    {address.isDefault ? <span className="ml-2 text-xs text-brand-accent">Varsayılan</span> : null}
+                    <br />
+                    <span className="text-foreground/60">
+                      {address.addressDistrict}, {address.addressCity}
+                    </span>
+                  </span>
+                </label>
+              ))}
+              <label className="flex items-center gap-2 rounded-md border border-black/10 p-3 text-sm hover:border-black/20">
+                <input
+                  type="radio"
+                  name="savedAddressChoice"
+                  checked={selectedAddressId === "new"}
+                  onChange={() => handleAddressChoice("new")}
+                  className="h-4 w-4 border-black/20"
+                />
+                Yeni adres gir
+              </label>
+            </div>
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
