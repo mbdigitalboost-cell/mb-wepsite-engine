@@ -17,10 +17,35 @@ import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
  * (/dashboard, /login, /auth, /api, Next internals) redirect to /login —
  * so the panel deployment only ever shows the panel, never a customer's
  * public site.
+ *
+ * FAZ 5.1d — ROOT CAUSE of the live /mfa-challenge redirect loop
+ * (ERR_TOO_MANY_REDIRECTS, mbdigitalboost@gmail.com, 2026-09-26):
+ * "/mfa-challenge" was missing from this allowlist. On the panel
+ * deployment (PANEL_ONLY_MODE=true — the only place this account ever
+ * logs in), every request to /mfa-challenge was redirected straight to
+ * /login by THIS proxy, before the page ever rendered — the user never
+ * saw a code form because the request never reached
+ * app/(auth)/mfa-challenge/page.tsx at all. /login then saw the existing
+ * (valid, but AAL1) session cookie and sent them back to /dashboard,
+ * which saw the still-unsatisfied AAL2 requirement and sent them back to
+ * /mfa-challenge, which this proxy redirected to /login again —
+ * deterministic, on every single request, matching exactly what was
+ * reported. Unblocked at the time by deleting that user's session + TOTP
+ * factor directly in the DB (forcing AAL back to a level that never hits
+ * this redirect); this one-line addition is the actual fix.
  */
 const PANEL_ONLY_MODE = process.env.PANEL_ONLY_MODE === "true";
 
-const PANEL_ALLOWED_PATH_PREFIXES = ["/dashboard", "/login", "/auth", "/api", "/_next", "/favicon.ico", "/store"];
+const PANEL_ALLOWED_PATH_PREFIXES = [
+  "/dashboard",
+  "/login",
+  "/mfa-challenge",
+  "/auth",
+  "/api",
+  "/_next",
+  "/favicon.ico",
+  "/store",
+];
 
 function isPanelAllowedPath(pathname: string) {
   return PANEL_ALLOWED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
