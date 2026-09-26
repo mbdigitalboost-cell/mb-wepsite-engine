@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils/format-price";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
-import { CheckoutForm } from "./checkout-form";
+import { CheckoutForm, type InitialCustomer } from "./checkout-form";
 
 /**
  * FAZ 1 (mağaza sepeti/configurator) — item list renders purely from
@@ -18,7 +18,13 @@ import { CheckoutForm } from "./checkout-form";
  * why that ordering matters) — so it owns its own "success / empty /
  * form" decision independently of this component's item-list rendering.
  */
-export function CartList({ storeSlug }: { storeSlug: string }) {
+export function CartList({
+  storeSlug,
+  initialCustomer,
+}: {
+  storeSlug: string;
+  initialCustomer: InitialCustomer | null;
+}) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
 
   return (
@@ -98,7 +104,7 @@ export function CartList({ storeSlug }: { storeSlug: string }) {
         </>
       )}
 
-      <CheckoutForm storeSlug={storeSlug} />
+      <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} />
     </div>
   );
 }

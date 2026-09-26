@@ -14,22 +14,39 @@ import { useCart } from "./cart-context";
  * currently lacks a place for: a persistent link back to the store home
  * and the cart badge this phase's spec asks for.
  */
-export function StoreHeader({ storeSlug, storeName }: { storeSlug: string; storeName: string }) {
+export function StoreHeader({
+  storeSlug,
+  storeName,
+  isLoggedIn,
+}: {
+  storeSlug: string;
+  storeName: string;
+  /** FAZ 5.1 — resolved server-side (layout.tsx) since this is a client component with no session access of its own. */
+  isLoggedIn: boolean;
+}) {
   const { itemCount } = useCart();
 
   return (
     <header className="border-b border-black/10">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link href={`/store/${storeSlug}`} className="text-sm font-medium text-foreground hover:underline">
           {storeName}
         </Link>
-        <Link
-          href={`/store/${storeSlug}/sepet`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:border-black/20 hover:text-foreground"
-        >
-          <ShoppingCart size={16} aria-hidden="true" />
-          Sepetim {itemCount > 0 ? `(${itemCount})` : ""}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={isLoggedIn ? `/store/${storeSlug}/hesap` : `/store/${storeSlug}/hesap/giris`}
+            className="text-sm text-foreground/80 hover:text-foreground hover:underline"
+          >
+            {isLoggedIn ? "Hesabım" : "Giriş Yap"}
+          </Link>
+          <Link
+            href={`/store/${storeSlug}/sepet`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:border-black/20 hover:text-foreground"
+          >
+            <ShoppingCart size={16} aria-hidden="true" />
+            Sepetim {itemCount > 0 ? `(${itemCount})` : ""}
+          </Link>
+        </div>
       </div>
     </header>
   );

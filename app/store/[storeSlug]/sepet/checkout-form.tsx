@@ -34,6 +34,13 @@ function toWireCartLine(item: CartItem) {
 
 type Step = 1 | 2;
 
+/** FAZ 5.1 — see sepet/page.tsx's loadInitialCustomer for how this is sourced. */
+export interface InitialCustomer {
+  name: string;
+  phone: string;
+  email: string;
+}
+
 /**
  * FAZ 2.6 — 2-step checkout wizard, replacing Faz 2's single-screen form.
  * Step 1 ("Teslimat Bilgisi") collects contact + il/ilçe (cascading
@@ -51,15 +58,21 @@ type Step = 1 | 2;
  * server-side; a customer with JS disabled or a tampered client still
  * can't bypass it.
  */
-export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
+export function CheckoutForm({
+  storeSlug,
+  initialCustomer,
+}: {
+  storeSlug: string;
+  initialCustomer: InitialCustomer | null;
+}) {
   const { items, clear } = useCart();
   const [state, formAction, isPending] = useActionState(createOrderAction.bind(null, storeSlug), initialCheckoutFormState);
   const clearedForOrderNumber = useRef<number | null>(null);
 
   const [step, setStep] = useState<Step>(1);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? "");
+  const [customerPhone, setCustomerPhone] = useState(initialCustomer?.phone ?? "");
+  const [customerEmail, setCustomerEmail] = useState(initialCustomer?.email ?? "");
   const [provinceId, setProvinceId] = useState("");
   const [districtId, setDistrictId] = useState("");
   const [addressNeighborhood, setAddressNeighborhood] = useState("");

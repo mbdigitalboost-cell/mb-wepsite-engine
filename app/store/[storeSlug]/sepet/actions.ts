@@ -12,6 +12,7 @@ import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/pub
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
 import { checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { CheckoutFormState } from "./form-state";
 
@@ -204,6 +205,16 @@ export async function createOrderAction(
 
   const subtotal = resolvedLines.reduce((sum, line) => sum + line.lineTotal, 0);
 
+  // FAZ 5.1 — read via the request's own cookie-bound session (NOT the
+  // admin client below, which has no session at all), never trusted from
+  // client input. Anonymous/guest checkout is unaffected: `user` is simply
+  // null when there's no session, and customer_user_id stays null on the
+  // insert below — identical to Faz 2's original behavior.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const admin = createSupabaseAdminClient();
 
   // store_public_stores (the anon-safe view getStoreBySlug reads) never
@@ -219,6 +230,7 @@ export async function createOrderAction(
       customer_name: parsedCustomer.data.customerName,
       customer_phone: parsedCustomer.data.customerPhone,
       customer_email: parsedCustomer.data.customerEmail || null,
+      customer_user_id: user?.id ?? null,
       address_city: parsedCustomer.data.addressCity,
       address_district: parsedCustomer.data.addressDistrict,
       address_neighborhood: parsedCustomer.data.addressNeighborhood,

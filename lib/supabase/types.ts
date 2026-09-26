@@ -1222,6 +1222,7 @@ export type Database = {
           customer_name: string;
           customer_phone: string;
           customer_email: string | null;
+          customer_user_id: string | null;
           address_city: string;
           address_district: string;
           address_line: string;
@@ -1245,6 +1246,7 @@ export type Database = {
           customer_name: string;
           customer_phone: string;
           customer_email?: string | null;
+          customer_user_id?: string | null;
           address_city: string;
           address_district: string;
           address_line: string;
@@ -1268,6 +1270,7 @@ export type Database = {
           customer_name?: string;
           customer_phone?: string;
           customer_email?: string | null;
+          customer_user_id?: string | null;
           address_city?: string;
           address_district?: string;
           address_line?: string;
@@ -1288,6 +1291,12 @@ export type Database = {
             foreignKeyName: "orders_store_id_fkey";
             columns: ["store_id"];
             referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_customer_user_id_fkey";
+            columns: ["customer_user_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -1416,6 +1425,53 @@ export type Database = {
             columns: ["addon_id", "store_id"];
             referencedRelation: "product_addons";
             referencedColumns: ["id", "store_id"];
+          },
+        ];
+      };
+      /**
+       * FAZ 5.1, migration 0031_store_customers.sql. Links a shared
+       * Supabase Auth identity (profiles.id) to a specific store's
+       * customer base — unique(user_id, store_id), NOT unique on user_id
+       * alone, so the same person can be a customer of more than one
+       * store. phone is nullable: no UI this phase ever fills it.
+       */
+      store_customers: {
+        Row: {
+          id: string;
+          user_id: string;
+          store_id: string;
+          email: string;
+          phone: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          store_id: string;
+          email: string;
+          phone?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          store_id?: string;
+          email?: string;
+          phone?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_customers_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_customers_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
           },
         ];
       };

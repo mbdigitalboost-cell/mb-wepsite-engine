@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 
@@ -58,9 +59,22 @@ export default async function StoreLayout({
 
   if (!store) return children;
 
+  // FAZ 5.1 — the ONLY reason this layout now reads the auth session
+  // (previously every app/store/** read went through the cookie-less
+  // public client only). Storefront pages already render dynamically
+  // per-request today (no page in this tree opts into `revalidate`/static
+  // generation — Next 15+'s fetch caching defaults to off, and none of the
+  // Supabase reads here are native `fetch()` calls the old cache model
+  // could even apply to), so this doesn't newly make anything dynamic that
+  // wasn't already.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <CartProvider storeSlug={storeSlug}>
-      <StoreHeader storeSlug={storeSlug} storeName={store.name} />
+      <StoreHeader storeSlug={storeSlug} storeName={store.name} isLoggedIn={Boolean(user)} />
       {children}
     </CartProvider>
   );
