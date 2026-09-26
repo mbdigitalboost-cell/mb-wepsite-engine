@@ -1442,6 +1442,11 @@ export type Database = {
           store_id: string;
           email: string;
           phone: string | null;
+          full_name: string | null;
+          address_city: string | null;
+          address_district: string | null;
+          address_neighborhood: string | null;
+          address_line: string | null;
           created_at: string;
         };
         Insert: {
@@ -1450,6 +1455,11 @@ export type Database = {
           store_id: string;
           email: string;
           phone?: string | null;
+          full_name?: string | null;
+          address_city?: string | null;
+          address_district?: string | null;
+          address_neighborhood?: string | null;
+          address_line?: string | null;
           created_at?: string;
         };
         Update: {
@@ -1458,6 +1468,11 @@ export type Database = {
           store_id?: string;
           email?: string;
           phone?: string | null;
+          full_name?: string | null;
+          address_city?: string | null;
+          address_district?: string | null;
+          address_neighborhood?: string | null;
+          address_line?: string | null;
           created_at?: string;
         };
         Relationships: [

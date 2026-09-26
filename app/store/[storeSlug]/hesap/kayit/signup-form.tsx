@@ -1,15 +1,39 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { inputClasses } from "@/lib/utils/input-classes";
+import { PROVINCES, ProvinceDistrictSelect } from "@/components/commerce/public/location-select";
 import { signupAction } from "../actions";
 import { initialStoreSignupState } from "../form-state";
 
+/**
+ * FAZ 5.1b — il/ilçe/mahalle/adres fields added, same set + same
+ * required-ness as checkout-form.tsx's own "Teslimat Bilgisi" step (per
+ * spec: "checkout-form.tsx'teki 'Teslimat Bilgisi' adımıyla AYNI alan
+ * seti ve AYNI zorunluluk kuralları"). province/district are submitted as
+ * hidden inputs carrying the resolved NAME (not id) — same reasoning as
+ * checkout-form.tsx's own hidden addressCity/addressDistrict inputs:
+ * that's the shape storeSignupFormSchema (and every other address field
+ * in this schema) actually expects.
+ */
 export function SignupForm({ storeSlug }: { storeSlug: string }) {
   const [state, formAction, pending] = useActionState(signupAction.bind(null, storeSlug), initialStoreSignupState);
   const formId = useId();
+
+  const [provinceId, setProvinceId] = useState("");
+  const [districtId, setDistrictId] = useState("");
+
+  const selectedProvince = useMemo(() => PROVINCES.find((p) => String(p.id) === provinceId) ?? null, [provinceId]);
+  const districts = useMemo(
+    () => (selectedProvince ? selectedProvince.districts : []),
+    [selectedProvince],
+  );
+  const selectedDistrict = useMemo(
+    () => districts.find((d) => String(d.id) === districtId) ?? null,
+    [districts, districtId],
+  );
 
   if (state.status === "confirm_email") {
     return (
@@ -31,19 +55,29 @@ export function SignupForm({ storeSlug }: { storeSlug: string }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="addressCity" value={selectedProvince?.name ?? ""} />
+      <input type="hidden" name="addressDistrict" value={selectedDistrict?.name ?? ""} />
+
+      <div>
+        <label htmlFor={`${formId}-fullName`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Ad Soyad
+        </label>
+        <input
+          id={`${formId}-fullName`}
+          name="fullName"
+          type="text"
+          required
+          autoComplete="name"
+          autoFocus
+          className={inputClasses}
+        />
+      </div>
+
       <div>
         <label htmlFor={`${formId}-email`} className="mb-1.5 block text-sm font-medium text-foreground">
           E-posta
         </label>
-        <input
-          id={`${formId}-email`}
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          autoFocus
-          className={inputClasses}
-        />
+        <input id={`${formId}-email`} name="email" type="email" required autoComplete="email" className={inputClasses} />
       </div>
 
       <div>
@@ -59,6 +93,35 @@ export function SignupForm({ storeSlug }: { storeSlug: string }) {
           autoComplete="new-password"
           className={inputClasses}
         />
+      </div>
+
+      <ProvinceDistrictSelect
+        idPrefix={`${formId}-signup`}
+        provinceId={provinceId}
+        districtId={districtId}
+        onProvinceIdChange={setProvinceId}
+        onDistrictIdChange={setDistrictId}
+      />
+
+      <div>
+        <label htmlFor={`${formId}-neighborhood`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Mahalle
+        </label>
+        <input
+          id={`${formId}-neighborhood`}
+          name="addressNeighborhood"
+          type="text"
+          required
+          placeholder="ör. Caferağa Mahallesi"
+          className={inputClasses}
+        />
+      </div>
+
+      <div>
+        <label htmlFor={`${formId}-addressLine`} className="mb-1.5 block text-sm font-medium text-foreground">
+          Adres (Sokak / Bina / Daire No)
+        </label>
+        <textarea id={`${formId}-addressLine`} name="addressLine" required rows={2} className={inputClasses} />
       </div>
 
       {state.status === "error" && state.error ? (

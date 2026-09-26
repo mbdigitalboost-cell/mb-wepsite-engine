@@ -6,22 +6,9 @@ import { inputClasses } from "@/lib/utils/input-classes";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
 import { formatPrice } from "@/lib/utils/format-price";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/validation/order";
-import turkeyLocationsData from "@/lib/data/turkey-locations.json";
+import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
 import { createOrderAction } from "./actions";
 import { initialCheckoutFormState } from "./form-state";
-
-interface Province {
-  id: number;
-  name: string;
-  districts: { id: number; name: string }[];
-}
-
-// lib/data/turkey-locations.README.md — il/ilçe only (~32KB), MIT-licensed,
-// sourced from onurusluca/turkey-geo-api. Mahalle is deliberately NOT a
-// third cascading level here — see that README for the size trade-off.
-const PROVINCES: Province[] = (turkeyLocationsData as Province[])
-  .slice()
-  .sort((a, b) => a.name.localeCompare(b.name, "tr"));
 
 function toWireCartLine(item: CartItem) {
   return {
@@ -34,11 +21,22 @@ function toWireCartLine(item: CartItem) {
 
 type Step = 1 | 2;
 
-/** FAZ 5.1 — see sepet/page.tsx's loadInitialCustomer for how this is sourced. */
+/**
+ * FAZ 5.1 — see sepet/page.tsx's loadInitialCustomer for how this is
+ * sourced. FAZ 5.1b — address fields added; addressCity/addressDistrict
+ * are NAMES (e.g. "İstanbul"), not ids, same as everywhere else this data
+ * crosses a server/client boundary (orders.address_city, store_customers
+ * .address_city) — findProvinceByName resolves a name back to an id for
+ * seeding provinceId/districtId's own useState below.
+ */
 export interface InitialCustomer {
   name: string;
   phone: string;
   email: string;
+  addressCity: string;
+  addressDistrict: string;
+  addressNeighborhood: string;
+  addressLine: string;
 }
 
 /**
@@ -73,10 +71,18 @@ export function CheckoutForm({
   const [customerName, setCustomerName] = useState(initialCustomer?.name ?? "");
   const [customerPhone, setCustomerPhone] = useState(initialCustomer?.phone ?? "");
   const [customerEmail, setCustomerEmail] = useState(initialCustomer?.email ?? "");
-  const [provinceId, setProvinceId] = useState("");
-  const [districtId, setDistrictId] = useState("");
-  const [addressNeighborhood, setAddressNeighborhood] = useState("");
-  const [addressLine, setAddressLine] = useState("");
+  // FAZ 5.1b — seeded from initialCustomer's NAME fields (findProvinceByName
+  // resolves the name to an id, only used to seed provinceId/districtId's
+  // own useState below — initialCustomer doesn't change after this
+  // component mounts, so this effectively only ever runs once).
+  const initialProvince = useMemo(() => findProvinceByName(initialCustomer?.addressCity), [initialCustomer?.addressCity]);
+  const [provinceId, setProvinceId] = useState(initialProvince ? String(initialProvince.id) : "");
+  const [districtId, setDistrictId] = useState(() => {
+    const district = initialProvince?.districts.find((d) => d.name === initialCustomer?.addressDistrict);
+    return district ? String(district.id) : "";
+  });
+  const [addressNeighborhood, setAddressNeighborhood] = useState(initialCustomer?.addressNeighborhood ?? "");
+  const [addressLine, setAddressLine] = useState(initialCustomer?.addressLine ?? "");
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
   const [step1Error, setStep1Error] = useState<string | null>(null);
@@ -188,48 +194,13 @@ export function CheckoutForm({
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="checkout-province" className="mb-1.5 block text-sm font-medium text-foreground">
-                İl
-              </label>
-              <select
-                id="checkout-province"
-                value={provinceId}
-                onChange={(e) => {
-                  setProvinceId(e.target.value);
-                  setDistrictId("");
-                }}
-                className={inputClasses}
-              >
-                <option value="">Seçin</option>
-                {PROVINCES.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="checkout-district" className="mb-1.5 block text-sm font-medium text-foreground">
-                İlçe
-              </label>
-              <select
-                id="checkout-district"
-                value={districtId}
-                onChange={(e) => setDistrictId(e.target.value)}
-                disabled={!provinceId}
-                className={inputClasses}
-              >
-                <option value="">{provinceId ? "Seçin" : "Önce il seçin"}</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <ProvinceDistrictSelect
+            idPrefix="checkout"
+            provinceId={provinceId}
+            districtId={districtId}
+            onProvinceIdChange={setProvinceId}
+            onDistrictIdChange={setDistrictId}
+          />
 
           <div>
             <label htmlFor="checkout-neighborhood" className="mb-1.5 block text-sm font-medium text-foreground">

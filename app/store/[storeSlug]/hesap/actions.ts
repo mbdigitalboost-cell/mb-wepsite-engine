@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import type { AuthError } from "@supabase/supabase-js";
+import type { AuthError, User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,6 +25,43 @@ async function getRequestIp(): Promise<string> {
   return getClientIp(new Request("http://internal", { headers: headerList }));
 }
 
+interface StoreCustomerProfileFields {
+  fullName?: string;
+  addressCity?: string;
+  addressDistrict?: string;
+  addressNeighborhood?: string;
+  addressLine?: string;
+}
+
+/**
+ * FAZ 5.1b — reads the same fields signupAction wrote into Supabase Auth's
+ * own user_metadata at signUp time (see signupAction's `options.data`
+ * below). This is what closes the "email confirmation required" gap:
+ * signupAction cannot write store_customers without a session (see its own
+ * comment), so the name/address collected AT signup would otherwise be
+ * lost by the time a real session exists at first login. user_metadata is
+ * persisted on the auth.users row regardless of confirmation status, so
+ * it's still there whenever ensureStoreCustomerLink finally runs. Returns
+ * `undefined` for a field the metadata doesn't have (e.g. an account that
+ * never went through this store's own signup — a plain login elsewhere,
+ * or a pre-5.1b account) rather than an empty string, so
+ * ensureStoreCustomerLink's upsert leaves an existing, possibly more
+ * recent value (see createOrderAction's own address-sync comment)
+ * untouched instead of blanking it out.
+ */
+function extractProfileMetaFromUser(user: User): StoreCustomerProfileFields {
+  const meta = user.user_metadata as Record<string, unknown>;
+  const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+
+  return {
+    fullName: asString(meta.full_name),
+    addressCity: asString(meta.address_city),
+    addressDistrict: asString(meta.address_district),
+    addressNeighborhood: asString(meta.address_neighborhood),
+    addressLine: asString(meta.address_line),
+  };
+}
+
 /**
  * FAZ 5.1 — the ONE place a store_customers row is ever written. Called
  * from both signupAction (immediately, if Supabase Auth grants a session
@@ -43,16 +80,33 @@ async function getRequestIp(): Promise<string> {
  * service-role admin client) — RLS's `store_customers_insert_self` /
  * `_update_self` policies (migration 0031) are what actually allow this,
  * not application trust.
+ *
+ * FAZ 5.1b — `profile` fields are optional and only included in the
+ * upsert payload when present (never sent as `undefined`/empty), so a
+ * conflict-path UPDATE never overwrites an existing, possibly more
+ * recently synced value (see createOrderAction's own address-sync
+ * comment) with nothing.
  */
 async function ensureStoreCustomerLink(
   supabase: SupabaseClient<Database>,
   storeId: string,
   userId: string,
   email: string,
+  profile?: StoreCustomerProfileFields,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("store_customers")
-    .upsert({ user_id: userId, store_id: storeId, email }, { onConflict: "user_id,store_id" });
+  const { error } = await supabase.from("store_customers").upsert(
+    {
+      user_id: userId,
+      store_id: storeId,
+      email,
+      ...(profile?.fullName !== undefined ? { full_name: profile.fullName } : {}),
+      ...(profile?.addressCity !== undefined ? { address_city: profile.addressCity } : {}),
+      ...(profile?.addressDistrict !== undefined ? { address_district: profile.addressDistrict } : {}),
+      ...(profile?.addressNeighborhood !== undefined ? { address_neighborhood: profile.addressNeighborhood } : {}),
+      ...(profile?.addressLine !== undefined ? { address_line: profile.addressLine } : {}),
+    },
+    { onConflict: "user_id,store_id" },
+  );
 
   if (error) {
     console.error("[store/hesap] failed to link store_customers row:", error.message);
@@ -83,11 +137,16 @@ export async function signupAction(
   const parsed = storeSignupFormSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
+    fullName: formData.get("fullName"),
+    addressCity: formData.get("addressCity"),
+    addressDistrict: formData.get("addressDistrict"),
+    addressNeighborhood: formData.get("addressNeighborhood"),
+    addressLine: formData.get("addressLine"),
   });
   if (!parsed.success) {
     return { status: "error", error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
   }
-  const { email, password } = parsed.data;
+  const { email, password, fullName, addressCity, addressDistrict, addressNeighborhood, addressLine } = parsed.data;
 
   const ip = await getRequestIp();
   const perIp = rateLimit(`store-signup:ip:${ip}`, SIGNUP_RATE_LIMIT_PER_IP);
@@ -97,7 +156,23 @@ export async function signupAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  // FAZ 5.1b — name/address also go into Supabase Auth's own
+  // user_metadata (not just store_customers below), specifically so
+  // they're not lost if email confirmation is required — see
+  // extractProfileMetaFromUser's own comment for why.
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+        address_city: addressCity,
+        address_district: addressDistrict,
+        address_neighborhood: addressNeighborhood,
+        address_line: addressLine,
+      },
+    },
+  });
 
   if (error) {
     return { status: "error", error: mapSignupError(error) };
@@ -111,11 +186,19 @@ export async function signupAction(
     // settings — no session yet, so store_customers can't (and per its own
     // self-insert RLS policy, must not) be written here. See
     // ensureStoreCustomerLink's own comment: it runs on first login
-    // instead, once a real session exists.
+    // instead, once a real session exists — and extractProfileMetaFromUser
+    // recovers fullName/address from user_metadata at that point, since
+    // the login form itself only ever asks for email+password.
     return { status: "confirm_email", error: null };
   }
 
-  await ensureStoreCustomerLink(supabase, store.id, data.user.id, data.user.email ?? email);
+  await ensureStoreCustomerLink(supabase, store.id, data.user.id, data.user.email ?? email, {
+    fullName,
+    addressCity,
+    addressDistrict,
+    addressNeighborhood,
+    addressLine,
+  });
   redirect(`/store/${storeSlug}/hesap`);
 }
 
@@ -152,7 +235,13 @@ export async function loginAction(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  await ensureStoreCustomerLink(supabase, store.id, data.user.id, data.user.email ?? email);
+  await ensureStoreCustomerLink(
+    supabase,
+    store.id,
+    data.user.id,
+    data.user.email ?? email,
+    extractProfileMetaFromUser(data.user),
+  );
   redirect(`/store/${storeSlug}/hesap`);
 }
 

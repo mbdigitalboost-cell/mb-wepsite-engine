@@ -247,6 +247,54 @@ export async function createOrderAction(
     return { status: "error", error: "Siparişiniz oluşturulamadı, lütfen tekrar deneyin.", orderNumber: null };
   }
 
+  if (user) {
+    // FAZ 5.1b — keeps a signed-in customer's account profile in sync with
+    // whichever address they actually shipped to most recently, so the
+    // next checkout's pre-fill (sepet/page.tsx's loadInitialCustomer)
+    // reflects reality instead of silently going stale the moment they
+    // ship to a second address. Only writes when something actually
+    // differs from the stored profile (not an unconditional upsert on
+    // every order) so a repeat order to the same address doesn't churn
+    // the row for no reason. Uses the admin client like every other write
+    // in this action — `user.id` came from the request's own verified
+    // session above, never from client input, so this is as trusted as
+    // the order insert itself.
+    const { data: currentProfile } = await admin
+      .from("store_customers")
+      .select("address_city, address_district, address_neighborhood, address_line")
+      .eq("user_id", user.id)
+      .eq("store_id", store.id)
+      .maybeSingle();
+
+    const addressChanged =
+      !currentProfile ||
+      currentProfile.address_city !== parsedCustomer.data.addressCity ||
+      currentProfile.address_district !== parsedCustomer.data.addressDistrict ||
+      currentProfile.address_neighborhood !== parsedCustomer.data.addressNeighborhood ||
+      currentProfile.address_line !== parsedCustomer.data.addressLine;
+
+    if (addressChanged) {
+      const { error: profileSyncError } = await admin.from("store_customers").upsert(
+        {
+          user_id: user.id,
+          store_id: store.id,
+          email: user.email ?? parsedCustomer.data.customerEmail ?? "",
+          address_city: parsedCustomer.data.addressCity,
+          address_district: parsedCustomer.data.addressDistrict,
+          address_neighborhood: parsedCustomer.data.addressNeighborhood,
+          address_line: parsedCustomer.data.addressLine,
+        },
+        { onConflict: "user_id,store_id" },
+      );
+      if (profileSyncError) {
+        // Non-fatal — the order itself already succeeded; this is a
+        // best-effort profile sync, not part of the order's own
+        // correctness.
+        console.error("[store/sepet] failed to sync store_customers address:", profileSyncError.message);
+      }
+    }
+  }
+
   for (const line of resolvedLines) {
     const { data: item, error: itemError } = await admin
       .from("order_items")
