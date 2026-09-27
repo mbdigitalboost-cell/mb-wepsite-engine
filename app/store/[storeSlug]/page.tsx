@@ -1,14 +1,28 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
 import { getPublicStoreHomepageSections } from "@/lib/commerce/public/homepage";
 import { getPublicProducts } from "@/lib/commerce/public/products";
+import { getPublicCategories } from "@/lib/commerce/public/categories";
+import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
 import { StoreHomepageSections } from "@/components/commerce/public/homepage-sections/store-homepage-sections";
-import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { Container } from "@/components/ui/container";
+import {
+  WhyKydexSection,
+  KydexCollectionSection,
+  BrandFinderSection,
+  FeaturedProductsSection,
+  ProductionFeelSection,
+  BrandStatementSection,
+  OtherCategoriesSection,
+  TrustBadgesSection,
+  InstagramSection,
+  StoreFooterV2,
+} from "@/components/commerce/public/taktikalp46-homepage-sections";
 
 /**
  * FAZ 7.3 — v2 hero tasarımı SADECE bu sayfaya özel bir başlık fontu
@@ -17,8 +31,14 @@ import { Container } from "@/components/ui/container";
  * eski FAZ 2C-3 STEP 22 notu, hâlâ doğru) global bir font eklemek yerine
  * bu dosyaya scoped next/font/google kullanılıyor — Petra'ya ya da panel'e
  * hiç dokunmuyor.
+ *
+ * FAZ 7.3 follow-up — Inter, v2'nin "gövde Inter" talimatı için eklendi;
+ * yeni bölümlerdeki gövde metinlerine className olarak veriliyor (bkz.
+ * taktikalp46-homepage-sections.tsx'e geçirilen `bodyFont`/`headingFont`
+ * class'ları).
  */
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 /**
  * FAZ 2C-3 STEP 22 — Taktikalp46 / multi-tenant commerce storefront
@@ -41,10 +61,13 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [mainNav, sections, featuredProducts] = await Promise.all([
+  const [mainNav, sections, allProducts, categories, brands, profile] = await Promise.all([
     getPublicStoreNavigation(store.id, "main"),
     getPublicStoreHomepageSections(store.id),
     getPublicProducts(store.id),
+    getPublicCategories(store.id),
+    getPublicBrandsWithProducts(store.id),
+    getPublicStoreProfile(store.id),
   ]);
 
   // FAZ 7.3 follow-up — "cta" tipi section (bu mağazanın tek homepage
@@ -56,6 +79,14 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   // StoreHomepageSections çağrısının emptyState notu.
   const ctaSection = sections.find((section) => section.sectionTypeKey === "cta") ?? null;
   const remainingSections = ctaSection ? sections.filter((section) => section.id !== ctaSection.id) : sections;
+
+  const topLevelCategories = categories.filter((category) => category.parentId === null);
+  // "Öne Çıkan Kydex Ürünler" — kaç tane varsa (0-4), sahte ürünle 4'e tamamlanmıyor.
+  const featuredProducts = allProducts.slice(0, 4);
+  const instagramUrl =
+    typeof profile?.socialLinks.instagram === "string" && profile.socialLinks.instagram.trim().length > 0
+      ? profile.socialLinks.instagram
+      : null;
 
   return (
     <div>
@@ -181,10 +212,31 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         </div>
       </section>
 
-      <Container className="py-10">
-        <h2 className="text-lg font-semibold text-foreground">Ürünler</h2>
-        <ProductGrid storeSlug={storeSlug} products={featuredProducts} />
-      </Container>
+      {/*
+        FAZ 7.3 follow-up — hero'nun altındaki v2 bölümleri (görevin kendi
+        sıralamasıyla, 1'den 10'a). Eski düz "Ürünler" H2 + ProductGrid
+        bloğu (tüm ürünleri stilsiz listeleyen) buradan kaldırıldı: aşağıdaki
+        FeaturedProductsSection aynı ihtiyacı (ürünleri göster) v2 kart
+        stiliyle zaten karşılıyor, ikisini yan yana tutmak görevin istediği
+        tutarlı/premium görünümle çelişirdi. Kategori/marka/ürün bulunamayan
+        bölümler kendi içeride null döner (bkz. taktikalp46-homepage-
+        sections.tsx'in her fonksiyonunun kendi erken-dönüş kontrolü) — bu
+        sayfa onlar için ayrıca bir varlık kontrolü tekrarlamıyor, tek
+        istisna Instagram (aşağıda instagramUrl null ise hiç render
+        edilmiyor, çünkü o bileşen linksiz render edilmeyi desteklemiyor).
+      */}
+      <div className={inter.className}>
+        <WhyKydexSection headingFont={spaceGrotesk.className} />
+        <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
+        <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={spaceGrotesk.className} />
+        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProducts} headingFont={spaceGrotesk.className} />
+        <ProductionFeelSection headingFont={spaceGrotesk.className} />
+        <BrandStatementSection headingFont={spaceGrotesk.className} />
+        <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
+        <TrustBadgesSection />
+        {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={spaceGrotesk.className} /> : null}
+        <StoreFooterV2 storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
+      </div>
     </div>
   );
 }

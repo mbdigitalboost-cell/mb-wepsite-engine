@@ -4,28 +4,10 @@ import Image from "next/image";
 import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
+import { CATEGORY_FALLBACK_IMAGES } from "@/lib/commerce/public/category-fallback-images";
 import { Container } from "@/components/ui/container";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
-
-/**
- * FAZ 7.3 — bu 8 dosya illüstratif/kategori-navigasyonu görselleri (gerçek
- * ürün fotoğrafı DEĞİL — bkz. bu fazın kendi görevi), slug'a göre
- * eşleniyor. `category.imageUrl` (admin'in CMS'ten girdiği DB alanı) hâlâ
- * birinci öncelik — bu sözlük sadece o alan boşken devreye giren bir
- * fallback; ileride bir admin bu kategoriye gerçek bir imageUrl girerse
- * otomatik olarak onu kullanmaya geçer, bu dosyaya dokunmadan.
- */
-const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
-  "silah-kiliflari": "/images/categories/silah-kiliflari.jpg",
-  "bicak-kiliflari": "/images/categories/bicak-kiliflari.jpg",
-  "sarjor-kiliflari": "/images/categories/sarjor-kiliflari.jpg",
-  giyim: "/images/categories/giyim.jpg",
-  canta: "/images/categories/canta.jpg",
-  "palaska-ve-kemer": "/images/categories/palaska-ve-kemer.jpg",
-  "edc-ve-gunluk-tasima": "/images/categories/edc-ve-gunluk-tasima.jpg",
-  "kampanyali-urunler": "/images/categories/kampanyali-urunler.jpg",
-};
 
 /**
  * FAZ 7.2 — "Tüm Kategoriler" sayfası. Üst kategoriler (parentId ===
