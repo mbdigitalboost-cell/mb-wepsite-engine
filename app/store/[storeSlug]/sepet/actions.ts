@@ -10,6 +10,7 @@ import {
 } from "@/lib/commerce/public/products";
 import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/public/products";
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
+import { resolveApplicableDiscount } from "@/lib/commerce/discounts";
 import { checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
@@ -47,7 +48,7 @@ export async function createOrderAction(
 ): Promise<CheckoutFormState> {
   const store = await getStoreBySlug(storeSlug);
   if (!store) {
-    return { status: "error", error: "Mağaza bulunamadı.", orderNumber: null };
+    return { status: "error", error: "Mağaza bulunamadı.", orderNumber: null, discountAmount: null, discountCode: null };
   }
 
   const parsedCustomer = checkoutFormSchema.safeParse({
@@ -60,20 +61,21 @@ export async function createOrderAction(
     addressLine: formData.get("addressLine"),
     note: formData.get("note") || undefined,
     paymentMethod: formData.get("paymentMethod"),
+    discountCode: formData.get("discountCode") || undefined,
   });
   if (!parsedCustomer.success) {
-    return { status: "error", error: parsedCustomer.error.issues[0]?.message ?? "Geçersiz form.", orderNumber: null };
+    return { status: "error", error: parsedCustomer.error.issues[0]?.message ?? "Geçersiz form.", orderNumber: null, discountAmount: null, discountCode: null };
   }
 
   let rawLines: unknown;
   try {
     rawLines = JSON.parse(String(formData.get("cartItems") ?? "[]"));
   } catch {
-    return { status: "error", error: "Sepet verisi okunamadı, lütfen sayfayı yenileyip tekrar deneyin.", orderNumber: null };
+    return { status: "error", error: "Sepet verisi okunamadı, lütfen sayfayı yenileyip tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null };
   }
   const parsedLines = orderCartLinesSchema.safeParse(rawLines);
   if (!parsedLines.success) {
-    return { status: "error", error: parsedLines.error.issues[0]?.message ?? "Sepetiniz boş.", orderNumber: null };
+    return { status: "error", error: parsedLines.error.issues[0]?.message ?? "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null };
   }
 
   // Fetch each DISTINCT product's fresh data ONCE (never once per cart
@@ -197,10 +199,10 @@ export async function createOrderAction(
   }
 
   if (lineErrors.length > 0) {
-    return { status: "error", error: [...new Set(lineErrors)].join(" "), orderNumber: null };
+    return { status: "error", error: [...new Set(lineErrors)].join(" "), orderNumber: null, discountAmount: null, discountCode: null };
   }
   if (resolvedLines.length === 0) {
-    return { status: "error", error: "Sepetiniz boş.", orderNumber: null };
+    return { status: "error", error: "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null };
   }
 
   const subtotal = resolvedLines.reduce((sum, line) => sum + line.lineTotal, 0);
@@ -223,6 +225,29 @@ export async function createOrderAction(
   // log's own "which customer does this concern" field.
   const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.id).maybeSingle();
 
+  // "Aboneler" indirim sistemi — migration 0036/lib/commerce/discounts.ts.
+  // Girilen bir kod varsa ve GEÇERSİZSE, indirimsiz devam etmek yerine
+  // sipariş hiç oluşturulmadan burada hata dönülüyor: müşteri özellikle bir
+  // kod girdiyse "geçersiz kod" demek, onu sessizce yok saymaktan daha
+  // dürüst bir davranış. Kod hiç girilmediyse (boş) tek olasılık 'auto'dur.
+  const enteredCode = parsedCustomer.data.discountCode || null;
+  const resolvedDiscount = await resolveApplicableDiscount({
+    admin,
+    storeId: store.id,
+    subtotal,
+    userId: user?.id ?? null,
+    enteredCode,
+  });
+  if (enteredCode && !resolvedDiscount) {
+    return {
+      status: "error",
+      error: "Girdiğiniz indirim kodu geçersiz veya süresi dolmuş.",
+      orderNumber: null,
+      discountAmount: null,
+      discountCode: null,
+    };
+  }
+
   const { data: order, error: orderError } = await admin
     .from("orders")
     .insert({
@@ -238,13 +263,16 @@ export async function createOrderAction(
       note: parsedCustomer.data.note || null,
       payment_method: parsedCustomer.data.paymentMethod,
       subtotal,
+      discount_amount: resolvedDiscount?.amount ?? 0,
+      discount_code: resolvedDiscount?.code ?? null,
+      applied_discount_id: resolvedDiscount?.id ?? null,
     })
     .select("id, order_number")
     .single();
 
   if (orderError || !order) {
     console.error("[store/sepet] failed to create order:", orderError?.message);
-    return { status: "error", error: "Siparişiniz oluşturulamadı, lütfen tekrar deneyin.", orderNumber: null };
+    return { status: "error", error: "Siparişiniz oluşturulamadı, lütfen tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null };
   }
 
   if (user) {
@@ -344,7 +372,14 @@ export async function createOrderAction(
     action: "order.create",
     entityType: "order",
     entityId: order.id,
-    metadata: { storeId: store.id, orderNumber: order.order_number, subtotal, lineCount: resolvedLines.length },
+    metadata: {
+      storeId: store.id,
+      orderNumber: order.order_number,
+      subtotal,
+      lineCount: resolvedLines.length,
+      discountAmount: resolvedDiscount?.amount ?? 0,
+      discountId: resolvedDiscount?.id ?? null,
+    },
   });
 
   if (storeRow?.customer_id) {
@@ -355,5 +390,11 @@ export async function createOrderAction(
     revalidatePath(`/dashboard/customers/${storeRow.customer_id}/stores/${store.id}/orders`);
   }
 
-  return { status: "success", error: null, orderNumber: order.order_number };
+  return {
+    status: "success",
+    error: null,
+    orderNumber: order.order_number,
+    discountAmount: resolvedDiscount?.amount ?? null,
+    discountCode: resolvedDiscount?.code ?? null,
+  };
 }

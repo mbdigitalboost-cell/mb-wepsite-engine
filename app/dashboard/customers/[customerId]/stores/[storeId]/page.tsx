@@ -18,6 +18,7 @@ const SUBMODULES = [
   { key: "products", label: "Products", description: "Ürün kataloğu" },
   { key: "categories", label: "Categories", description: "Ürün kategorileri" },
   { key: "brands", label: "Brands", description: "Markalar" },
+  { key: "subscribers", label: "Aboneler", description: "Müşteri listesi, indirimler, e-posta/WhatsApp" },
 ] as const;
 
 /**

@@ -254,9 +254,24 @@ export default async function StoreOrderDetailPage({
             );
           })}
         </ul>
-        <div className="mt-4 flex items-center justify-between rounded-lg border border-black/10 p-4">
-          <span className="text-sm text-foreground/60">Genel Toplam</span>
-          <span className="text-xl font-semibold text-foreground">{formatPrice(Number(order.subtotal))}</span>
+        <div className="mt-4 rounded-lg border border-black/10 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-foreground/60">Ara Toplam</span>
+            <span className="text-foreground">{formatPrice(Number(order.subtotal))}</span>
+          </div>
+          {/* "Aboneler" indirim sistemi — migration 0036. discount_amount=0 (varsayılan) olan her eski/indirimsiz sipariş için bu satır hiç görünmez. */}
+          {Number(order.discount_amount) > 0 ? (
+            <div className="mt-1 flex items-center justify-between text-sm text-emerald-700">
+              <span>İndirim{order.discount_code ? ` (${order.discount_code})` : ""}</span>
+              <span>-{formatPrice(Number(order.discount_amount))}</span>
+            </div>
+          ) : null}
+          <div className="mt-2 flex items-center justify-between border-t border-black/10 pt-2">
+            <span className="text-sm text-foreground/60">Genel Toplam</span>
+            <span className="text-xl font-semibold text-foreground">
+              {formatPrice(Number(order.subtotal) - Number(order.discount_amount))}
+            </span>
+          </div>
         </div>
       </section>
 

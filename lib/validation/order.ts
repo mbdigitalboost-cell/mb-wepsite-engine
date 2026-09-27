@@ -45,6 +45,15 @@ export const checkoutFormSchema = z.object({
   addressLine: z.string().trim().min(1, "Adres zorunlu.").max(500),
   note: z.string().trim().max(1000).optional().or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHODS, { message: "Geçerli bir ödeme yöntemi seçin." }),
+  /**
+   * "Aboneler" indirim sistemi — opsiyonel. Sadece ŞEKİL doğrulanıyor
+   * (uzunluk), geçerlilik (var mı/aktif mi/süresi geçmiş mi/bu mağazaya mı
+   * ait) createOrderAction içinde lib/commerce/discounts.ts'in
+   * resolveApplicableDiscount'ı ile SERVER-SIDE kontrol ediliyor — tıpkı
+   * fiyatlandırmanın kendisi gibi, client'tan gelen hiçbir indirim iddiasına
+   * güvenilmiyor.
+   */
+  discountCode: z.string().trim().max(50).optional().or(z.literal("")),
 });
 
 export type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;

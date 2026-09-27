@@ -146,6 +146,13 @@ export function CheckoutForm({
         <p className="mt-2 text-sm text-foreground/70">
           Sipariş No: <span className="font-medium text-foreground">#{state.orderNumber}</span>
         </p>
+        {/* "Aboneler" indirim sistemi — server'ın (createOrderAction) gerçekten uyguladığı indirim, client'ın kendi tahmini değil. */}
+        {state.discountAmount && state.discountAmount > 0 ? (
+          <p className="mt-1 text-sm text-emerald-700">
+            {state.discountCode ? `"${state.discountCode}" kodu ile ` : ""}
+            {formatPrice(state.discountAmount)} indirim uygulandı.
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-foreground/70">
           Siparişinizi onaylamak için sizi arayacağız. Sorularınız için mağazayla iletişime geçebilirsiniz.
         </p>
@@ -396,6 +403,22 @@ export function CheckoutForm({
               <span>Toplam</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
+          </div>
+
+          {/*
+            "Aboneler" indirim sistemi — kod GERÇEKTEN geçerli mi/aktif mi/
+            bu mağazaya mı ait, sadece siparişi tamamen gönderip
+            createOrderAction çalıştığında server-side doğrulanıyor (burada
+            ayrı bir "kodu uygula" ön-kontrolü YOK — ek bir Server Action
+            round-trip'i bu fazın kapsamı dışında). Geçersiz bir kod, formu
+            tekrar hatayla (yukarıdaki state.error) döndürür, sipariş
+            OLUŞTURULMAZ — indirimsiz sessizce devam etmez.
+          */}
+          <div>
+            <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-foreground">
+              İndirim Kodu <span className="font-normal text-foreground/50">(varsa)</span>
+            </label>
+            <input id="discountCode" name="discountCode" type="text" className={inputClasses} placeholder="Örn. HOSGELDIN10" />
           </div>
 
           <div className="flex items-center gap-2">

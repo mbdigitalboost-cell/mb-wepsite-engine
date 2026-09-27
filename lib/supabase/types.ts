@@ -71,6 +71,9 @@ export type StoreButtonStyle = "rounded" | "square" | "pill";
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "shipped" | "completed" | "cancelled";
 /** FAZ 2.5, migration 0029_orders.sql — independent of OrderStatus, see that enum's own comment. */
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
+/** "Aboneler" — migration 0036_customer_discounts.sql. 'auto' requires store_customer_id NOT NULL (DB CHECK) — see that migration's own security-decision comment. */
+export type CustomerDiscountType = "code" | "auto";
+export type CustomerDiscountValueType = "percentage" | "fixed";
 export type StoreColorMode = "light" | "dark" | "system";
 export type StoreNavigationMenuType = "main" | "footer" | "category";
 /**
@@ -1237,6 +1240,9 @@ export type Database = {
           shipped_at: string | null;
           created_at: string;
           updated_at: string;
+          discount_amount: number;
+          discount_code: string | null;
+          applied_discount_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1261,6 +1267,9 @@ export type Database = {
           shipped_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          discount_amount?: number;
+          discount_code?: string | null;
+          applied_discount_id?: string | null;
         };
         Update: {
           id?: string;
@@ -1285,6 +1294,9 @@ export type Database = {
           shipped_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          discount_amount?: number;
+          discount_code?: string | null;
+          applied_discount_id?: string | null;
         };
         Relationships: [
           {
@@ -1297,6 +1309,12 @@ export type Database = {
             foreignKeyName: "orders_customer_user_id_fkey";
             columns: ["customer_user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_applied_discount_id_fkey";
+            columns: ["applied_discount_id"];
+            referencedRelation: "customer_discounts";
             referencedColumns: ["id"];
           },
         ];
@@ -1486,6 +1504,81 @@ export type Database = {
             foreignKeyName: "store_customers_store_id_fkey";
             columns: ["store_id"];
             referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /**
+       * "Aboneler" — migration 0036_customer_discounts.sql. Exactly one of
+       * store_customer_id (registered) or guest_email/guest_phone (guest) is
+       * set (DB CHECK) — never both, never neither. discount_type='auto'
+       * requires store_customer_id NOT NULL (DB CHECK) — see that
+       * migration's own security-decision comment for why a guest can never
+       * be 'auto' targeted.
+       */
+      customer_discounts: {
+        Row: {
+          id: string;
+          store_id: string;
+          store_customer_id: string | null;
+          guest_email: string | null;
+          guest_phone: string | null;
+          discount_type: CustomerDiscountType;
+          code: string | null;
+          value_type: CustomerDiscountValueType;
+          value: number;
+          is_active: boolean;
+          expires_at: string | null;
+          created_at: string;
+          created_by: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          store_customer_id?: string | null;
+          guest_email?: string | null;
+          guest_phone?: string | null;
+          discount_type: CustomerDiscountType;
+          code?: string | null;
+          value_type: CustomerDiscountValueType;
+          value: number;
+          is_active?: boolean;
+          expires_at?: string | null;
+          created_at?: string;
+          created_by: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          store_customer_id?: string | null;
+          guest_email?: string | null;
+          guest_phone?: string | null;
+          discount_type?: CustomerDiscountType;
+          code?: string | null;
+          value_type?: CustomerDiscountValueType;
+          value?: number;
+          is_active?: boolean;
+          expires_at?: string | null;
+          created_at?: string;
+          created_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_discounts_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_discounts_store_customer_store_fkey";
+            columns: ["store_customer_id"];
+            referencedRelation: "store_customers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_discounts_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
