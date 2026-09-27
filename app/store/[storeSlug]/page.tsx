@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
 import { getPublicStoreHomepageSections } from "@/lib/commerce/public/homepage";
 import { getPublicProducts } from "@/lib/commerce/public/products";
@@ -42,29 +41,63 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [profile, mainNav, sections, featuredProducts] = await Promise.all([
-    getPublicStoreProfile(store.id),
+  const [mainNav, sections, featuredProducts] = await Promise.all([
     getPublicStoreNavigation(store.id, "main"),
     getPublicStoreHomepageSections(store.id),
     getPublicProducts(store.id),
   ]);
 
+  // FAZ 7.3 follow-up — "cta" tipi section (bu mağazanın tek homepage
+  // section'ı) artık genel StoreHomepageSections render'ından ÇIKARILIP
+  // aşağıdaki koyu "üst şerit" olarak özel stillendiriliyor; içerik
+  // (title/description) hâlâ bu DB satırından geliyor, sadece görünümü
+  // hardcoded. Diğer section tipleri (varsa/ileride eklenirse) generic
+  // renderer'dan değişmeden geçmeye devam ediyor — bkz. aşağıdaki
+  // StoreHomepageSections çağrısının emptyState notu.
+  const ctaSection = sections.find((section) => section.sectionTypeKey === "cta") ?? null;
+  const remainingSections = ctaSection ? sections.filter((section) => section.id !== ctaSection.id) : sections;
+
   return (
     <div>
-      <Container className="py-6">
-        <h1 className="text-2xl font-semibold text-foreground">{profile?.displayName ?? store.name}</h1>
-        {mainNav.length > 0 ? (
-          <nav className="mt-3 flex flex-wrap gap-4 text-sm">
+      {mainNav.length > 0 ? (
+        <Container className="py-6">
+          <nav className="flex flex-wrap gap-4 text-sm">
             {mainNav.map((item) => (
               <a key={item.id} href={item.url} className="text-foreground/70 hover:text-foreground hover:underline">
                 {item.label}
               </a>
             ))}
           </nav>
-        ) : null}
-      </Container>
+        </Container>
+      ) : null}
 
-      <StoreHomepageSections sections={sections} />
+      {ctaSection && (ctaSection.title || ctaSection.description) ? (
+        <div className="border-b border-[#292929] bg-[#111111]">
+          <Container className="flex min-h-[76px] flex-col items-center justify-center gap-1 py-4 text-center">
+            {ctaSection.title ? (
+              <p className={`${spaceGrotesk.className} text-sm font-semibold text-[#F5F5F5]`}>{ctaSection.title}</p>
+            ) : null}
+            {ctaSection.description ? (
+              <p className="text-[13px] text-[#A3A3A3]">{ctaSection.description}</p>
+            ) : null}
+          </Container>
+        </div>
+      ) : null}
+
+      {/*
+        FAZ 7.3 follow-up — ctaSection artık yukarıdaki özel şeritte
+        render edildiği için burada tekrar edilmemesi gerekiyor;
+        remainingSections onu zaten dışarıda bırakıyor. Sadece o TEK
+        section (bugünkü gerçek durum) varsa generic bileşenin kendi
+        "Bu mağaza için henüz yayınlanmış bir ana sayfa bölümü yok."
+        boş-durum mesajı YANLIŞ olurdu (section aslında var, sadece
+        başka yerde render ediliyor) — emptyState={<></>} bunu bilinçli
+        olarak bastırıyor, SADECE ctaSection dolu olduğu bu durumda;
+        mağazanın gerçekten hiç section'ı yoksa (ctaSection null) bu hâlâ
+        undefined'a düşüp bileşenin kendi varsayılan boş-durum mesajını
+        gösteriyor, eskisi gibi.
+      */}
+      <StoreHomepageSections sections={remainingSections} emptyState={ctaSection ? <></> : undefined} />
 
       {/*
         FAZ 7.2 — checked first, per that phase's own explicit "silip
@@ -86,11 +119,16 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         bg-brand-* tokens — the storefront has no ThemeProvider wired up
         yet (still true, see the file-level comment above), so there is no
         brand token to route through; hardcoding here matches this
-        phase's own "sadece JSX/CSS" scope. The big headline below is a
-        <p>, not an <h1> — the Container above already renders this
-        page's one semantic <h1> ({"{profile?.displayName ?? store.name}"});
-        adding a second <h1> here would be an accessibility regression
-        this phase never asked for.
+        phase's own "sadece JSX/CSS" scope.
+
+        FAZ 7.3 follow-up — the big headline below is now this page's
+        real <h1> (was a <p> before): the old top Container's
+        `{profile?.displayName ?? store.name}` <h1> was removed per this
+        follow-up's explicit "tekrarlayan başlığı kaldır" instruction
+        (header already shows the brand name, this hero already repeats
+        it too — a third repetition served no one), so promoting this
+        one to <h1> is what keeps the page at exactly one semantic
+        heading rather than zero.
       */}
       <section className="relative isolate overflow-hidden bg-neutral-950">
         <div className="relative h-[560px] w-full sm:h-[640px] lg:h-[720px]">
@@ -116,11 +154,11 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
 
           <div className="relative flex h-full items-end sm:items-center">
             <Container className="pb-10 sm:pb-0">
-              <p
+              <h1
                 className={`${spaceGrotesk.className} max-w-2xl text-3xl font-bold uppercase leading-tight text-white sm:text-5xl lg:text-6xl`}
               >
                 TAKTİKALP46 <span className="text-[#D95F00]">GÜVENLE TAŞI.</span>
-              </p>
+              </h1>
               <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
                 Kydex&apos;in hassasiyeti. Sahaya hazır performans.
               </p>
