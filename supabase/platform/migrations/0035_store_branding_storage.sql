@@ -5,14 +5,13 @@
 -- tenant-aware storage.objects RLS desenini kullanır, ama BİLİNÇLİ OLARAK
 -- FARKLI bir bucket'a, farklı bir public/private kararıyla.
 --
--- ⚠️ NOT APPLIED YET — bu turdaki Supabase MCP bağlantısı koptuğu için bu
--- migration BU OTURUMDA apply_migration ile uygulanamadı/list_migrations
--- ile doğrulanamadı (kod tabanının kendi son numarası 0034; bu dosya
--- 0035 olarak seçildi ama gerçek üretim sırası MCP yeniden bağlandığında
--- list_migrations ile TEKRAR doğrulanmalı — bu repo'nun kendi 0023-0028
--- geçmişi zaten dosya adı numarasının gerçek uygulama sırasıyla birebir
--- örtüşmeyebileceğini gösteriyor). Uygulanana kadar logo/favicon yükleme
--- akışı ÇALIŞMAZ (bucket yok) — bkz. bu fazın kendi commit/rapor notu.
+-- Uygulandı: yazıldığı turda Supabase MCP bağlantısı kopmuştu (0034'ün son
+-- migration olduğu ve 0035'in boş olduğu SADECE dosya listesinden
+-- çıkarılmıştı, list_migrations ile doğrulanamamıştı); bağlantı geri
+-- geldiğinde list_migrations ile 0034'ün hâlâ son migration olduğu
+-- TEKRAR doğrulandı, sonra bu dosya apply_migration ile uygulandı ve
+-- ardından yine list_migrations ile 0035 olarak gerçekten uygulandığı
+-- teyit edildi — bu repo'nun her migration'ında izlenen aynı disiplin.
 --
 -- PUBLIC BUCKET (public=true) — migration 0020'nin `product-images`
 -- bucket'ının TAM TERSİ karar, kasıtlı: bir favicon/logo tarayıcı
