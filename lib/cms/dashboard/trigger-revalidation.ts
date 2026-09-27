@@ -48,6 +48,21 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  * olmalı; bu helper sadece o başarılı yazımdan SONRA çağrılan, saf bir
  * cache-invalidation sinyali.
  */
+/**
+ * FAZ 11 Kısım B — bu mekanizma (dolayısıyla REVALIDATE_WEBHOOK_SECRET'ın
+ * kendisi) SADECE `websites` tablosuna ait, Petra-tarzı customer CMS
+ * sayfaları için var — yukarıdaki `websites.domain` sorgusu zaten sadece
+ * bu tabloyu okuyor, `stores`/`store_*` tablolarına hiç bakmıyor. Yeni
+ * taktikalp46-store Vercel projesi (app/store/[storeSlug]/** üzerinden
+ * servis edilen commerce storefront) bu secret'a İHTİYAÇ DUYMUYOR ve
+ * kasıtlı olarak eklenmedi: (1) hiçbir stores/** Server Action'ı
+ * triggerRemoteRevalidation'ı hiç çağırmıyor (grep ile doğrulandı), (2)
+ * storefront route'ları zaten her istekte tamamen dinamik render ediliyor
+ * (Faz 5.1'in kendi layout.tsx yorumu — hiçbir sayfa `revalidate`/statik
+ * üretime katılmıyor), yani revalidate edilecek bir cache zaten yok. Bu
+ * karar, storefront'a ileride gerçek bir statik/ISR cache eklenirse
+ * (bugün YOK) yeniden gözden geçirilmeli — o zamana kadar bu not geçerli.
+ */
 export async function triggerRemoteRevalidation(customerId: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
 
