@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStoreSubscribers, type SubscriberRow } from "@/lib/commerce/subscribers";
+import { countDiscountUsageForAdmin } from "@/lib/commerce/discounts";
 import { formatPrice } from "@/lib/utils/format-price";
 import { inputClasses } from "@/lib/utils/input-classes";
 import { serverEnv } from "@/lib/config/env";
@@ -12,6 +13,8 @@ import {
   sendSubscriberEmailAction,
   sendSubscriberWhatsappAction,
 } from "./actions";
+import { DiscountValueFields } from "./discount-value-fields";
+import { DiscountMinOrderField } from "./discount-min-order-field";
 import type { CustomerDiscountType, CustomerDiscountValueType } from "@/lib/supabase/types";
 
 interface ActiveDiscountRow {
@@ -23,6 +26,10 @@ interface ActiveDiscountRow {
   code: string | null;
   value_type: CustomerDiscountValueType;
   value: number;
+  /** Faz 12 devamı, migration 0037. NULL = sınırsız. */
+  max_uses: number | null;
+  /** Faz 12 devamı, migration 0037. NULL = şart yok. */
+  min_order_amount: number | null;
 }
 
 const SUCCESS_MESSAGES: Record<string, string> = {
@@ -78,12 +85,26 @@ export default async function StoreSubscribersPage({
     getStoreSubscribers(supabase, storeId),
     supabase
       .from("customer_discounts")
-      .select("id, store_customer_id, guest_email, guest_phone, discount_type, code, value_type, value")
+      .select("id, store_customer_id, guest_email, guest_phone, discount_type, code, value_type, value, max_uses, min_order_amount")
       .eq("store_id", storeId)
       .eq("is_active", true),
   ]);
 
   const activeDiscounts = (activeDiscountRows ?? []) as ActiveDiscountRow[];
+
+  // Faz 12 devamı — "X/Y kullanıldı" için, sadece max_uses SET olan
+  // indirimler için sayım yapılıyor (sınırsız olanlar için gereksiz bir
+  // sorgu). lib/commerce/discounts.ts'in checkout'ta kullandığı AYNI
+  // countDiscountUsageForAdmin (dolayısıyla aynı orders.applied_discount_id
+  // sayımı) — iki farklı hesaplama yolu yok.
+  const usageByDiscountId = new Map(
+    await Promise.all(
+      activeDiscounts
+        .filter((d) => d.max_uses !== null)
+        .map(async (d) => [d.id, await countDiscountUsageForAdmin(supabase, d.id)] as const),
+    ),
+  );
+
   const discountByStoreCustomerId = new Map(
     activeDiscounts.filter((d) => d.store_customer_id).map((d) => [d.store_customer_id as string, d]),
   );
@@ -173,6 +194,12 @@ export default async function StoreSubscribersPage({
                     <span className="text-foreground/80">
                       Aktif indirim: {discount.value_type === "percentage" ? `%${discount.value}` : formatPrice(Number(discount.value))}{" "}
                       ({discount.discount_type === "code" ? `kod: ${discount.code}` : "otomatik"})
+                      {discount.max_uses !== null ? (
+                        <> · {usageByDiscountId.get(discount.id) ?? 0}/{discount.max_uses} kullanıldı</>
+                      ) : null}
+                      {discount.min_order_amount !== null ? (
+                        <> · {formatPrice(Number(discount.min_order_amount))} üzeri</>
+                      ) : null}
                     </span>
                     <form action={deactivateDiscount.bind(null, discount.id)}>
                       <button type="submit" className="text-foreground/60 underline-offset-2 hover:text-foreground hover:underline">
@@ -201,13 +228,42 @@ export default async function StoreSubscribersPage({
                             <option value="code">Kod tipi</option>
                             {row.kind === "registered" ? <option value="auto">Otomatik</option> : null}
                           </select>
-                          <select name="valueType" defaultValue="percentage" className={inputClasses}>
-                            <option value="percentage">Yüzde (%)</option>
-                            <option value="fixed">Sabit (TL)</option>
-                          </select>
+                          <DiscountValueFields />
                         </div>
-                        <input name="value" type="number" min="0" step="0.01" placeholder="Değer" required className={inputClasses} />
                         <input name="code" type="text" placeholder="Kod (boş bırakılırsa otomatik üretilir)" className={inputClasses} />
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label htmlFor={`maxUsesPreset-${row.key}`} className="mb-1 block text-foreground/60">
+                              Kullanım Sınırı
+                            </label>
+                            <select id={`maxUsesPreset-${row.key}`} name="maxUsesPreset" defaultValue="unlimited" className={inputClasses}>
+                              <option value="unlimited">Sınırsız</option>
+                              <option value="1">1 kez</option>
+                              <option value="2">2 kez</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor={`maxUsesCustom-${row.key}`} className="mb-1 block text-foreground/60">
+                              veya özel sayı
+                            </label>
+                            <input
+                              id={`maxUsesCustom-${row.key}`}
+                              name="maxUsesCustom"
+                              type="number"
+                              min="1"
+                              step="1"
+                              placeholder="Örn. 10"
+                              className={inputClasses}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-foreground/60">Minimum Sepet Tutarı</label>
+                          <DiscountMinOrderField />
+                        </div>
+
                         <div>
                           <label htmlFor={`expiresAt-${row.key}`} className="mb-1 block text-foreground/60">
                             Son geçerlilik tarihi (opsiyonel)

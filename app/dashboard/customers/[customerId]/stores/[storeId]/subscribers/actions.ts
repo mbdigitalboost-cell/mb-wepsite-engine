@@ -48,6 +48,35 @@ export async function createDiscountAction(customerId: string, storeId: string, 
   const rawExpiresAt = String(formData.get("expiresAt") ?? "").trim();
   const manualCode = String(formData.get("code") ?? "").trim();
 
+  // Faz 12 devamı — "1/2/Sınırsız" select + yanında opsiyonel serbest sayı
+  // input'u: serbest input doluysa O kazanır (select bir varsayılan, tek
+  // zorunlu seçenek değil — görevin kendi "gerekirse serbest sayı da
+  // girilebilsin" talimatı). "unlimited" -> null (sınırsız).
+  const maxUsesPreset = String(formData.get("maxUsesPreset") ?? "unlimited");
+  const maxUsesCustomRaw = String(formData.get("maxUsesCustom") ?? "").trim();
+  let maxUses: number | null = null;
+  if (maxUsesCustomRaw) {
+    const parsed = Number(maxUsesCustomRaw);
+    if (!Number.isFinite(parsed) || parsed <= 0) redirect(`${basePath(customerId, storeId)}?error=form`);
+    maxUses = Math.floor(parsed);
+  } else if (maxUsesPreset !== "unlimited") {
+    const parsed = Number(maxUsesPreset);
+    if (!Number.isFinite(parsed) || parsed <= 0) redirect(`${basePath(customerId, storeId)}?error=form`);
+    maxUses = Math.floor(parsed);
+  }
+
+  // Minimum sepet tutarı — hazır seçenek butonları (1000/5000) client'ta
+  // AYNI bu input'un değerini dolduruyor (DiscountMinOrderField), yani
+  // burada tek bir alan yeterli: preset/serbest ayrımı yok, ikisi de aynı
+  // "minOrderAmount" input'una yazıyor.
+  const minOrderAmountRaw = String(formData.get("minOrderAmount") ?? "").trim();
+  let minOrderAmount: number | null = null;
+  if (minOrderAmountRaw) {
+    const parsed = Number(minOrderAmountRaw);
+    if (!Number.isFinite(parsed) || parsed <= 0) redirect(`${basePath(customerId, storeId)}?error=form`);
+    minOrderAmount = parsed;
+  }
+
   if (discountType !== "code" && discountType !== "auto") redirect(`${basePath(customerId, storeId)}?error=form`);
   if (valueType !== "percentage" && valueType !== "fixed") redirect(`${basePath(customerId, storeId)}?error=form`);
   if (!Number.isFinite(rawValue) || rawValue <= 0) redirect(`${basePath(customerId, storeId)}?error=form`);
@@ -74,6 +103,8 @@ export async function createDiscountAction(customerId: string, storeId: string, 
     value_type: valueType,
     value: rawValue,
     expires_at: rawExpiresAt ? new Date(rawExpiresAt).toISOString() : null,
+    max_uses: maxUses,
+    min_order_amount: minOrderAmount,
     created_by: user.id,
   });
 
@@ -90,7 +121,7 @@ export async function createDiscountAction(customerId: string, storeId: string, 
     action: "customer_discount.create",
     entityType: "customer_discount",
     entityId: null,
-    metadata: { storeId, targetKind, discountType, valueType, value: rawValue },
+    metadata: { storeId, targetKind, discountType, valueType, value: rawValue, maxUses, minOrderAmount },
   });
 
   revalidatePath(basePath(customerId, storeId));

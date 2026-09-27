@@ -1531,6 +1531,10 @@ export type Database = {
           expires_at: string | null;
           created_at: string;
           created_by: string;
+          /** Faz 12 devamı, migration 0037. NULL = sınırsız. Kullanım SAYISI burada tutulmaz — orders.applied_discount_id sayılarak hesaplanır. */
+          max_uses: number | null;
+          /** Faz 12 devamı, migration 0037. NULL = şart yok. */
+          min_order_amount: number | null;
         };
         Insert: {
           id?: string;
@@ -1546,6 +1550,8 @@ export type Database = {
           expires_at?: string | null;
           created_at?: string;
           created_by: string;
+          max_uses?: number | null;
+          min_order_amount?: number | null;
         };
         Update: {
           id?: string;
@@ -1561,6 +1567,8 @@ export type Database = {
           expires_at?: string | null;
           created_at?: string;
           created_by?: string;
+          max_uses?: number | null;
+          min_order_amount?: number | null;
         };
         Relationships: [
           {

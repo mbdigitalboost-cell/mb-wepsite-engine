@@ -225,28 +225,31 @@ export async function createOrderAction(
   // log's own "which customer does this concern" field.
   const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.id).maybeSingle();
 
-  // "Aboneler" indirim sistemi — migration 0036/lib/commerce/discounts.ts.
-  // Girilen bir kod varsa ve GEÇERSİZSE, indirimsiz devam etmek yerine
-  // sipariş hiç oluşturulmadan burada hata dönülüyor: müşteri özellikle bir
-  // kod girdiyse "geçersiz kod" demek, onu sessizce yok saymaktan daha
-  // dürüst bir davranış. Kod hiç girilmediyse (boş) tek olasılık 'auto'dur.
+  // "Aboneler" indirim sistemi — migration 0036/0037, lib/commerce/discounts.ts.
+  // Girilen bir kod varsa ve herhangi bir sebeple GEÇERSİZSE (yok/süresi
+  // geçmiş/minimum tutar karşılanmıyor/kullanım hakkı dolmuş), indirimsiz
+  // devam etmek yerine sipariş hiç oluşturulmadan burada hata dönülüyor —
+  // müşteri özellikle bir kod girdiyse, onu sessizce yok saymak yerine NEDEN
+  // geçersiz olduğunu söylemek daha dürüst bir davranış. Kod hiç girilmediyse
+  // (boş) tek olasılık 'auto'dur, o yol zaten sessiz (bkz. resolveApplicableDiscount).
   const enteredCode = parsedCustomer.data.discountCode || null;
-  const resolvedDiscount = await resolveApplicableDiscount({
+  const discountResolution = await resolveApplicableDiscount({
     admin,
     storeId: store.id,
     subtotal,
     userId: user?.id ?? null,
     enteredCode,
   });
-  if (enteredCode && !resolvedDiscount) {
-    return {
-      status: "error",
-      error: "Girdiğiniz indirim kodu geçersiz veya süresi dolmuş.",
-      orderNumber: null,
-      discountAmount: null,
-      discountCode: null,
-    };
+  if (enteredCode && discountResolution.status !== "applied") {
+    let discountError = "Girdiğiniz indirim kodu geçersiz veya süresi dolmuş.";
+    if (discountResolution.status === "min_order_not_met") {
+      discountError = `Bu kod en az ${discountResolution.minOrderAmount.toLocaleString("tr-TR")} TL'lik alışverişte geçerli.`;
+    } else if (discountResolution.status === "usage_limit_reached") {
+      discountError = "Bu kodun kullanım hakkı dolmuş.";
+    }
+    return { status: "error", error: discountError, orderNumber: null, discountAmount: null, discountCode: null };
   }
+  const resolvedDiscount = discountResolution.status === "applied" ? discountResolution.discount : null;
 
   const { data: order, error: orderError } = await admin
     .from("orders")
