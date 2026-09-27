@@ -26,15 +26,24 @@ import { StoreMobileMenu } from "./store-mobile-menu";
  * this header from getting cramped now that it also has a hamburger
  * button on the left — Sepetim stays inline since it's the one action a
  * shopper expects to reach in one tap at any screen size.
+ *
+ * FAZ 10 — `logoUrl` (store_profiles.logo_url, resolved server-side in
+ * layout.tsx) shows an actual logo image when a store has uploaded one;
+ * falls straight back to the original store-name text link when it
+ * hasn't — every store without a logo (which is every store except
+ * Taktikalp46 today) renders exactly as before.
  */
 export function StoreHeader({
   storeSlug,
   storeName,
+  logoUrl,
   isLoggedIn,
   categories,
 }: {
   storeSlug: string;
   storeName: string;
+  /** FAZ 10 — resolved server-side (layout.tsx) from lib/commerce/public/profile.ts. `null` when the store hasn't uploaded a logo. */
+  logoUrl: string | null;
   /** FAZ 5.1 — resolved server-side (layout.tsx) since this is a client component with no session access of its own. */
   isLoggedIn: boolean;
   /** FAZ 6.1 — top-level categories only (parentId === null), resolved server-side in layout.tsx. */
@@ -47,8 +56,13 @@ export function StoreHeader({
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <StoreMobileMenu storeSlug={storeSlug} categories={categories} isLoggedIn={isLoggedIn} />
-          <Link href={`/store/${storeSlug}`} className="text-sm font-medium text-foreground hover:underline">
-            {storeName}
+          <Link href={`/store/${storeSlug}`} className="flex items-center">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- store-provided public Storage URL, arbitrary per tenant; not worth a next.config.ts remotePatterns entry for a small header logo.
+              <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain" />
+            ) : (
+              <span className="text-sm font-medium text-foreground hover:underline">{storeName}</span>
+            )}
           </Link>
         </div>
         <Link

@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { storeProfileFormSchema } from "@/lib/validation/store-profile";
 import { storeProfileTag } from "@/lib/commerce/cache-tags";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { uploadStoreBrandingAsset } from "@/lib/commerce/upload-store-branding-asset";
 import type { StoreProfileFormState } from "./form-state";
 
 /**
@@ -26,8 +27,6 @@ export async function updateStoreProfileAction(
   const parsed = storeProfileFormSchema.safeParse({
     displayName: formData.get("displayName"),
     description: formData.get("description"),
-    logoUrl: formData.get("logoUrl"),
-    faviconUrl: formData.get("faviconUrl"),
     phone: formData.get("phone"),
     email: formData.get("email"),
     address: formData.get("address"),
@@ -51,6 +50,30 @@ export async function updateStoreProfileAction(
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
   }
 
+  // FAZ 10 — a File is only present in formData when the admin actually
+  // chose a new one this submission (an empty <input type="file"> yields
+  // no File entry, or a zero-size one). `logoUrl`/`faviconUrl` stay
+  // `undefined` in that case and are deliberately OMITTED from the upsert
+  // payload below — Postgres's own ON CONFLICT semantics leave an omitted
+  // column untouched, so saving any OTHER profile field (phone, address,
+  // ...) can never accidentally wipe out an already-uploaded logo/favicon
+  // just because this submission didn't include a new file.
+  let logoUrl: string | undefined;
+  const logoFile = formData.get("logoFile");
+  if (logoFile instanceof File && logoFile.size > 0) {
+    const result = await uploadStoreBrandingAsset({ storeId, assetType: "logo", file: logoFile });
+    if (result.error) return { error: result.error };
+    logoUrl = result.publicUrl;
+  }
+
+  let faviconUrl: string | undefined;
+  const faviconFile = formData.get("faviconFile");
+  if (faviconFile instanceof File && faviconFile.size > 0) {
+    const result = await uploadStoreBrandingAsset({ storeId, assetType: "favicon", file: faviconFile });
+    if (result.error) return { error: result.error };
+    faviconUrl = result.publicUrl;
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("store_profiles")
@@ -58,8 +81,8 @@ export async function updateStoreProfileAction(
       store_id: storeId,
       display_name: parsed.data.displayName || null,
       description: parsed.data.description || null,
-      logo_url: parsed.data.logoUrl || null,
-      favicon_url: parsed.data.faviconUrl || null,
+      ...(logoUrl !== undefined ? { logo_url: logoUrl } : {}),
+      ...(faviconUrl !== undefined ? { favicon_url: faviconUrl } : {}),
       phone: parsed.data.phone || null,
       email: parsed.data.email || null,
       address: parsed.data.address || null,

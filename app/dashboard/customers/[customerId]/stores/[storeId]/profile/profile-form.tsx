@@ -55,18 +55,46 @@ export function StoreProfileForm({ customerId, storeId, initialValues }: StorePr
         <textarea id={`${formId}-description`} name="description" rows={3} defaultValue={initialValues.description} className={inputClasses} />
       </div>
 
+      {/*
+        FAZ 10 — dosya yükleme (Storage'a, lib/commerce/upload-store-branding-asset.ts
+        üzerinden), artık ham bir URL metin kutusu değil. Mevcut logo/favicon
+        varsa (initialValues) küçük bir önizleme gösterilir — dosya seçimi
+        boş bırakılırsa (yeni bir dosya SEÇİLMEZSE) actions.ts bu alanları
+        DOKUNMADAN bırakır, formun geri kalanını kaydetmek mevcut logoyu
+        silmez.
+      */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${formId}-logoUrl`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Logo URL
+          <label htmlFor={`${formId}-logoFile`} className="mb-1.5 block text-sm font-medium text-foreground">
+            Logo
           </label>
-          <input id={`${formId}-logoUrl`} name="logoUrl" type="text" defaultValue={initialValues.logoUrl} className={inputClasses} />
+          {initialValues.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin-only preview of an already-uploaded public Storage asset, arbitrary store-provided URL not worth next/image's remotePatterns setup for a small admin thumbnail.
+            <img src={initialValues.logoUrl} alt="" className="mb-2 h-12 w-auto max-w-[200px] object-contain" />
+          ) : null}
+          <input
+            id={`${formId}-logoFile`}
+            name="logoFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className={inputClasses}
+          />
         </div>
         <div>
-          <label htmlFor={`${formId}-faviconUrl`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Favicon URL
+          <label htmlFor={`${formId}-faviconFile`} className="mb-1.5 block text-sm font-medium text-foreground">
+            Favicon
           </label>
-          <input id={`${formId}-faviconUrl`} name="faviconUrl" type="text" defaultValue={initialValues.faviconUrl} className={inputClasses} />
+          {initialValues.faviconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- see logo preview's own comment above.
+            <img src={initialValues.faviconUrl} alt="" className="mb-2 h-8 w-8 object-contain" />
+          ) : null}
+          <input
+            id={`${formId}-faviconFile`}
+            name="faviconFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className={inputClasses}
+          />
         </div>
       </div>
 

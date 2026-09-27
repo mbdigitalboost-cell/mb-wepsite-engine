@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
+import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
@@ -28,11 +29,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { storeSlug } = await params;
   const store = await getStoreBySlug(storeSlug);
+  const profile = store ? await getPublicStoreProfile(store.id) : null;
 
   return {
     title: {
       absolute: store?.name ?? "Mağaza",
     },
+    // FAZ 10 — only set when a store has actually uploaded a favicon;
+    // `icons: undefined` here means "not specified at this level", which
+    // Next's metadata merging treats as "inherit the root layout's own
+    // file-based icons" (app/icon.png/favicon.ico/apple-icon.png) — this
+    // is exactly the required fallback, not an accidental omission, and
+    // it's what keeps every OTHER store (and Petra, a completely separate
+    // route tree) rendering its existing favicon unchanged.
+    icons: profile?.faviconUrl ? { icon: profile.faviconUrl, apple: profile.faviconUrl } : undefined,
   };
 }
 
@@ -74,7 +84,8 @@ export default async function StoreLayout({
       data: { user },
     },
     allCategories,
-  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id)]);
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id), getPublicStoreProfile(store.id)]);
 
   // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
   // simple list per that phase's own "basit bir panel" spec); getPublicCategories
@@ -85,7 +96,13 @@ export default async function StoreLayout({
 
   return (
     <CartProvider storeSlug={storeSlug}>
-      <StoreHeader storeSlug={storeSlug} storeName={store.name} isLoggedIn={Boolean(user)} categories={topLevelCategories} />
+      <StoreHeader
+        storeSlug={storeSlug}
+        storeName={store.name}
+        logoUrl={profile?.logoUrl ?? null}
+        isLoggedIn={Boolean(user)}
+        categories={topLevelCategories}
+      />
       {children}
     </CartProvider>
   );

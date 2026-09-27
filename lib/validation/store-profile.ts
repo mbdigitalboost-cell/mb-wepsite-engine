@@ -30,11 +30,18 @@ export const storeBusinessInfoSchema = z.object({
   mersisNumber: z.string().trim().max(50).optional().or(z.literal("")),
 });
 
+/**
+ * FAZ 10 — logoUrl/faviconUrl BİLEREK burada YOK artık: bu iki alan artık
+ * bir dosya yükleyip Storage'ın kendi public URL'ini yazan
+ * updateStoreProfileAction'ın kendi mantığından geliyor (bkz.
+ * lib/commerce/upload-store-branding-asset.ts), asla ham bir form
+ * string'i olarak submit edilmiyor — doğrulanacak bir URL METNİ yok,
+ * doğrulanan şey bir File (boyut/MIME/magic-number, upload helper'ın
+ * kendi işi).
+ */
 export const storeProfileFormSchema = z.object({
   displayName: z.string().trim().max(200).optional().or(z.literal("")),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
-  logoUrl: urlField,
-  faviconUrl: urlField,
   phone: z.string().trim().max(20).regex(phoneRegex, "Telefon formatı: 0535 791 11 96").optional().or(z.literal("")),
   email: z.string().trim().email("Geçerli bir e-posta girin.").max(200).optional().or(z.literal("")),
   address: z.string().trim().max(500).optional().or(z.literal("")),
