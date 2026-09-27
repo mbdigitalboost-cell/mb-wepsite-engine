@@ -87,6 +87,26 @@ body {
   animation: reference-fade-in 500ms var(--motion-easing);
 }
 
+/* Taktikalp46 storefront — announcement ticker (components/commerce/public/
+   store-announcement-bar.tsx). Two identical copies of the same content
+   sit side by side (track is exactly double the single copy's width);
+   animating the track from translateX(0) to translateX(-50%) moves it by
+   exactly one copy's width, so the loop point is seamless. Pure CSS, no
+   JS — already covered by the prefers-reduced-motion override above
+   (forces a single, near-instant pass instead of a continuous scroll). */
+@keyframes storefront-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-storefront-marquee {
+  animation: storefront-marquee 26s linear infinite;
+}
+
 /* Petra Hero — atmosferik motion (components/sections/hero-atmosphere.tsx).
    Faz "Hero — Yeni Görsel + Mouse-Reactive Motion": bu katman artık
    `11_hero_main_v1.jpg`/`11_hero_mobile_v1.jpg`'nin ÜZERİNE, onların

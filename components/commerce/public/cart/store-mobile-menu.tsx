@@ -56,12 +56,20 @@ export function StoreMobileMenu({
 
   return (
     <>
+      {/*
+        FAZ 7.3 follow-up — sadece bu tetikleyici buton koyu header'a
+        (store-header.tsx) uyacak şekilde renklendirildi; menü AÇILINCA
+        görünen aşağıdaki panel (açık zemin, siyah metin) kasıtlı olarak
+        dokunulmadı — görev "header/menü çubuğu" dedi, o hep-açık, tam
+        ekran overlay drawer'ın kendisi ayrı bir görsel bağlam ve bu
+        fazın kapsamında değildi.
+      */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Menüyü aç"
         aria-expanded={open}
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-foreground/80 hover:text-foreground"
+        className="inline-flex items-center justify-center rounded-md p-1.5 text-[#F5F5F5] hover:text-[#D95F00]"
       >
         <Menu size={20} aria-hidden="true" />
       </button>

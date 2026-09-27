@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { Space_Grotesk } from "next/font/google";
 import { ShoppingCart } from "lucide-react";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
 import { useCart } from "./cart-context";
 import { StoreMobileMenu } from "./store-mobile-menu";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 1 (mağaza sepeti/configurator) — minimal persistent header, mounted
@@ -32,6 +35,14 @@ import { StoreMobileMenu } from "./store-mobile-menu";
  * falls straight back to the original store-name text link when it
  * hasn't — every store without a logo (which is every store except
  * Taktikalp46 today) renders exactly as before.
+ *
+ * FAZ 7.3 follow-up — v2 koyu tema. Bu bileşen tek bir yerden geliyor
+ * (layout.tsx, tüm /store/[storeSlug]/** sayfaları için paylaşımlı) ve
+ * tenant-bağımsız — hiçbir Taktikalp46'ya özel hardcoded içerik yok,
+ * her şey prop olarak geliyor. Bu yüzden buradaki restil, henüz tek
+ * canlı mağaza olan Taktikalp46 dışında ileride başka bir mağaza
+ * eklenirse ONU DA otomatik olarak koyu temaya alır — istenen/beklenen
+ * davranış (bkz. bu fazın kendi görev metni), yanlışlıkla değil.
  */
 export function StoreHeader({
   storeSlug,
@@ -52,7 +63,7 @@ export function StoreHeader({
   const { itemCount } = useCart();
 
   return (
-    <header className="border-b border-black/10">
+    <header className="border-b border-[#292929] bg-[#0A0A0A]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <StoreMobileMenu storeSlug={storeSlug} categories={categories} isLoggedIn={isLoggedIn} />
@@ -61,13 +72,15 @@ export function StoreHeader({
               // eslint-disable-next-line @next/next/no-img-element -- store-provided public Storage URL, arbitrary per tenant; not worth a next.config.ts remotePatterns entry for a small header logo.
               <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain" />
             ) : (
-              <span className="text-sm font-medium text-foreground hover:underline">{storeName}</span>
+              <span className={`${spaceGrotesk.className} text-sm font-bold uppercase tracking-wide text-[#F5F5F5] hover:text-[#D95F00]`}>
+                {storeName}
+              </span>
             )}
           </Link>
         </div>
         <Link
           href={`/store/${storeSlug}/sepet`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:border-black/20 hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#292929] bg-[#171717] px-3 py-1.5 text-sm text-[#F5F5F5] transition-colors hover:border-[#D95F00]"
         >
           <ShoppingCart size={16} aria-hidden="true" />
           Sepetim {itemCount > 0 ? `(${itemCount})` : ""}

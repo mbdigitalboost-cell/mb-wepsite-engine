@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Truck, ShieldCheck, RotateCcw, Headphones } from "lucide-react";
+import { Truck, ShieldCheck, RotateCcw, Headphones, ImageOff } from "lucide-react";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
 import type { PublicBrand } from "@/lib/commerce/public/brands";
 import type { PublicProduct } from "@/lib/commerce/public/products";
@@ -59,6 +59,53 @@ export function WhyKydexSection({ headingFont }: { headingFont: string }) {
   );
 }
 
+/**
+ * Paylaşımlı kategori kartı — gradient overlay + sol-alt etiket. Hem
+ * "Kydex Koleksiyonu" (2) hem "Diğer Kategoriler" (7) için AYNI görsel dil
+ * (FAZ 7.3 follow-up'un kendi talimatı: "OtherCategoriesSection'ı,
+ * KydexCollectionSection'daki AYNI görsel+gradient+etiket düzenine
+ * çevir") — iki ayrı JSX kopyası yerine tek, parametreli bileşen.
+ */
+function CategoryImageCard({
+  storeSlug,
+  category,
+  headingFont,
+  height,
+}: {
+  storeSlug: string;
+  category: PublicCategory;
+  headingFont: string;
+  height: string;
+}) {
+  const imageUrl = category.imageUrl ?? CATEGORY_FALLBACK_IMAGES[category.slug] ?? null;
+  return (
+    <Link
+      href={`/store/${storeSlug}/kategori/${category.slug}`}
+      className={`group relative block ${height} overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
+    >
+      {imageUrl ? (
+        <Image
+          src={imageUrl}
+          alt={category.name}
+          fill
+          unoptimized
+          sizes="(min-width: 1024px) 25vw, 50vw"
+          className="object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : null}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.05) 0%, rgba(10,10,10,0.88) 100%)" }}
+      />
+      <div className="absolute bottom-4 left-4">
+        <p className={`${headingFont} text-[15px] font-semibold text-white`}>{category.name}</p>
+        <p className="mt-0.5 text-xs font-medium text-[#D95F00]">Keşfet →</p>
+      </div>
+    </Link>
+  );
+}
+
 /** 2. Kydex Koleksiyonu — 4 sabit slug, gerçek kategori varsa kart olarak göster (yoksa o kart atlanır). */
 const FEATURED_COLLECTION_SLUGS = ["silah-kiliflari", "bicak-kiliflari", "sarjor-kiliflari", "edc-ve-gunluk-tasima"];
 
@@ -81,36 +128,15 @@ export function KydexCollectionSection({
       <Container>
         <h2 className={`${HEADING} ${headingFont} mb-6 text-[26px] text-[#F5F5F5]`}>Kydex Koleksiyonu</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {featured.map((category) => {
-            const imageUrl = category.imageUrl ?? CATEGORY_FALLBACK_IMAGES[category.slug] ?? null;
-            return (
-              <Link
-                key={category.id}
-                href={`/store/${storeSlug}/kategori/${category.slug}`}
-                className="group relative block h-[240px] overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-              >
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={category.name}
-                    fill
-                    unoptimized
-                    sizes="(min-width: 1024px) 25vw, 50vw"
-                    className="object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : null}
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.05) 0%, rgba(10,10,10,0.88) 100%)" }}
-                />
-                <div className="absolute bottom-4 left-4">
-                  <p className={`${headingFont} text-[15px] font-semibold text-white`}>{category.name}</p>
-                  <p className="mt-0.5 text-xs font-medium text-[#D95F00]">Keşfet →</p>
-                </div>
-              </Link>
-            );
-          })}
+          {featured.map((category) => (
+            <CategoryImageCard
+              key={category.id}
+              storeSlug={storeSlug}
+              category={category}
+              headingFont={headingFont}
+              height="h-[240px]"
+            />
+          ))}
         </div>
       </Container>
     </div>
@@ -156,14 +182,23 @@ export function BrandFinderSection({
   );
 }
 
-/** 4. Öne Çıkan Kydex Ürünler — gerçek ürünler (page.tsx en fazla 4 gönderiyor), yıldız YOK. Ürün yoksa render edilmez. */
+/**
+ * 4. Öne Çıkan Kydex Ürünler — gerçek ürünler (page.tsx en fazla 4
+ * gönderiyor), yıldız YOK. Ürün yoksa render edilmez.
+ *
+ * FAZ 7.3 follow-up — `imageUrl` artık page.tsx'te her ürün için ayrıca
+ * çözülen gerçek birincil ürün fotoğrafı (getPublicProductImages,
+ * product-images bucket'ından imzalı URL) — önceden burada hardcoded boş
+ * bir <div> vardı. Görseli olmayan (nadir) bir ürün için sahte bir görsel
+ * uydurmak yerine nötr bir ikon (ImageOff) gösteriliyor.
+ */
 export function FeaturedProductsSection({
   storeSlug,
   products,
   headingFont,
 }: {
   storeSlug: string;
-  products: PublicProduct[];
+  products: (PublicProduct & { imageUrl: string | null })[];
   headingFont: string;
 }) {
   if (products.length === 0) return null;
@@ -179,7 +214,22 @@ export function FeaturedProductsSection({
               href={`/store/${storeSlug}/urun/${product.slug}`}
               className="group block overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <div className="h-[170px] bg-[#1D1D1B]" />
+              <div className="relative h-[170px] bg-[#1D1D1B]">
+                {product.imageUrl ? (
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    sizes="(min-width: 1024px) 25vw, 50vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <ImageOff size={28} strokeWidth={1.5} className="text-[#4A4A46]" aria-hidden="true" />
+                  </div>
+                )}
+              </div>
               <div className="p-3.5">
                 <div className="text-[13px] font-semibold text-[#F5F5F5]">{product.name}</div>
                 <div className={`${headingFont} mt-2 text-[15px] font-bold text-[#D95F00]`}>
@@ -237,7 +287,15 @@ export function BrandStatementSection({ headingFont }: { headingFont: string }) 
   );
 }
 
-/** 7. Diğer Kategoriler — Kydex Koleksiyonu'na girmeyen gerçek kategoriler. Hiç yoksa render edilmez. */
+/**
+ * 7. Diğer Kategoriler — Kydex Koleksiyonu'na girmeyen gerçek kategoriler.
+ * Hiç yoksa render edilmez.
+ *
+ * FAZ 7.3 follow-up — düz metin kutucukları yerine artık KydexCollectionSection
+ * ile AYNI CategoryImageCard (görsel+gradient+etiket) kullanıyor; giyim/
+ * canta/palaska-ve-kemer/kampanyali-urunler için CATEGORY_FALLBACK_IMAGES'taki
+ * dosyalar zaten repoda (yeni dosya eklenmedi).
+ */
 export function OtherCategoriesSection({
   storeSlug,
   categories,
@@ -258,17 +316,17 @@ export function OtherCategoriesSection({
         </h2>
         <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
           {otherCategories.map((category) => (
-            <Link
+            <CategoryImageCard
               key={category.id}
-              href={`/store/${storeSlug}/kategori/${category.slug}`}
-              className="flex h-[70px] items-end rounded-[5px] border border-[#292929] bg-[#171717] p-2.5 text-xs text-[#F5F5F5] transition-colors hover:border-[#D95F00]"
-            >
-              {category.name}
-            </Link>
+              storeSlug={storeSlug}
+              category={category}
+              headingFont={headingFont}
+              height="h-[150px]"
+            />
           ))}
           <Link
             href={`/store/${storeSlug}/kategoriler`}
-            className="flex h-[70px] items-end rounded-[5px] border border-[#292929] bg-[#171717] p-2.5 text-xs font-medium text-[#D95F00] transition-colors hover:border-[#D95F00]"
+            className="flex h-[150px] items-center justify-center rounded-[6px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
           >
             Tümünü Gör →
           </Link>
@@ -393,8 +451,22 @@ export function StoreFooterV2({
             </div>
           </div>
         </div>
-        <div className="mt-7 border-t border-[#292929] pt-4 text-center text-xs text-[#7A776E]">
-          © {new Date().getFullYear()} Taktikalp46 — Güvenle Taşı.
+        {/*
+          FAZ 7.3 follow-up — "MB Digital Boost tarafından geliştirilmiştir"
+          rozeti. components/layout/site-footer.tsx (Petra'nın kendi
+          footer'ı) BİREBİR aynı metni + aynı /images/mb-digital-boost/
+          mb-mark.png dosyasını (16px, opacity-70) zaten kullanıyor —
+          Petra'nın kendi kodu/görseli SADECE okundu, değiştirilmedi; aynı
+          stil burada tekrarlandı. mb-mark.png kök public/ altında olduğu
+          için (tek bir tenant'a özel değil) yeni bir dosya kopyalamaya
+          gerek yoktu.
+        */}
+        <div className="mt-7 flex flex-col items-center justify-between gap-2 border-t border-[#292929] pt-4 text-center text-xs text-[#7A776E] sm:flex-row sm:text-left">
+          <p>© {new Date().getFullYear()} Taktikalp46 — Güvenle Taşı.</p>
+          <p className="flex items-center gap-1.5">
+            <span>Web sitesi MB Digital Boost tarafından geliştirilmiştir.</span>
+            <Image src="/images/mb-digital-boost/mb-mark.png" alt="" width={16} height={16} className="opacity-70" />
+          </p>
         </div>
       </Container>
     </footer>

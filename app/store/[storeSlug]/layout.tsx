@@ -5,6 +5,7 @@ import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
+import { StoreAnnouncementBar } from "@/components/commerce/public/store-announcement-bar";
 
 /**
  * Per-store tab title. Without this, every /store/[storeSlug]/** page
@@ -96,6 +97,8 @@ export default async function StoreLayout({
 
   return (
     <CartProvider storeSlug={storeSlug}>
+      {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
+      <StoreAnnouncementBar />
       <StoreHeader
         storeSlug={storeSlug}
         storeName={store.name}

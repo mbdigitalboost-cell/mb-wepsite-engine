@@ -6,7 +6,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
 import { getPublicStoreHomepageSections } from "@/lib/commerce/public/homepage";
-import { getPublicProducts } from "@/lib/commerce/public/products";
+import { getPublicProducts, getPublicProductImages } from "@/lib/commerce/public/products";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
 import { StoreHomepageSections } from "@/components/commerce/public/homepage-sections/store-homepage-sections";
@@ -83,6 +83,20 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const topLevelCategories = categories.filter((category) => category.parentId === null);
   // "Öne Çıkan Kydex Ürünler" — kaç tane varsa (0-4), sahte ürünle 4'e tamamlanmıyor.
   const featuredProducts = allProducts.slice(0, 4);
+  // FAZ 7.3 follow-up — en fazla 4 ürün olduğu için (yukarıdaki slice),
+  // ürün başına bir getPublicProductImages çağrısı burada kabul
+  // edilebilir bir maliyet (bu fonksiyonun kendi doc comment'i genel
+  // liste sayfaları için bunu reddetmişti — orada ürün sayısı sınırsızdı,
+  // burada sabit ve küçük). isPrimary=true olan görsel, yoksa sort_order'a
+  // göre ilk görsel kullanılıyor; hiç görseli yoksa null (bileşen nötr bir
+  // placeholder gösteriyor, sahte bir görsel değil).
+  const featuredProductsWithImages = await Promise.all(
+    featuredProducts.map(async (product) => {
+      const images = await getPublicProductImages(store.id, product.id);
+      const primary = images.find((image) => image.isPrimary) ?? images[0] ?? null;
+      return { ...product, imageUrl: primary?.url ?? null };
+    }),
+  );
   const instagramUrl =
     typeof profile?.socialLinks.instagram === "string" && profile.socialLinks.instagram.trim().length > 0
       ? profile.socialLinks.instagram
@@ -229,7 +243,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         <WhyKydexSection headingFont={spaceGrotesk.className} />
         <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
         <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={spaceGrotesk.className} />
-        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProducts} headingFont={spaceGrotesk.className} />
+        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={spaceGrotesk.className} />
         <ProductionFeelSection headingFont={spaceGrotesk.className} />
         <BrandStatementSection headingFont={spaceGrotesk.className} />
         <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
