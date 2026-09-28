@@ -247,33 +247,6 @@ export function FeaturedProductsSection({
   );
 }
 
-/** 5. Kydex'in Üretim Hissi — foto/video YOK (gerçek görsel gelince ayrıca eklenecek), düz koyu zemin + süreç adımları. */
-const PRODUCTION_STEPS = ["Kydex Levha", "Isı", "Şekillendirme", "Kesim", "Son Ürün"];
-
-export function ProductionFeelSection({ headingFont }: { headingFont: string }) {
-  return (
-    <div
-      className="py-20"
-      style={{ background: "linear-gradient(160deg, #111111 0%, #0A0A0A 100%)" }}
-    >
-      <Container className="flex flex-col items-center gap-4 text-center">
-        <h2 className={`${HEADING} ${headingFont} text-[34px] text-[#F5F5F5]`}>Formdan Ekipmana</h2>
-        <p className="max-w-xl text-[15px] leading-relaxed text-[#A3A3A3]">
-          Kydex&apos;in şekillendirilmesinden son ürüne kadar teknik detaylara odaklanan üretim yaklaşımı.
-        </p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-[#A3A3A3]">
-          {PRODUCTION_STEPS.map((step, index) => (
-            <span key={step} className="flex items-center gap-2">
-              <span className="rounded-full border border-[#292929] px-3.5 py-1.5">{step}</span>
-              {index < PRODUCTION_STEPS.length - 1 ? <span>→</span> : null}
-            </span>
-          ))}
-        </div>
-      </Container>
-    </div>
-  );
-}
-
 /** 6. "Güvenle Taşı." marka statement — statik. */
 export function BrandStatementSection({ headingFont }: { headingFont: string }) {
   return (

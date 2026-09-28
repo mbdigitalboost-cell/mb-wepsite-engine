@@ -16,7 +16,6 @@ import {
   KydexCollectionSection,
   BrandFinderSection,
   FeaturedProductsSection,
-  ProductionFeelSection,
   BrandStatementSection,
   OtherCategoriesSection,
   TrustBadgesSection,
@@ -244,7 +243,6 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
         <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={spaceGrotesk.className} />
         <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={spaceGrotesk.className} />
-        <ProductionFeelSection headingFont={spaceGrotesk.className} />
         <BrandStatementSection headingFont={spaceGrotesk.className} />
         <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
         <TrustBadgesSection />
