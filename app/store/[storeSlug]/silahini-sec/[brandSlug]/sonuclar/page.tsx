@@ -7,6 +7,7 @@ import { getPublicProducts } from "@/lib/commerce/public/products";
 import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb, SelectedBrandChip } from "@/components/commerce/public/silahini-sec-progress";
+import { SilahiniSecCtaBand } from "@/components/commerce/public/silahini-sec-cta-band";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
@@ -19,18 +20,12 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
  * bir filtre parametresi eklemeye gerek yoktu. Aynı ProductGrid
  * (kategori sayfasının da kullandığı) yeniden kullanılıyor, kopyalanmadı.
  *
- * Faz 12 devamı — v2 koyu tema, SADECE bu sayfaya özel çevre (breadcrumb/
- * rozet/başlık) için — ProductGrid'in KENDİSİ bilerek DEĞİŞTİRİLMEDİ,
- * çünkü /kategori/[categorySlug] sayfası da AYNI bileşeni kullanıyor ve o
- * sayfa bu fazın kapsamında değil (grep ile doğrulandı: ProductGrid sadece
- * bu 2 sayfada + product-grid.tsx'in kendisinde geçiyor). ProductGrid'in
- * kendi kart stili hâlâ açık temaya göre (border-black/10, text-foreground,
- * açık zemin varsayımıyla) — bu yüzden onu doğrudan #0A0A0A sayfa zemininin
- * üzerine koymak koyu-üstünde-koyu metin görünmez hale getirirdi (checkout
- * formlarında düzeltilen AYNI sınıftan bir hata). Çözüm: ProductGrid'i açık
- * renkli, kendi içinde tutarlı bir "kart" panelinin içine sarmalamak — bu
- * panel bu SAYFAYA özel (page-level çevre), product-grid.tsx'in kendisine
- * dokunulmuyor.
+ * Faz 12 devamı (A) — ProductGrid artık KENDİSİ koyu tema (bkz.
+ * product-grid.tsx'in kendi doc comment'i, /kategori/[categorySlug] ile
+ * paylaşılıyor, o sayfa da bu fazda koyulaştırıldı) — bu yüzden önceki
+ * turda burada geçici olarak eklenen açık renkli "kart" sarmalayıcı
+ * (bg-[#F5F5F5]) artık gereksiz ve kaldırıldı; ProductGrid doğrudan
+ * sayfanın #0A0A0A zemini üzerinde kendi başına okunur.
  */
 export default async function StoreChooseWeaponResultsPage({
   params,
@@ -68,10 +63,10 @@ export default async function StoreChooseWeaponResultsPage({
           <SelectedBrandChip brandName={brand.name} />
         </div>
 
-        <div className="mt-6 rounded-lg bg-[#F5F5F5] p-4">
-          <ProductGrid storeSlug={storeSlug} products={products} />
-        </div>
+        <ProductGrid storeSlug={storeSlug} products={products} />
       </Container>
+
+      <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb } from "@/components/commerce/public/silahini-sec-progress";
+import { SilahiniSecCtaBand } from "@/components/commerce/public/silahini-sec-cta-band";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
@@ -50,6 +51,8 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
           </ul>
         )}
       </Container>
+
+      <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
     </div>
   );
 }

@@ -25,10 +25,19 @@ function formatPrice(value: number) {
  *
  * No pagination/filter/sort/cart button — explicitly out of scope for
  * this phase.
+ *
+ * Faz 12 devamı — v2 koyu tema. Bu bileşen İKİ çağıran arasında paylaşılıyor
+ * (bu dosyanın kendi doc comment'i: homepage + kategori sayfası) — homepage
+ * artık bu bileşeni KULLANMIYOR (Öne Çıkan Kydex Ürünler kendi ayrı
+ * FeaturedProductsSection'ına geçti, bkz. taktikalp46-homepage-sections.tsx),
+ * bu yüzden tek gerçek çağıran bugün /kategori/[categorySlug] ve
+ * /silahini-sec/[brandSlug]/sonuclar — ikisi de artık koyu temalı, bu
+ * yüzden bu bileşenin kendisini koyulaştırmak güvenli (üçüncü, hâlâ açık
+ * temalı bir çağıranı yok).
  */
 export function ProductGrid({ storeSlug, products }: ProductGridProps) {
   if (products.length === 0) {
-    return <p className="text-sm text-foreground/60">Henüz ürün eklenmemiş.</p>;
+    return <p className="text-sm text-[#A3A3A3]">Henüz ürün eklenmemiş.</p>;
   }
 
   return (
@@ -37,16 +46,16 @@ export function ProductGrid({ storeSlug, products }: ProductGridProps) {
         <li key={product.id}>
           <Link
             href={`/store/${storeSlug}/urun/${product.slug}`}
-            className="block rounded-lg border border-black/10 p-3 text-sm transition-colors hover:border-black/20"
+            className="block rounded-lg border border-[#292929] bg-[#171717] p-3 text-sm transition-colors hover:border-[#D95F00]"
           >
             {/* STEP 33 display-only — product.brand already resolved by getPublicProducts/attachBrandsToProducts, no extra query here. No link/filter, plain label. */}
             {product.brand ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">{product.brand.name}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[#A3A3A3]">{product.brand.name}</p>
             ) : null}
-            <p className="font-medium text-foreground">{product.name}</p>
-            <p className="mt-1 text-foreground/70">{formatPrice(product.price)}</p>
+            <p className="font-medium text-[#F5F5F5]">{product.name}</p>
+            <p className="mt-1 text-[#F5F5F5]">{formatPrice(product.price)}</p>
             {product.compareAtPrice ? (
-              <p className="text-xs text-foreground/40 line-through">{formatPrice(product.compareAtPrice)}</p>
+              <p className="text-xs text-[#A3A3A3] line-through">{formatPrice(product.compareAtPrice)}</p>
             ) : null}
           </Link>
         </li>
