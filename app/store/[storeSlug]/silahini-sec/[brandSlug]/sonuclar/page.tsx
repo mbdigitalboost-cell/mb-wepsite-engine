@@ -66,7 +66,10 @@ export default async function StoreChooseWeaponResultsPage({
         <ProductGrid storeSlug={storeSlug} products={products} />
       </Container>
 
-      <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
+      {/* Faz 12 devamı — bandın kendi py-14'üne dokunmadan, üstündeki ürün grid'iyle arasına nefes payı. */}
+      <div className="mt-16">
+        <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
+      </div>
     </div>
   );
 }

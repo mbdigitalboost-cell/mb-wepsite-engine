@@ -52,7 +52,10 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
         )}
       </Container>
 
-      <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
+      {/* Faz 12 devamı — bandın kendi py-14'üne dokunmadan, üstündeki grid'le arasına nefes payı. */}
+      <div className="mt-16">
+        <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
+      </div>
     </div>
   );
 }
