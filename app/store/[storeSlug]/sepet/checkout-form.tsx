@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { inputClasses } from "@/lib/utils/input-classes";
+import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
 import { formatPrice } from "@/lib/utils/format-price";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/validation/order";
@@ -237,7 +237,7 @@ export function CheckoutForm({
                     name="savedAddressChoice"
                     checked={selectedAddressId === address.id}
                     onChange={() => handleAddressChoice(address.id)}
-                    className="mt-0.5 h-4 w-4 border-black/20"
+                    className={`mt-0.5 ${storefrontRadioClasses}`}
                   />
                   <span>
                     <span className="font-medium text-foreground">{address.label || `${address.addressCity} adresi`}</span>
@@ -255,7 +255,7 @@ export function CheckoutForm({
                   name="savedAddressChoice"
                   checked={selectedAddressId === "new"}
                   onChange={() => handleAddressChoice("new")}
-                  className="h-4 w-4 border-black/20"
+                  className={storefrontRadioClasses}
                 />
                 Yeni adres gir
               </label>
@@ -272,7 +272,7 @@ export function CheckoutForm({
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className={inputClasses}
+                className={storefrontInputClasses}
               />
             </div>
             <div>
@@ -284,7 +284,7 @@ export function CheckoutForm({
                 type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                className={inputClasses}
+                className={storefrontInputClasses}
               />
             </div>
           </div>
@@ -298,7 +298,7 @@ export function CheckoutForm({
               type="email"
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
-              className={inputClasses}
+              className={storefrontInputClasses}
             />
           </div>
 
@@ -320,7 +320,7 @@ export function CheckoutForm({
               value={addressNeighborhood}
               onChange={(e) => setAddressNeighborhood(e.target.value)}
               placeholder="ör. Caferağa Mahallesi"
-              className={inputClasses}
+              className={storefrontInputClasses}
             />
           </div>
 
@@ -333,7 +333,7 @@ export function CheckoutForm({
               value={addressLine}
               onChange={(e) => setAddressLine(e.target.value)}
               rows={2}
-              className={inputClasses}
+              className={storefrontInputClasses}
             />
           </div>
 
@@ -341,7 +341,7 @@ export function CheckoutForm({
             <label htmlFor="checkout-note" className="mb-1.5 block text-sm font-medium text-foreground">
               Not <span className="text-foreground/40">(opsiyonel)</span>
             </label>
-            <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClasses} />
+            <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={storefrontInputClasses} />
           </div>
 
           <Button type="button" size="md" onClick={handleContinue}>
@@ -378,7 +378,7 @@ export function CheckoutForm({
                     value={method}
                     checked={paymentMethod === method}
                     onChange={() => setPaymentMethod(method)}
-                    className="h-4 w-4 border-black/20"
+                    className={storefrontRadioClasses}
                   />
                   {method}
                 </label>
@@ -418,7 +418,7 @@ export function CheckoutForm({
             <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-foreground">
               İndirim Kodu <span className="font-normal text-foreground/50">(varsa)</span>
             </label>
-            <input id="discountCode" name="discountCode" type="text" className={inputClasses} placeholder="Örn. HOSGELDIN10" />
+            <input id="discountCode" name="discountCode" type="text" className={storefrontInputClasses} placeholder="Örn. HOSGELDIN10" />
           </div>
 
           <div className="flex items-center gap-2">

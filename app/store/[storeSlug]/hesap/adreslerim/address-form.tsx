@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { inputClasses } from "@/lib/utils/input-classes";
+import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
 import { addAddressAction, updateAddressAction } from "./actions";
 import { initialAddressFormState } from "./form-state";
@@ -26,6 +26,12 @@ export interface AddressFormInitialValues {
  * initial useState, keep a hidden input carrying the resolved name back
  * out" pattern — that sepet/checkout-form.tsx already established. Not
  * reimplemented, just applied here too.
+ *
+ * Faz 12 devamı — storefrontInputClasses'a geçti (bkz. lib/utils/
+ * storefront-input-classes.ts'in kendi doc comment'i) — eskiden admin
+ * dashboard'la paylaşılan `inputClasses` kullanıyordu, karanlık modda/bazı
+ * tarayıcılarda metni görünmez kılan aynı kök nedenden bu form da
+ * etkileniyordu.
  */
 export function AddressForm({
   storeSlug,
@@ -67,7 +73,7 @@ export function AddressForm({
             type="text"
             defaultValue={initialValues?.label}
             placeholder="ör. Ev, İş"
-            className={inputClasses}
+            className={storefrontInputClasses}
           />
         </div>
         <div>
@@ -79,7 +85,7 @@ export function AddressForm({
             name="recipientName"
             type="text"
             defaultValue={initialValues?.recipientName}
-            className={inputClasses}
+            className={storefrontInputClasses}
           />
         </div>
       </div>
@@ -88,7 +94,7 @@ export function AddressForm({
         <label htmlFor={`${formId}-phone`} className="mb-1.5 block text-sm font-medium text-foreground">
           Telefon <span className="text-foreground/40">(opsiyonel)</span>
         </label>
-        <input id={`${formId}-phone`} name="phone" type="tel" defaultValue={initialValues?.phone} className={inputClasses} />
+        <input id={`${formId}-phone`} name="phone" type="tel" defaultValue={initialValues?.phone} className={storefrontInputClasses} />
       </div>
 
       <input type="hidden" name="addressCity" value={selectedProvince?.name ?? ""} />
@@ -111,7 +117,7 @@ export function AddressForm({
           type="text"
           defaultValue={initialValues?.addressNeighborhood}
           placeholder="ör. Caferağa Mahallesi"
-          className={inputClasses}
+          className={storefrontInputClasses}
         />
       </div>
 
@@ -124,7 +130,7 @@ export function AddressForm({
           name="addressLine"
           defaultValue={initialValues?.addressLine}
           rows={2}
-          className={inputClasses}
+          className={storefrontInputClasses}
         />
       </div>
 

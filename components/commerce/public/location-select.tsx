@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { inputClasses } from "@/lib/utils/input-classes";
+import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import turkeyLocationsData from "@/lib/data/turkey-locations.json";
 
 export interface Province {
@@ -32,6 +32,17 @@ export function findProvinceByName(name: string | undefined): Province | null {
  * province/district NAME for its own hidden `addressCity`/`addressDistrict`
  * inputs), this component only renders the two <select>s and resets
  * districtId to "" whenever province changes.
+ *
+ * Faz 12 devamı — storefrontInputClasses (koyu tema, bkz. o dosyanın kendi
+ * doc comment'i, kök neden dahil) kullanıyor artık, eski paylaşımlı
+ * `inputClasses`'ın (admin dashboard'la ortak) YERİNE. Bu bileşen
+ * checkout-form.tsx VE signup-form.tsx tarafından paylaşıldığı için bu
+ * değişiklik ikisini de etkiliyor — signup formu bu görevin talep ettiği
+ * sınırın (checkout + adres formları) dışında ama AYNI kök nedenden AYNI
+ * şekilde etkileniyordu; il/ilçe seçicisini sadece checkout'ta düzeltip
+ * kayıt formunda kırık bırakmak, tek bir paylaşılan bileşenin iki farklı
+ * stile bölünmesini gerektirirdi — bunun yerine tutarlı tek bir düzeltme
+ * tercih edildi (bkz. commit mesajı).
  */
 export function ProvinceDistrictSelect({
   idPrefix,
@@ -65,7 +76,7 @@ export function ProvinceDistrictSelect({
             onProvinceIdChange(e.target.value);
             onDistrictIdChange("");
           }}
-          className={inputClasses}
+          className={storefrontInputClasses}
         >
           <option value="">Seçin</option>
           {PROVINCES.map((p) => (
@@ -84,7 +95,7 @@ export function ProvinceDistrictSelect({
           value={districtId}
           onChange={(e) => onDistrictIdChange(e.target.value)}
           disabled={!provinceId}
-          className={inputClasses}
+          className={storefrontInputClasses}
         >
           <option value="">{provinceId ? "Seçin" : "Önce il seçin"}</option>
           {districts.map((d) => (
