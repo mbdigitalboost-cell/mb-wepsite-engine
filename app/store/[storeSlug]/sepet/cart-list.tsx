@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils/format-price";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
+import { resolveCartProductImages } from "./actions";
 import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkout-form";
 
 /**
@@ -17,6 +19,18 @@ import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkou
  * even after a successful order clears the cart (see its own comment on
  * why that ordering matters) — so it owns its own "success / empty /
  * form" decision independently of this component's item-list rendering.
+ *
+ * BUG FIX — kırık ürün görseli. item.imageUrl sepete eklenme ANINDA
+ * snapshotlanan bir Supabase Storage SIGNED URL — 1 saat sonra süresi
+ * doluyor (bkz. actions.ts'teki resolveCartProductImages'ın kendi doc
+ * comment'i, tam kök neden analizi orada). Mount olduğunda ve sepetteki
+ * ÜRÜN KÜMESİ değiştiğinde (miktar değişikliklerinde DEĞİL — gereksiz
+ * yeniden istek olmasın diye productIdsKey sadece benzersiz productId
+ * setini temsil ediyor) bu action'ı çağırıp TAZE imzalı URL'ler istiyor;
+ * `freshImageUrls[item.productId]` artık `item.imageUrl`'den ÖNCELİKLİ —
+ * eski alan sadece action henüz dönmeden ÖNCEKİ ilk boyamada kısa süreli
+ * bir fallback (genelde o an için de hâlâ geçerlidir, sepete yeni
+ * eklenmiş bir üründe).
  */
 export function CartList({
   storeSlug,
@@ -28,6 +42,25 @@ export function CartList({
   savedAddresses: SavedAddress[];
 }) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
+
+  const [freshImageUrls, setFreshImageUrls] = useState<Record<string, string | null>>({});
+  const productIdsKey = [...new Set(items.map((item) => item.productId))].sort().join(",");
+
+  useEffect(() => {
+    if (!productIdsKey) return;
+    let cancelled = false;
+
+    resolveCartProductImages(storeSlug, productIdsKey.split(",")).then((result) => {
+      if (!cancelled) setFreshImageUrls(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // items kasıtlı olarak değil, productIdsKey (benzersiz productId kümesinin
+    // kararlı bir temsili) dependency — miktar değişikliklerinde gereksiz
+    // yeniden istek atılmasın diye.
+  }, [storeSlug, productIdsKey]);
 
   return (
     <div className="mt-6">
@@ -44,9 +77,18 @@ export function CartList({
             {items.map((item) => (
               <li key={item.lineId} className="flex flex-wrap items-start gap-4 p-4">
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border border-[#292929] bg-[#0A0A0A]">
-                  {item.imageUrl ? (
-                    <Image src={item.imageUrl} alt={item.productName} fill unoptimized sizes="80px" className="object-cover" />
-                  ) : null}
+                  {(() => {
+                    // Henüz çözülmemiş (key hiç yok) -> eski snapshot fallback.
+                    // Çözülmüş ama null -> ürünün gerçekten görseli yok, HİÇ
+                    // görsel gösterme (sahte/kırık bir src göstermektense boş
+                    // kutu daha doğru, product-grid.tsx'in kendi ImageOff
+                    // deseniyle tutarlı bir "görsel yok" durumu).
+                    const freshUrl = freshImageUrls[item.productId];
+                    const displayUrl = item.productId in freshImageUrls ? freshUrl : item.imageUrl;
+                    return displayUrl ? (
+                      <Image src={displayUrl} alt={item.productName} fill unoptimized sizes="80px" className="object-cover" />
+                    ) : null;
+                  })()}
                 </div>
 
                 <div className="min-w-0 flex-1">

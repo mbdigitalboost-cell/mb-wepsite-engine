@@ -7,6 +7,7 @@ import {
   getPublicProductOptions,
   getPublicProductVariants,
   getPublicProductAddons,
+  getPublicProductImages,
 } from "@/lib/commerce/public/products";
 import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/public/products";
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
@@ -400,4 +401,46 @@ export async function createOrderAction(
     discountAmount: resolvedDiscount?.amount ?? null,
     discountCode: resolvedDiscount?.code ?? null,
   };
+}
+
+/**
+ * BUG FIX — sepetteki "kırık/yüklenmeyen ürün görseli". KÖK NEDEN: sepet
+ * tamamen client-side/localStorage (cart-context.tsx'in kendi doc comment'i
+ * — "every display field is snapshotted at add-time"), yani CartItem.imageUrl
+ * ürün sepete eklendiği ANDA product-configurator.tsx'ten gelen
+ * `primaryImage.url`'i KALICI olarak saklıyordu. O url ise
+ * getPublicProductImages'ın (products.ts) ürettiği bir Supabase Storage
+ * SIGNED URL — createSignedUrl(path, 3600), yani 1 SAAT sonra süresi
+ * doluyor. Diğer sayfalar (ürün detay, kategori, homepage) bu sorunu hiç
+ * yaşamıyor çünkü HER SERVER RENDER'DA (Server Component) imzayı yeniden
+ * üretiyorlar — sepet ise localStorage'da saatlerce/günlerce yaşayan TEK
+ * yer, bu yüzden imza süresi dolduğunda görsel 403/kırık oluyor. Bu,
+ * "diğer sayfalardaki çalışan görsel-çekme deseniyle karşılaştır" talimatı
+ * gereği bulunan gerçek kök neden.
+ *
+ * ÇÖZÜM: cart-list.tsx artık item.imageUrl'e (potansiyel olarak bayat)
+ * GÜVENMİYOR — mount olduğunda (ve sepetteki ürün kümesi değiştiğinde) bu
+ * action'ı çağırıp, sepetteki her productId için TAZE bir imzalı URL
+ * istiyor, dönen Map'i item.imageUrl'in YERİNE kullanıyor. localStorage'daki
+ * eski imageUrl alanı hâlâ var (CartItem şeması değişmedi, geriye dönük
+ * uyumluluk için) ama artık SADECE action henüz dönmemişken ilk boyamada
+ * bir "resim yok" flash'ını önleyen bir geçici fallback.
+ */
+export async function resolveCartProductImages(
+  storeSlug: string,
+  productIds: string[],
+): Promise<Record<string, string | null>> {
+  const store = await getStoreBySlug(storeSlug);
+  if (!store) return {};
+
+  const uniqueProductIds = [...new Set(productIds)];
+  const entries = await Promise.all(
+    uniqueProductIds.map(async (productId) => {
+      const images = await getPublicProductImages(store.id, productId);
+      const primary = images.find((image) => image.isPrimary) ?? images[0] ?? null;
+      return [productId, primary?.url ?? null] as const;
+    }),
+  );
+
+  return Object.fromEntries(entries);
 }

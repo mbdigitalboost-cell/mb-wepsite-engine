@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Space_Grotesk } from "next/font/google";
+import { Check } from "lucide-react";
 import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses, storefrontButtonOutlineClasses } from "@/lib/utils/storefront-button-classes";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
@@ -71,6 +72,20 @@ export interface SavedAddress {
  * (lib/validation/order.ts) is what createOrderAction actually enforces
  * server-side; a customer with JS disabled or a tampered client still
  * can't bypass it.
+ *
+ * TASARIM — akordeon adım akışı (Shopify tarzı checkout'lardan ilham
+ * alındı, hiçbir şey birebir kopyalanmadı — koyu tema token'larımıza
+ * uyarlandı). `step` state'i (1|2) AYNI kaldı, SADECE render biçimi
+ * değişti: tek, büyük, bordürlü bir "form kutusu" içinde iki adımdan
+ * birini göstermek yerine, artık İKİ adım da aynı akan dikey yapının
+ * parçası (ince `border-t` çizgileriyle ayrılan bölümler, dışarıda tek
+ * bir kutu YOK). Aktif adım (step ile eşleşen) tam açık render oluyor
+ * (numaralı rozet + tüm alanlar); TAMAMLANAN adım (step 2'deyken adım 1)
+ * küçük bir özet satırına daralıyor (✓ ikonu + ad/adres özeti + "Değiştir"
+ * linki) — tıklanınca setStep(1) ile yeniden açılıyor, aynı mevcut state
+ * korunarak (hiçbir alan sıfırlanmıyor). Adım 2 henüz ULAŞILMAMIŞSA
+ * (step === 1) hiç render edilmiyor — "kilitli/gelecek adım" placeholder'ı
+ * YOK, sade tutuldu.
  */
 export function CheckoutForm({
   storeSlug,
@@ -211,234 +226,280 @@ export function CheckoutForm({
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
+  // Adım 1 tamamlanıp daraltıldığında gösterilen özet — sadece dolu
+  // parçalar birleştiriliyor, "undefined"/bomboş virgül artığı yok.
+  const step1Summary = [customerName, [addressNeighborhood, selectedDistrict?.name, selectedProvince?.name].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="mt-6 rounded-lg border border-[#292929] bg-[#171717] p-4">
-      <div className="mb-4 flex items-center gap-2 text-xs text-[#A3A3A3]">
-        <span className={step === 1 ? "font-semibold text-[#F5F5F5]" : undefined}>1. Teslimat Bilgisi</span>
-        <span aria-hidden="true">→</span>
-        <span className={step === 2 ? "font-semibold text-[#F5F5F5]" : undefined}>2. Ödeme Yöntemi</span>
-      </div>
+    <div className="mt-6">
+      {/* Adım 1 — Teslimat Bilgisi */}
+      <div className="border-t border-[#292929] pt-6">
+        {step === 1 ? (
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className={`${spaceGrotesk.className} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-white`}>
+                1
+              </span>
+              <h2 className={`${spaceGrotesk.className} text-base font-bold text-[#F5F5F5]`}>Teslimat Bilgisi</h2>
+            </div>
 
-      {step === 1 ? (
-        <div className="space-y-4">
-          {step1Error ? (
-            <p role="alert" className="text-sm text-red-400">
-              {step1Error}
-            </p>
-          ) : null}
+            <div className="mt-5 space-y-4">
+              {step1Error ? (
+                <p role="alert" className="text-sm text-red-400">
+                  {step1Error}
+                </p>
+              ) : null}
 
-          {savedAddresses.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-[#F5F5F5]">Teslimat Adresi</p>
-              {savedAddresses.map((address) => (
-                <label
-                  key={address.id}
-                  className="flex items-start gap-2 rounded-md border border-[#292929] p-3 text-sm hover:border-[#D95F00]"
-                >
+              {savedAddresses.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-[#F5F5F5]">Teslimat Adresi</p>
+                  {savedAddresses.map((address) => (
+                    <label
+                      key={address.id}
+                      className="flex items-start gap-2 rounded-md border border-[#292929] p-3 text-sm hover:border-[#D95F00]"
+                    >
+                      <input
+                        type="radio"
+                        name="savedAddressChoice"
+                        checked={selectedAddressId === address.id}
+                        onChange={() => handleAddressChoice(address.id)}
+                        className={`mt-0.5 ${storefrontRadioClasses}`}
+                      />
+                      <span>
+                        <span className="font-medium text-[#F5F5F5]">{address.label || `${address.addressCity} adresi`}</span>
+                        {address.isDefault ? <span className="ml-2 text-xs text-[#D95F00]">Varsayılan</span> : null}
+                        <br />
+                        <span className="text-[#A3A3A3]">
+                          {address.addressDistrict}, {address.addressCity}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-2 rounded-md border border-[#292929] p-3 text-sm text-[#F5F5F5] hover:border-[#D95F00]">
+                    <input
+                      type="radio"
+                      name="savedAddressChoice"
+                      checked={selectedAddressId === "new"}
+                      onChange={() => handleAddressChoice("new")}
+                      className={storefrontRadioClasses}
+                    />
+                    Yeni adres gir
+                  </label>
+                </div>
+              ) : null}
+    
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="checkout-customerName" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                    Ad Soyad
+                  </label>
                   <input
-                    type="radio"
-                    name="savedAddressChoice"
-                    checked={selectedAddressId === address.id}
-                    onChange={() => handleAddressChoice(address.id)}
-                    className={`mt-0.5 ${storefrontRadioClasses}`}
+                    id="checkout-customerName"
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className={storefrontInputClasses}
                   />
-                  <span>
-                    <span className="font-medium text-[#F5F5F5]">{address.label || `${address.addressCity} adresi`}</span>
-                    {address.isDefault ? <span className="ml-2 text-xs text-[#D95F00]">Varsayılan</span> : null}
-                    <br />
-                    <span className="text-[#A3A3A3]">
-                      {address.addressDistrict}, {address.addressCity}
-                    </span>
-                  </span>
+                </div>
+                <div>
+                  <label htmlFor="checkout-customerPhone" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                    Telefon
+                  </label>
+                  <input
+                    id="checkout-customerPhone"
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className={storefrontInputClasses}
+                  />
+                </div>
+              </div>
+    
+              <div>
+                <label htmlFor="checkout-customerEmail" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                  E-posta <span className="text-[#A3A3A3]">(opsiyonel)</span>
                 </label>
-              ))}
-              <label className="flex items-center gap-2 rounded-md border border-[#292929] p-3 text-sm text-[#F5F5F5] hover:border-[#D95F00]">
                 <input
-                  type="radio"
-                  name="savedAddressChoice"
-                  checked={selectedAddressId === "new"}
-                  onChange={() => handleAddressChoice("new")}
-                  className={storefrontRadioClasses}
+                  id="checkout-customerEmail"
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className={storefrontInputClasses}
                 />
-                Yeni adres gir
-              </label>
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="checkout-customerName" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-                Ad Soyad
-              </label>
-              <input
-                id="checkout-customerName"
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className={storefrontInputClasses}
+              </div>
+    
+              <ProvinceDistrictSelect
+                idPrefix="checkout"
+                provinceId={provinceId}
+                districtId={districtId}
+                onProvinceIdChange={setProvinceId}
+                onDistrictIdChange={setDistrictId}
               />
-            </div>
-            <div>
-              <label htmlFor="checkout-customerPhone" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-                Telefon
-              </label>
-              <input
-                id="checkout-customerPhone"
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className={storefrontInputClasses}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="checkout-customerEmail" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-              E-posta <span className="text-[#A3A3A3]">(opsiyonel)</span>
-            </label>
-            <input
-              id="checkout-customerEmail"
-              type="email"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              className={storefrontInputClasses}
-            />
-          </div>
-
-          <ProvinceDistrictSelect
-            idPrefix="checkout"
-            provinceId={provinceId}
-            districtId={districtId}
-            onProvinceIdChange={setProvinceId}
-            onDistrictIdChange={setDistrictId}
-          />
-
-          <div>
-            <label htmlFor="checkout-neighborhood" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-              Mahalle
-            </label>
-            <input
-              id="checkout-neighborhood"
-              type="text"
-              value={addressNeighborhood}
-              onChange={(e) => setAddressNeighborhood(e.target.value)}
-              placeholder="ör. Caferağa Mahallesi"
-              className={storefrontInputClasses}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="checkout-addressLine" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-              Adres (Sokak / Bina / Daire No)
-            </label>
-            <textarea
-              id="checkout-addressLine"
-              value={addressLine}
-              onChange={(e) => setAddressLine(e.target.value)}
-              rows={2}
-              className={storefrontInputClasses}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="checkout-note" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-              Not <span className="text-[#A3A3A3]">(opsiyonel)</span>
-            </label>
-            <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={storefrontInputClasses} />
-          </div>
-
-          <button type="button" onClick={handleContinue} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
-            Devam Et
-          </button>
-        </div>
-      ) : (
-        <form action={formAction} className="space-y-4">
-          <input type="hidden" name="cartItems" value={JSON.stringify(items.map(toWireCartLine))} />
-          <input type="hidden" name="customerName" value={customerName} />
-          <input type="hidden" name="customerPhone" value={customerPhone} />
-          <input type="hidden" name="customerEmail" value={customerEmail} />
-          <input type="hidden" name="addressCity" value={selectedProvince?.name ?? ""} />
-          <input type="hidden" name="addressDistrict" value={selectedDistrict?.name ?? ""} />
-          <input type="hidden" name="addressNeighborhood" value={addressNeighborhood} />
-          <input type="hidden" name="addressLine" value={addressLine} />
-          <input type="hidden" name="note" value={note} />
-
-          {state.status === "error" && state.error ? (
-            <p role="alert" className="text-sm text-red-400">
-              {state.error}
-            </p>
-          ) : null}
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-[#F5F5F5]">Ödeme Yöntemi</p>
-            <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
-            <div className="space-y-2">
-              {PAYMENT_METHODS.map((method) => (
-                <label key={method} className="flex items-center gap-2 text-sm text-[#F5F5F5]">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={method}
-                    checked={paymentMethod === method}
-                    onChange={() => setPaymentMethod(method)}
-                    className={storefrontRadioClasses}
-                  />
-                  {method}
+    
+              <div>
+                <label htmlFor="checkout-neighborhood" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                  Mahalle
                 </label>
-              ))}
+                <input
+                  id="checkout-neighborhood"
+                  type="text"
+                  value={addressNeighborhood}
+                  onChange={(e) => setAddressNeighborhood(e.target.value)}
+                  placeholder="ör. Caferağa Mahallesi"
+                  className={storefrontInputClasses}
+                />
+              </div>
+    
+              <div>
+                <label htmlFor="checkout-addressLine" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                  Adres (Sokak / Bina / Daire No)
+                </label>
+                <textarea
+                  id="checkout-addressLine"
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  rows={2}
+                  className={storefrontInputClasses}
+                />
+              </div>
+    
+              <div>
+                <label htmlFor="checkout-note" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                  Not <span className="text-[#A3A3A3]">(opsiyonel)</span>
+                </label>
+                <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={storefrontInputClasses} />
+              </div>
+
+              <button type="button" onClick={handleContinue} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
+                Devam Et
+              </button>
             </div>
           </div>
-
-          <div className="rounded-md border border-[#292929] p-3">
-            <h3 className="text-xs font-medium text-[#A3A3A3]">Sipariş Özeti</h3>
-            <ul className="mt-2 space-y-1 text-sm">
-              {items.map((item) => (
-                <li key={item.lineId} className="flex justify-between gap-3">
-                  <span className="text-[#A3A3A3]">
-                    {item.productName}
-                    {item.variantLabel ? ` (${item.variantLabel})` : ""} × {item.quantity}
-                  </span>
-                  <span className="whitespace-nowrap text-[#F5F5F5]">{formatPrice(item.unitPrice * item.quantity)}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
-              <span>Toplam</span>
-              <span>{formatPrice(subtotal)}</span>
+        ) : (
+          // Tamamlandı — daraltılmış özet satırı + "Değiştir". Tıklanınca
+          // setStep(1) ile yeniden açılıyor, mevcut state (ad/adres/vb.)
+          // AYNEN korunuyor, hiçbir alan sıfırlanmıyor.
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#D95F00] text-[#D95F00]">
+                <Check size={13} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-[#F5F5F5]">Teslimat Bilgisi</p>
+                {step1Summary ? <p className="mt-0.5 text-xs text-[#A3A3A3]">{step1Summary}</p> : null}
+              </div>
             </div>
-          </div>
-
-          {/*
-            "Aboneler" indirim sistemi — kod GERÇEKTEN geçerli mi/aktif mi/
-            bu mağazaya mı ait, sadece siparişi tamamen gönderip
-            createOrderAction çalıştığında server-side doğrulanıyor (burada
-            ayrı bir "kodu uygula" ön-kontrolü YOK — ek bir Server Action
-            round-trip'i bu fazın kapsamı dışında). Geçersiz bir kod, formu
-            tekrar hatayla (yukarıdaki state.error) döndürür, sipariş
-            OLUŞTURULMAZ — indirimsiz sessizce devam etmez.
-          */}
-          <div>
-            <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-              İndirim Kodu <span className="font-normal text-[#A3A3A3]">(varsa)</span>
-            </label>
-            <input id="discountCode" name="discountCode" type="text" className={storefrontInputClasses} placeholder="Örn. HOSGELDIN10" />
-          </div>
-
-          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setStep(1)}
-              disabled={isPending}
-              className={`${spaceGrotesk.className} ${storefrontButtonOutlineClasses}`}
+              className="text-xs font-medium text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
             >
-              Geri
-            </button>
-            <button type="submit" disabled={isPending} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
-              {isPending ? "Gönderiliyor..." : "Siparişi Onayla"}
+              Değiştir
             </button>
           </div>
-        </form>
-      )}
+        )}
+      </div>
+
+      {/* Adım 2 — Ödeme Yöntemi. Adım 1 tamamlanmadan HİÇ render edilmiyor (kilitli/gelecek adım placeholder'ı yok, sade tutuldu). */}
+      {step === 2 ? (
+        <div className="border-t border-[#292929] pt-6">
+          <div className="flex items-center gap-2.5">
+            <span className={`${spaceGrotesk.className} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-white`}>
+              2
+            </span>
+            <h2 className={`${spaceGrotesk.className} text-base font-bold text-[#F5F5F5]`}>Ödeme Yöntemi</h2>
+          </div>
+
+          <form action={formAction} className="mt-5 space-y-4">
+            <input type="hidden" name="cartItems" value={JSON.stringify(items.map(toWireCartLine))} />
+            <input type="hidden" name="customerName" value={customerName} />
+            <input type="hidden" name="customerPhone" value={customerPhone} />
+            <input type="hidden" name="customerEmail" value={customerEmail} />
+            <input type="hidden" name="addressCity" value={selectedProvince?.name ?? ""} />
+            <input type="hidden" name="addressDistrict" value={selectedDistrict?.name ?? ""} />
+            <input type="hidden" name="addressNeighborhood" value={addressNeighborhood} />
+            <input type="hidden" name="addressLine" value={addressLine} />
+            <input type="hidden" name="note" value={note} />
+
+            {state.status === "error" && state.error ? (
+              <p role="alert" className="text-sm text-red-400">
+                {state.error}
+              </p>
+            ) : null}
+
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-[#F5F5F5]">Ödeme Yöntemi</p>
+              <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
+              <div className="space-y-2">
+                {PAYMENT_METHODS.map((method) => (
+                  <label key={method} className="flex items-center gap-2 text-sm text-[#F5F5F5]">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method}
+                      checked={paymentMethod === method}
+                      onChange={() => setPaymentMethod(method)}
+                      className={storefrontRadioClasses}
+                    />
+                    {method}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-[#292929] p-3">
+              <h3 className="text-xs font-medium text-[#A3A3A3]">Sipariş Özeti</h3>
+              <ul className="mt-2 space-y-1 text-sm">
+                {items.map((item) => (
+                  <li key={item.lineId} className="flex justify-between gap-3">
+                    <span className="text-[#A3A3A3]">
+                      {item.productName}
+                      {item.variantLabel ? ` (${item.variantLabel})` : ""} × {item.quantity}
+                    </span>
+                    <span className="whitespace-nowrap text-[#F5F5F5]">{formatPrice(item.unitPrice * item.quantity)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
+                <span>Toplam</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+            </div>
+
+            {/*
+              "Aboneler" indirim sistemi — kod GERÇEKTEN geçerli mi/aktif mi/
+              bu mağazaya mı ait, sadece siparişi tamamen gönderip
+              createOrderAction çalıştığında server-side doğrulanıyor (burada
+              ayrı bir "kodu uygula" ön-kontrolü YOK — ek bir Server Action
+              round-trip'i bu fazın kapsamı dışında). Geçersiz bir kod, formu
+              tekrar hatayla (yukarıdaki state.error) döndürür, sipariş
+              OLUŞTURULMAZ — indirimsiz sessizce devam etmez.
+            */}
+            <div>
+              <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                İndirim Kodu <span className="font-normal text-[#A3A3A3]">(varsa)</span>
+              </label>
+              <input id="discountCode" name="discountCode" type="text" className={storefrontInputClasses} placeholder="Örn. HOSGELDIN10" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                disabled={isPending}
+                className={`${spaceGrotesk.className} ${storefrontButtonOutlineClasses}`}
+              >
+                Geri
+              </button>
+              <button type="submit" disabled={isPending} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
+                {isPending ? "Gönderiliyor..." : "Siparişi Onayla"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }
