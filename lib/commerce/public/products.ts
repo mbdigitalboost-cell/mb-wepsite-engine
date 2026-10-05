@@ -172,14 +172,26 @@ async function attachBrandsToProducts(products: MappedProduct[], storeId: string
 }
 
 /**
+ * Kategori sayfasının sıralama kontrolü (Faz 12 devamı — kategori
+ * filtre/sıralama) — bu üçü dışında bir değer kabul edilmiyor, çağıran
+ * taraf (kategori page.tsx) geçersiz/bilinmeyen bir `?sort=` değerini
+ * zaten "newest"e düşürüyor, bu yüzden burada ayrıca bir doğrulama/varsayılan
+ * mantığı YOK — options.sort verilmemişse (bu fonksiyonun diğer çağıranları,
+ * örn. homepage/silahini-sec, hiç sort geçmiyor) eski `sort_order` davranışı
+ * değişmeden korunuyor.
+ */
+export type PublicProductSort = "price_asc" | "price_desc" | "newest";
+
+/**
  * RLS (migration 0017's `products_select_public_active`) already restricts
  * anon rows to `is_active = true` on a publicly-visible store — `categoryId`/
- * `brandId`/`model` are additional, optional narrowing filters for the
- * category grid and brand/model filtering (STEP 33, wired in by Faz 7.2),
- * not a security boundary. `brandId` is a resolved id (callers resolve a
- * `?brand=` slug via getPublicBrandBySlug first, same store-scoped-
- * resolution-before-filtering pattern the category route already uses) —
- * this function never accepts a raw slug itself.
+ * `brandId`/`model`/`sort` are additional, optional narrowing/ordering
+ * controls for the category grid and brand/model filtering (STEP 33, wired
+ * in by Faz 7.2; `sort` added Faz 12 devamı), not a security boundary.
+ * `brandId` is a resolved id (callers resolve a `?brand=` slug via
+ * getPublicBrandBySlug first, same store-scoped-resolution-before-filtering
+ * pattern the category route already uses) — this function never accepts a
+ * raw slug itself.
  *
  * FAZ 9 — `model` still means "products whose model LIST includes this
  * value" (the param name/shape callers pass is unchanged), but
@@ -190,10 +202,16 @@ async function attachBrandsToProducts(products: MappedProduct[], storeId: string
  * Postgres only through the query builder's own parameterized operator —
  * never string-interpolated into raw SQL — and migration 0034's own GIN
  * index on `models` is what keeps this fast instead of a sequential scan.
+ *
+ * Faz 12 devamı — `sort` ("price_asc"/"price_desc"/"newest") verilmezse
+ * (bu fonksiyonun diğer tüm çağıranları — homepage, silahini-sec/sonuclar —
+ * hiç `sort` geçmiyor) eski `sort_order` (admin'in elle belirlediği sıra)
+ * davranışı DEĞİŞMEDEN korunuyor; bu sadece kategori sayfasının yeni
+ * sıralama kontrolü için eklenen, opt-in bir davranış.
  */
 export async function getPublicProducts(
   storeId: string,
-  options: { categoryId?: string; brandId?: string; model?: string } = {},
+  options: { categoryId?: string; brandId?: string; model?: string; sort?: PublicProductSort } = {},
 ): Promise<PublicProduct[]> {
   const client = createSupabasePublicClient();
 
@@ -208,7 +226,17 @@ export async function getPublicProducts(
     query = query.contains("models", [options.model]);
   }
 
-  const { data, error } = await query.order("sort_order", { ascending: true });
+  if (options.sort === "price_asc") {
+    query = query.order("price", { ascending: true });
+  } else if (options.sort === "price_desc") {
+    query = query.order("price", { ascending: false });
+  } else if (options.sort === "newest") {
+    query = query.order("created_at", { ascending: false });
+  } else {
+    query = query.order("sort_order", { ascending: true });
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[commerce/public] getPublicProducts failed:", error.message);
