@@ -12,7 +12,7 @@ import {
   PAYMENT_STATUSES,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_BADGE_VARIANT,
-} from "../status-labels";
+} from "@/lib/commerce/order-status-labels";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 
 interface OrderItemRow {

@@ -128,6 +128,24 @@ export function StoreMobileMenu({
               ) : null}
 
               <div className="mt-3 border-t border-black/10 pt-3">
+                {/*
+                  "Siparişlerim" — ÜYE OLAN OLMAYAN HERKESE (devir metninin
+                  kendi talimatı): isLoggedIn'den bağımsız, her zaman
+                  gösteriliyor. Tek route (/siparislerim) üye/misafir
+                  dallanmasını kendi içinde yapıyor (page.tsx). Bu panelin
+                  GERİ KALANI gibi (store-mobile-menu.tsx'in üstteki kendi
+                  notu — "açık zemin, siyah metin kasıtlı dokunulmadı")
+                  v2 koyu tema yerine panelin KENDİ mevcut stiliyle tutarlı
+                  tutuldu; panel bir gün koyu temaya geçerse bu link de
+                  otomatik onunla birlikte geçecek.
+                */}
+                <Link
+                  href={`/store/${storeSlug}/siparislerim`}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-md px-2 py-2 text-sm text-foreground/80 hover:bg-black/5 hover:text-foreground"
+                >
+                  Siparişlerim
+                </Link>
                 <Link
                   href={isLoggedIn ? `/store/${storeSlug}/hesap` : `/store/${storeSlug}/hesap/giris`}
                   onClick={() => setOpen(false)}

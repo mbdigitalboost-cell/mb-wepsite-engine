@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
-import { isOrderStatus, isPaymentStatus } from "./status-labels";
+import { isOrderStatus, isPaymentStatus } from "@/lib/commerce/order-status-labels";
 
 /**
  * store_editor+ (RLS: orders_update_editor_tier) — same tier as

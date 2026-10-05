@@ -23,6 +23,29 @@ function toWireCartLine(item: CartItem) {
   };
 }
 
+/** "Siparişlerim" devir metni — opsiyonel kopyala butonu, sipariş kodunu kaydetmeyi kolaylaştırmak için. navigator.clipboard yoksa (çok eski tarayıcı/http) sessizce hiçbir şey yapmaz, hata fırlatmaz. */
+function OrderCodeCopyButton({ orderNumber }: { orderNumber: number }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard
+          ?.writeText(String(orderNumber))
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => {});
+      }}
+      className="shrink-0 text-xs font-medium text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
+    >
+      {copied ? "Kopyalandı ✓" : "Kodu Kopyala"}
+    </button>
+  );
+}
+
 type Step = 1 | 2;
 
 /**
@@ -161,17 +184,36 @@ export function CheckoutForm({
     return (
       <div className="mt-6 rounded-lg border border-[#292929] bg-[#171717] p-4">
         <h2 className={`${spaceGrotesk.className} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
-        <p className="mt-2 text-sm text-[#A3A3A3]">
-          Sipariş No: <span className="font-medium text-[#F5F5F5]">#{state.orderNumber}</span>
-        </p>
+
+        {/*
+          "Siparişlerim" devir metni — orders.order_number zaten global
+          unique olduğu için YENİ bir kolon/kod ÜRETİLMEDİ, var olan
+          sipariş numarası "sipariş kodu" olarak kullanılıyor. Önceden
+          burada sadece düz metinle gösteriliyordu, müşteriye SAKLAMASI
+          gerektiği hiç söylenmiyordu — şimdi ayrı, turuncu vurgulu bir
+          blokta, "Siparişlerim" sorgusunda neye ihtiyaç duyacağı AÇIKÇA
+          belirtilerek gösteriliyor.
+        */}
+        <div className="mt-3 rounded-md border border-[#D95F00]/40 bg-[#D95F00]/10 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#D95F00]">Sipariş Kodunuz</p>
+          <div className="mt-1.5 flex items-center justify-between gap-3">
+            <span className={`${spaceGrotesk.className} text-2xl font-bold text-[#F5F5F5]`}>#{state.orderNumber}</span>
+            <OrderCodeCopyButton orderNumber={state.orderNumber} />
+          </div>
+          <p className="mt-2 text-xs text-[#A3A3A3]">
+            Bu kodu ve sipariş verirken girdiğiniz telefon numarasını &quot;Siparişlerim&quot; bölümünde sipariş
+            durumunuzu sorgulamak için kullanabilirsiniz — lütfen kaydedin.
+          </p>
+        </div>
+
         {/* "Aboneler" indirim sistemi — server'ın (createOrderAction) gerçekten uyguladığı indirim, client'ın kendi tahmini değil. */}
         {state.discountAmount && state.discountAmount > 0 ? (
-          <p className="mt-1 text-sm text-emerald-400">
+          <p className="mt-3 text-sm text-emerald-400">
             {state.discountCode ? `"${state.discountCode}" kodu ile ` : ""}
             {formatPrice(state.discountAmount)} indirim uygulandı.
           </p>
         ) : null}
-        <p className="mt-1 text-sm text-[#A3A3A3]">
+        <p className="mt-3 text-sm text-[#A3A3A3]">
           Siparişinizi onaylamak için sizi arayacağız. Sorularınız için mağazayla iletişime geçebilirsiniz.
         </p>
       </div>

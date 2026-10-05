@@ -77,3 +77,18 @@ export const orderCartLineSchema = z.object({
 export const orderCartLinesSchema = z.array(orderCartLineSchema).min(1, "Sepetiniz boş.").max(100);
 
 export type OrderCartLine = z.infer<typeof orderCartLineSchema>;
+
+/**
+ * "Siparişlerim" — misafir (üye olmayan) sipariş sorgusu. İki alan: sipariş
+ * kodu (orders.order_number, global unique) + sipariş verirken girilen
+ * telefon. SADECE şekil doğrulanıyor burada — gerçek eşleşme (doğru kod +
+ * doğru telefon mu) lib/commerce/public/order-lookup.ts'te server-side,
+ * normalize edilmiş karşılaştırmayla yapılıyor (bkz. o dosyanın kendi doc
+ * comment'i). Eşleşmeyen HER durum (kod yok / telefon tutmuyor) actions.ts'te
+ * TEK VE AYNI genel hata mesajına düşüyor — enumeration'a karşı, hangi
+ * alanın yanlış olduğu asla ayrı ayrı belirtilmiyor.
+ */
+export const guestOrderLookupSchema = z.object({
+  orderNumber: z.coerce.number().int().positive({ message: "Sipariş bulunamadı, bilgileri kontrol edin." }),
+  phone: z.string().trim().min(1, "Sipariş bulunamadı, bilgileri kontrol edin."),
+});
