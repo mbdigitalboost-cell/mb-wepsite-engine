@@ -218,6 +218,56 @@ export async function getPublicProducts(
   return attachBrandsToProducts((data ?? []).map(mapProduct), storeId);
 }
 
+/**
+ * Faz 12 devamı — ürün detay sayfasının "Çok Satanlar" bölümü için. Ürün
+ * başına GERÇEK toplam satılan adet (order_items.quantity SUM'ı), azalan
+ * sırada ilk `limit` ürün. Sahte/tahmini veri YOK — hiç sipariş yoksa (ya
+ * da tüm order_items.product_id'leri silinmiş ürünlere aitse) boş dizi
+ * döner, çağıran sayfa bu durumda bölümü hiç render etmiyor.
+ *
+ * order_items'i ADMIN (service-role) client ile okuyor — migration 0029'un
+ * kendi kararı gereği bu tabloda hiç anon/public SELECT RLS policy'si yok
+ * (sadece store_editor+ authenticated). Burada sızdırılan TEK bilgi ürün
+ * başına toplam satış adedi (hiçbir müşteri/sipariş PII'si yok) — herhangi
+ * bir e-ticaret sitesinde zaten herkese açık, normal bir "çok satanlar"
+ * bilgisi; ayrı bir anon RLS policy eklemek yerine (fazladan bir yetki
+ * yüzeyi) var olan admin client deseni (lib/commerce/discounts.ts'in de
+ * kullandığı AYNI yol) tercih edildi.
+ *
+ * Yeni bir "ürünleri id listesine göre çek" fonksiyonu YAZILMADI — var olan
+ * getPublicProducts(storeId) (tüm aktif ürünler) çağrılıp satış adedine göre
+ * sıralanıp kesiliyor; katalog küçük olduğu için (bugün ~2 test ürünü) bu
+ * her zaman tek, ucuz bir sorgu.
+ */
+export async function getPublicBestSellingProducts(storeId: string, limit: number): Promise<PublicProduct[]> {
+  const admin = createSupabaseAdminClient();
+
+  const { data: itemRows, error } = await admin
+    .from("order_items")
+    .select("product_id, quantity")
+    .eq("store_id", storeId)
+    .not("product_id", "is", null);
+
+  if (error) {
+    console.error("[commerce/public] getPublicBestSellingProducts order_items lookup failed:", error.message);
+    return [];
+  }
+
+  const soldQuantityByProductId = new Map<string, number>();
+  for (const row of itemRows ?? []) {
+    if (!row.product_id) continue;
+    soldQuantityByProductId.set(row.product_id, (soldQuantityByProductId.get(row.product_id) ?? 0) + row.quantity);
+  }
+  if (soldQuantityByProductId.size === 0) return [];
+
+  const allProducts = await getPublicProducts(storeId);
+
+  return allProducts
+    .filter((product) => soldQuantityByProductId.has(product.id))
+    .sort((a, b) => (soldQuantityByProductId.get(b.id) ?? 0) - (soldQuantityByProductId.get(a.id) ?? 0))
+    .slice(0, limit);
+}
+
 export async function getPublicProductBySlug(storeId: string, productSlug: string): Promise<PublicProduct | null> {
   const client = createSupabasePublicClient();
 

@@ -9,11 +9,37 @@ import {
   getPublicProductOptions,
   getPublicProductVariants,
   getPublicProductAddons,
+  getPublicProducts,
+  getPublicBestSellingProducts,
+  type PublicProduct,
 } from "@/lib/commerce/public/products";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { Container } from "@/components/ui/container";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
+import { ProductImageCardGrid } from "@/components/commerce/public/product-image-card-grid";
 import { ProductConfigurator } from "./product-configurator";
+
+/**
+ * Faz 12 devamı (Part A) — "Çok Satanlar"/"Benzer Ürünler" kartları için her
+ * ürünün birincil görselini çözüyor. Homepage'in FeaturedProductsSection'ı
+ * (page.tsx, taktikalp46-homepage-sections.tsx) ile AYNI desen: en fazla 4
+ * ürünlük, sınırlı bir liste için ürün başına bir getPublicProductImages
+ * çağrısı kabul edilebilir bir maliyet (products.ts'in genel liste
+ * sayfaları için bunu reddeden kendi doc comment'i burada geçerli değil —
+ * orada sınırsız sayıda ürün vardı).
+ */
+async function attachPrimaryImages(
+  storeId: string,
+  products: PublicProduct[],
+): Promise<(PublicProduct & { imageUrl: string | null })[]> {
+  return Promise.all(
+    products.map(async (product) => {
+      const images = await getPublicProductImages(storeId, product.id);
+      const primary = images.find((image) => image.isPrimary) ?? images[0] ?? null;
+      return { ...product, imageUrl: primary?.url ?? null };
+    }),
+  );
+}
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500"] });
@@ -40,6 +66,13 @@ const inter = Inter({ subsets: ["latin"], weight: ["400", "500"] });
  * sayfa da onu çağırınca isim artık yanıltıcıydı, bu yüzden genelleştirildi,
  * davranışı DEĞİŞMEDİ) sayfanın en altına AYNEN yeniden kullanıldı — yeni
  * bir bileşen yazılmadı.
+ *
+ * Faz 12 devamı (2. tur, Part A) — "Çok Satanlar" (getPublicBestSellingProducts,
+ * gerçek order_items satış adedi) ve "Benzer Ürünler" (aynı kategori,
+ * getPublicProducts'ın var olan categoryId filtresi) bölümleri eklendi —
+ * ikisi de görüntülenen ürün HARİÇ, gerçek veri yoksa (sipariş yok / aynı
+ * kategoride başka ürün yok) hiç render edilmiyor (bkz. ProductImageCardGrid'in
+ * kendi doc comment'i).
  */
 export default async function StoreProductPage({
   params,
@@ -63,6 +96,21 @@ export default async function StoreProductPage({
   ]);
   const primaryImage = images.find((image) => image.isPrimary) ?? images[0] ?? null;
   const category = categories.find((c) => c.id === product.categoryId) ?? null;
+
+  // "Çok Satanlar" / "Benzer Ürünler" — görüntülenen üründen HARİÇ, her
+  // ikisi de gerçek veriden (sahte/placeholder ürün YOK). Katalog bugün
+  // küçük olduğu için (~2 test ürünü) bu bölümler boş/az görünebilir —
+  // beklenen bir durum.
+  const [bestSellersRaw, similarRaw] = await Promise.all([
+    getPublicBestSellingProducts(store.id, 5),
+    product.categoryId ? getPublicProducts(store.id, { categoryId: product.categoryId }) : Promise.resolve([]),
+  ]);
+  const bestSellers = bestSellersRaw.filter((p) => p.id !== product.id).slice(0, 4);
+  const similarProducts = similarRaw.filter((p) => p.id !== product.id).slice(0, 4);
+  const [bestSellersWithImages, similarWithImages] = await Promise.all([
+    attachPrimaryImages(store.id, bestSellers),
+    attachPrimaryImages(store.id, similarProducts),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -160,6 +208,12 @@ export default async function StoreProductPage({
               addons={addons}
             />
           </div>
+        </div>
+
+        {/* Ürün bilgisinin ALTINA, StorefrontCtaBand'in ÜSTÜNE — bant sayfanın kapanışı olarak en altta kalıyor. */}
+        <div className={inter.className}>
+          <ProductImageCardGrid storeSlug={storeSlug} heading="Çok Satanlar" products={bestSellersWithImages} />
+          <ProductImageCardGrid storeSlug={storeSlug} heading="Benzer Ürünler" products={similarWithImages} />
         </div>
       </Container>
 

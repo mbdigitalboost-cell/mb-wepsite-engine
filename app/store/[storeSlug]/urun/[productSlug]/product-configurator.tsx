@@ -7,6 +7,7 @@ import { computeConfiguredPrice, resolveRequiredAddonIds } from "@/lib/commerce/
 import { useCart, makeCartLineId } from "@/components/commerce/public/cart/cart-context";
 import { storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
+import { getColorSwatch } from "@/lib/utils/color-swatch-map";
 import type { PublicOptionGroup, PublicProductAddon, PublicProductVariant } from "@/lib/commerce/public/products";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
@@ -46,6 +47,16 @@ interface ProductConfiguratorProps {
  * Ek ürün checkbox'ları storefrontRadioClasses kullanıyor — checkout
  * formlarındaki AYNI opak/hardcoded renk mantığı (koyu üstünde koyu metin
  * hatasını tekrarlamamak için).
+ *
+ * Faz 12 devamı (2. tur, Part B) — "premium" yoğunluk geçişi: renk
+ * pilleri lib/utils/color-swatch-map.ts'ten GERÇEK bir eşleşme varsa küçük
+ * bir renk noktası taşıyor (tanınmayan isim = noktasız, uydurma renk YOK);
+ * yan ürünler düz checkbox yerine kart/pil stiline geçti; fiyatın yanında
+ * compareAtPrice varsa CANLI hesaplanan bir "%X İndirim" rozeti var (sabit/
+ * uydurma bir sayı değil); bölümler arası boşluk artırıldı. Hiçbiri veri/
+ * fiyatlandırma MANTIĞINA dokunmuyor — computeConfiguredPrice hâlâ tek
+ * doğruluk kaynağı, badge sadece onun zaten döndürdüğü iki sayıdan
+ * (totalPrice/baseCompareAtPrice) türetiliyor.
  */
 export function ProductConfigurator({
   productId,
@@ -93,6 +104,14 @@ export function ProductConfigurator({
   const needsSelection = optionGroups.length > 0 && !allGroupsSelected;
   const selectionOutOfStock = Boolean(priced.matchedVariant) && priced.matchedVariant?.inStock === false;
   const canAddToCart = !needsSelection && !selectionOutOfStock;
+
+  // Faz 12 devamı — canlı hesaplanan indirim yüzdesi, computeConfiguredPrice'ın
+  // zaten döndürdüğü iki sayıdan (totalPrice/baseCompareAtPrice) türetiliyor,
+  // ayrı/sabit bir sayı DEĞİL.
+  const discountPercent =
+    priced.baseCompareAtPrice && priced.baseCompareAtPrice > priced.totalPrice
+      ? Math.round(((priced.baseCompareAtPrice - priced.totalPrice) / priced.baseCompareAtPrice) * 100)
+      : null;
 
   function toggleOptionValue(groupId: string, valueId: string) {
     setSelectedOptionValueIdByGroup((prev) => ({ ...prev, [groupId]: valueId }));
@@ -145,20 +164,26 @@ export function ProductConfigurator({
   }
 
   return (
-    <div className="mt-4">
-      <div className="flex items-baseline gap-3">
-        <span className={`${spaceGrotesk.className} text-xl font-bold text-[#F5F5F5]`}>{formatPrice(priced.totalPrice)}</span>
+    <div className="mt-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`${spaceGrotesk.className} text-3xl font-bold text-[#F5F5F5]`}>{formatPrice(priced.totalPrice)}</span>
         {priced.baseCompareAtPrice ? (
-          <span className="text-sm text-[#A3A3A3] line-through">{formatPrice(priced.baseCompareAtPrice)}</span>
+          <span className="text-base text-[#A3A3A3] line-through">{formatPrice(priced.baseCompareAtPrice)}</span>
+        ) : null}
+        {discountPercent !== null ? (
+          <span className={`${spaceGrotesk.className} rounded-full bg-[#D95F00]/15 px-2.5 py-1 text-xs font-bold text-[#D95F00]`}>
+            %{discountPercent} İndirim
+          </span>
         ) : null}
       </div>
 
       {optionGroups.map((group) => (
-        <div key={group.id} className="mt-4">
+        <div key={group.id} className="mt-6">
           <p className="text-sm font-medium text-[#F5F5F5]">{group.name}</p>
-          <div role="radiogroup" aria-label={group.name} className="mt-1.5 flex flex-wrap gap-2">
+          <div role="radiogroup" aria-label={group.name} className="mt-2 flex flex-wrap gap-2.5">
             {group.values.map((value) => {
               const isSelected = selectedOptionValueIdByGroup[group.id] === value.id;
+              const swatch = getColorSwatch(value.value);
               return (
                 <button
                   key={value.id}
@@ -166,12 +191,19 @@ export function ProductConfigurator({
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => toggleOptionValue(group.id, value.id)}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     isSelected
                       ? "border-[#D95F00] bg-[#D95F00] text-white"
                       : "border-[#292929] bg-[#171717] text-[#A3A3A3] hover:border-[#D95F00] hover:text-[#F5F5F5]"
                   }`}
                 >
+                  {swatch ? (
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full border border-white/25"
+                      style={{ backgroundColor: swatch }}
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   {value.value}
                 </button>
               );
@@ -181,30 +213,34 @@ export function ProductConfigurator({
       ))}
 
       {addons.length > 0 ? (
-        <div className="mt-5">
+        <div className="mt-7">
           <p className="text-sm font-medium text-[#F5F5F5]">Ek Ürün Alanları</p>
-          <ul className="mt-1.5 space-y-2">
+          <ul className="mt-2 space-y-2">
             {addons.map((addon) => {
               const isRequired = requiredAddonIds.has(addon.id);
               const isChecked = selectedAddonIds.includes(addon.id);
               const disabled = isRequired || (!addon.inStock && !isChecked);
               return (
-                <li key={addon.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    id={`addon-${addon.id}`}
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={disabled}
-                    onChange={() => toggleAddon(addon.id)}
-                    className={`rounded ${storefrontRadioClasses} disabled:cursor-not-allowed disabled:opacity-40`}
-                  />
+                <li key={addon.id}>
                   <label
                     htmlFor={`addon-${addon.id}`}
-                    className={`flex-1 ${disabled && !isRequired ? "text-[#A3A3A3]/50" : "text-[#F5F5F5]"}`}
+                    className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                      isChecked ? "border-[#D95F00] bg-[#D95F00]/10" : "border-[#292929] bg-[#171717]"
+                    } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-[#D95F00]"}`}
                   >
-                    {addon.name} <span className="text-[#A3A3A3]">(+{formatPrice(addon.priceDelta)})</span>
-                    {isRequired ? <span className="ml-1.5 text-xs text-[#A3A3A3]">(zorunlu)</span> : null}
-                    {!addon.inStock && !isRequired ? <span className="ml-1.5 text-xs text-red-400">Tükendi</span> : null}
+                    <input
+                      id={`addon-${addon.id}`}
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={disabled}
+                      onChange={() => toggleAddon(addon.id)}
+                      className={`rounded ${storefrontRadioClasses} disabled:cursor-not-allowed`}
+                    />
+                    <span className="flex-1 text-[#F5F5F5]">
+                      {addon.name} <span className="text-[#A3A3A3]">(+{formatPrice(addon.priceDelta)})</span>
+                      {isRequired ? <span className="ml-1.5 text-xs text-[#A3A3A3]">(zorunlu)</span> : null}
+                      {!addon.inStock && !isRequired ? <span className="ml-1.5 text-xs text-red-400">Tükendi</span> : null}
+                    </span>
                   </label>
                 </li>
               );
@@ -213,7 +249,7 @@ export function ProductConfigurator({
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-7 flex flex-wrap items-center gap-3">
         <div className="flex items-center rounded-md border border-[#292929]">
           <button
             type="button"
