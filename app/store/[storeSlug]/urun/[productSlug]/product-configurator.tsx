@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Space_Grotesk } from "next/font/google";
 import { formatPrice } from "@/lib/utils/format-price";
 import { computeConfiguredPrice, resolveRequiredAddonIds } from "@/lib/commerce/pricing";
 import { useCart, makeCartLineId } from "@/components/commerce/public/cart/cart-context";
+import { storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
+import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import type { PublicOptionGroup, PublicProductAddon, PublicProductVariant } from "@/lib/commerce/public/products";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 interface ProductConfiguratorProps {
   productId: string;
@@ -32,6 +36,16 @@ interface ProductConfiguratorProps {
  * resolution rules apply here as anywhere else that function is reused.
  * Nothing here is server-authoritative: this is a Faz 1 preview only, see
  * that module's own Faz 2 note.
+ *
+ * Faz 12 devamı (Part A) — v2 koyu tema. Generic `Button` (components/ui/
+ * button.tsx) bilerek KULLANILMADI — storefront'a henüz bir ThemeProvider
+ * bağlanmadığı için o bileşenin `bg-brand-*` token'ları hiç set edilmiyor,
+ * yani fiilen stilsiz render oluyordu (bkz. storefront-button-classes.ts'in
+ * kendi doc comment'i) — hero/CTA bandı gibi daha önce v2'ye taşınan her
+ * yer zaten aynı sebeple generic Button'ı atlamıştı, burada da aynı desen.
+ * Ek ürün checkbox'ları storefrontRadioClasses kullanıyor — checkout
+ * formlarındaki AYNI opak/hardcoded renk mantığı (koyu üstünde koyu metin
+ * hatasını tekrarlamamak için).
  */
 export function ProductConfigurator({
   productId,
@@ -133,15 +147,15 @@ export function ProductConfigurator({
   return (
     <div className="mt-4">
       <div className="flex items-baseline gap-3">
-        <span className="text-xl font-semibold text-foreground">{formatPrice(priced.totalPrice)}</span>
+        <span className={`${spaceGrotesk.className} text-xl font-bold text-[#F5F5F5]`}>{formatPrice(priced.totalPrice)}</span>
         {priced.baseCompareAtPrice ? (
-          <span className="text-sm text-foreground/40 line-through">{formatPrice(priced.baseCompareAtPrice)}</span>
+          <span className="text-sm text-[#A3A3A3] line-through">{formatPrice(priced.baseCompareAtPrice)}</span>
         ) : null}
       </div>
 
       {optionGroups.map((group) => (
         <div key={group.id} className="mt-4">
-          <p className="text-sm font-medium text-foreground">{group.name}</p>
+          <p className="text-sm font-medium text-[#F5F5F5]">{group.name}</p>
           <div role="radiogroup" aria-label={group.name} className="mt-1.5 flex flex-wrap gap-2">
             {group.values.map((value) => {
               const isSelected = selectedOptionValueIdByGroup[group.id] === value.id;
@@ -154,8 +168,8 @@ export function ProductConfigurator({
                   onClick={() => toggleOptionValue(group.id, value.id)}
                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                     isSelected
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-black/15 text-foreground/70 hover:border-black/30 hover:text-foreground"
+                      ? "border-[#D95F00] bg-[#D95F00] text-white"
+                      : "border-[#292929] bg-[#171717] text-[#A3A3A3] hover:border-[#D95F00] hover:text-[#F5F5F5]"
                   }`}
                 >
                   {value.value}
@@ -168,7 +182,7 @@ export function ProductConfigurator({
 
       {addons.length > 0 ? (
         <div className="mt-5">
-          <p className="text-sm font-medium text-foreground">Ek Ürün Alanları</p>
+          <p className="text-sm font-medium text-[#F5F5F5]">Ek Ürün Alanları</p>
           <ul className="mt-1.5 space-y-2">
             {addons.map((addon) => {
               const isRequired = requiredAddonIds.has(addon.id);
@@ -182,15 +196,15 @@ export function ProductConfigurator({
                     checked={isChecked}
                     disabled={disabled}
                     onChange={() => toggleAddon(addon.id)}
-                    className="h-4 w-4 rounded border-black/20 disabled:cursor-not-allowed"
+                    className={`rounded ${storefrontRadioClasses} disabled:cursor-not-allowed disabled:opacity-40`}
                   />
                   <label
                     htmlFor={`addon-${addon.id}`}
-                    className={`flex-1 ${disabled && !isRequired ? "text-foreground/40" : "text-foreground/80"}`}
+                    className={`flex-1 ${disabled && !isRequired ? "text-[#A3A3A3]/50" : "text-[#F5F5F5]"}`}
                   >
-                    {addon.name} <span className="text-foreground/50">(+{formatPrice(addon.priceDelta)})</span>
-                    {isRequired ? <span className="ml-1.5 text-xs text-foreground/40">(zorunlu)</span> : null}
-                    {!addon.inStock && !isRequired ? <span className="ml-1.5 text-xs text-red-600">Tükendi</span> : null}
+                    {addon.name} <span className="text-[#A3A3A3]">(+{formatPrice(addon.priceDelta)})</span>
+                    {isRequired ? <span className="ml-1.5 text-xs text-[#A3A3A3]">(zorunlu)</span> : null}
+                    {!addon.inStock && !isRequired ? <span className="ml-1.5 text-xs text-red-400">Tükendi</span> : null}
                   </label>
                 </li>
               );
@@ -200,33 +214,38 @@ export function ProductConfigurator({
       ) : null}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <div className="flex items-center rounded-md border border-black/15">
+        <div className="flex items-center rounded-md border border-[#292929]">
           <button
             type="button"
             aria-label="Adedi azalt"
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+            className="px-3 py-1.5 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
           >
             −
           </button>
-          <span className="min-w-[2ch] px-2 text-center text-sm text-foreground">{quantity}</span>
+          <span className="min-w-[2ch] px-2 text-center text-sm text-[#F5F5F5]">{quantity}</span>
           <button
             type="button"
             aria-label="Adedi artır"
             onClick={() => setQuantity((q) => q + 1)}
-            className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+            className="px-3 py-1.5 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
           >
             +
           </button>
         </div>
 
-        <Button type="button" size="md" disabled={!canAddToCart} onClick={handleAddToCart}>
+        <button
+          type="button"
+          disabled={!canAddToCart}
+          onClick={handleAddToCart}
+          className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}
+        >
           {justAdded ? "Sepete Eklendi ✓" : "Sepete Ekle"}
-        </Button>
+        </button>
       </div>
 
-      {needsSelection ? <p className="mt-2 text-xs text-foreground/50">Devam etmek için yukarıdan bir seçenek seçin.</p> : null}
-      {selectionOutOfStock ? <p className="mt-2 text-xs text-red-600">Bu seçenek şu an stokta yok.</p> : null}
+      {needsSelection ? <p className="mt-2 text-xs text-[#A3A3A3]">Devam etmek için yukarıdan bir seçenek seçin.</p> : null}
+      {selectionOutOfStock ? <p className="mt-2 text-xs text-red-400">Bu seçenek şu an stokta yok.</p> : null}
     </div>
   );
 }

@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
+import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { CartList } from "./cart-list";
 import type { InitialCustomer, SavedAddress } from "./checkout-form";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 5.1 — pre-fills checkout step 1 for a signed-in customer. email
@@ -102,6 +105,12 @@ async function loadCheckoutPrefill(
  * in the parent layout), so it's rendered by CartList, a colocated "use
  * client" component, same split as the rest of this codebase (e.g.
  * product-tabs.tsx next to its own page.tsx).
+ *
+ * Faz 12 devamı (Part B) — v2 koyu tema, SADECE görsel: sayfa zemini,
+ * kart/sepet satırı/özet kutusu renkleri (cart-list.tsx, checkout-form.tsx'in
+ * kendi çevresi — form alanları zaten önceki bir turda düzeltilmişti).
+ * Breadcrumb/CTA bandı BİLEREK eklenmedi — checkout bir dönüşüm akışı,
+ * dikkat dağıtıcı ekstra bağlantılar istenmedi (görevin kendi talimatı).
  */
 export default async function StoreCartPage({ params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
@@ -112,9 +121,11 @@ export default async function StoreCartPage({ params }: { params: Promise<{ stor
   const { initialCustomer, savedAddresses } = await loadCheckoutPrefill(store.id);
 
   return (
-    <Container className="py-10">
-      <h1 className="text-2xl font-semibold text-foreground">Sepetim</h1>
-      <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
-    </Container>
+    <div className="min-h-screen bg-[#0A0A0A]">
+      <Container className="py-10">
+        <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Sepetim</h1>
+        <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+      </Container>
+    </div>
   );
 }

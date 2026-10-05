@@ -1,8 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { SignupForm } from "./signup-form";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 5.1 — storefront customer signup. `force-dynamic` for the same
@@ -23,13 +26,15 @@ export default async function StoreSignupPage({ params }: { params: Promise<{ st
   if (user) redirect(`/store/${storeSlug}/hesap`);
 
   return (
-    <Container className="flex flex-col items-center py-16">
-      <div className="w-full max-w-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">Hesap Oluştur</h1>
-        <div className="rounded-lg border border-black/10 p-6 shadow-sm">
-          <SignupForm storeSlug={storeSlug} />
+    <div className="min-h-screen bg-[#0A0A0A]">
+      <Container className="flex flex-col items-center py-16">
+        <div className="w-full max-w-sm">
+          <h1 className={`${spaceGrotesk.className} mb-6 text-center text-xl font-bold text-[#F5F5F5]`}>Hesap Oluştur</h1>
+          <div className="rounded-lg border border-[#292929] bg-[#171717] p-6">
+            <SignupForm storeSlug={storeSlug} />
+          </div>
         </div>
-      </div>
-    </Container>
+      </Container>
+    </div>
   );
 }

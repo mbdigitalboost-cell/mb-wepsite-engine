@@ -5,7 +5,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb } from "@/components/commerce/public/silahini-sec-progress";
-import { SilahiniSecCtaBand } from "@/components/commerce/public/silahini-sec-cta-band";
+import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
@@ -54,7 +54,7 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
 
       {/* Faz 12 devamı — bandın kendi py-14'üne dokunmadan, üstündeki grid'le arasına nefes payı. */}
       <div className="mt-16">
-        <SilahiniSecCtaBand storeId={store.id} storeSlug={storeSlug} />
+        <StorefrontCtaBand storeId={store.id} storeSlug={storeSlug} />
       </div>
     </div>
   );

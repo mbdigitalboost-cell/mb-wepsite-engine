@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { Container } from "@/components/ui/container";
 import { UpdatePasswordForm } from "./update-password-form";
@@ -6,6 +7,8 @@ import { UpdatePasswordForm } from "./update-password-form";
 // Session-dependent (updatePasswordAction reads cookies via getUser()) —
 // see app/dashboard/layout.tsx for why this needs to be explicit.
 export const dynamic = "force-dynamic";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export default async function StoreUpdatePasswordPage({
   params,
@@ -17,13 +20,15 @@ export default async function StoreUpdatePasswordPage({
   if (!store) notFound();
 
   return (
-    <Container className="flex flex-col items-center py-16">
-      <div className="w-full max-w-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">Şifreni Güncelle</h1>
-        <div className="rounded-lg border border-black/10 p-6 shadow-sm">
-          <UpdatePasswordForm storeSlug={storeSlug} />
+    <div className="min-h-screen bg-[#0A0A0A]">
+      <Container className="flex flex-col items-center py-16">
+        <div className="w-full max-w-sm">
+          <h1 className={`${spaceGrotesk.className} mb-6 text-center text-xl font-bold text-[#F5F5F5]`}>Şifreni Güncelle</h1>
+          <div className="rounded-lg border border-[#292929] bg-[#171717] p-6">
+            <UpdatePasswordForm storeSlug={storeSlug} />
+          </div>
         </div>
-      </div>
-    </Container>
+      </Container>
+    </div>
   );
 }

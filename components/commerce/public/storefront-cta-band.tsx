@@ -6,10 +6,13 @@ import { Container } from "@/components/ui/container";
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
- * Faz 12 devamı (B) — "Silahını Seç" akışının 3 sayfasının da (marka/
- * model/sonuçlar) EN ALTINA eklenen, tam genişlikte turuncu bant.
- * Tenant-bağımsız/genel (bu akışın diğer parçalarıyla aynı gerekçe, bkz.
- * silahini-sec-progress.tsx'in doc comment'i) — kendi verisini
+ * Faz 12 devamı (B), Faz 12 devamı (bu tur, Part A) — tam genişlikte turuncu
+ * CTA bandı. Başlangıçta "Silahını Seç" akışının 3 sayfasına özel yazılmıştı
+ * (dosya adı silahini-sec-cta-band.tsx, export SilahiniSecCtaBand'tı) — bu
+ * turda ürün detay sayfası (/urun/[productSlug]) da AYNI banda ihtiyaç
+ * duyunca isim artık yanıltıcıydı (sadece o akışa özel değil), bu yüzden
+ * dosya + export adı genelleştirildi: fonksiyonel davranış DEĞİŞMEDİ, sadece
+ * isim. Hâlâ tenant-bağımsız/genel — kendi verisini
  * (store_profiles.social_links.instagram) kendi çözüyor, çağıran sayfalar
  * sadece storeId/storeSlug veriyor.
  *
@@ -36,9 +39,10 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
  * ORAYA, yoksa /silahini-sec'e (diğer markalara göz at) yönlendirir. Bu
  * karar HER SAYFA YÜKLEMESİNDE canlı DB satırından okunuyor, hardcoded
  * değil — profil sonradan değişirse/silinirse bant otomatik /silahini-sec'e
- * döner.
+ * döner. Ürün detay sayfasından çağrıldığında da hedef AYNI (silahini-sec'e
+ * ya da Instagram'a) — "ürün sayfasına özel" bir hedef istenmedi.
  */
-export async function SilahiniSecCtaBand({ storeId, storeSlug }: { storeId: string; storeSlug: string }) {
+export async function StorefrontCtaBand({ storeId, storeSlug }: { storeId: string; storeSlug: string }) {
   const profile = await getPublicStoreProfile(storeId);
   const instagramUrl =
     typeof profile?.socialLinks.instagram === "string" && profile.socialLinks.instagram.trim().length > 0

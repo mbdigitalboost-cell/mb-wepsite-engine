@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Space_Grotesk } from "next/font/google";
 import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
+import { storefrontButtonClasses, storefrontButtonOutlineClasses } from "@/lib/utils/storefront-button-classes";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
 import { formatPrice } from "@/lib/utils/format-price";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/validation/order";
 import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
 import { createOrderAction } from "./actions";
 import { initialCheckoutFormState } from "./form-state";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 function toWireCartLine(item: CartItem) {
   return {
@@ -141,19 +144,19 @@ export function CheckoutForm({
   // replaced by "cart is empty" on the very next render.
   if (state.status === "success" && state.orderNumber !== null) {
     return (
-      <div className="mt-6 rounded-lg border border-black/10 p-4">
-        <h2 className="text-sm font-semibold text-foreground">Siparişiniz Alındı</h2>
-        <p className="mt-2 text-sm text-foreground/70">
-          Sipariş No: <span className="font-medium text-foreground">#{state.orderNumber}</span>
+      <div className="mt-6 rounded-lg border border-[#292929] bg-[#171717] p-4">
+        <h2 className={`${spaceGrotesk.className} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
+        <p className="mt-2 text-sm text-[#A3A3A3]">
+          Sipariş No: <span className="font-medium text-[#F5F5F5]">#{state.orderNumber}</span>
         </p>
         {/* "Aboneler" indirim sistemi — server'ın (createOrderAction) gerçekten uyguladığı indirim, client'ın kendi tahmini değil. */}
         {state.discountAmount && state.discountAmount > 0 ? (
-          <p className="mt-1 text-sm text-emerald-700">
+          <p className="mt-1 text-sm text-emerald-400">
             {state.discountCode ? `"${state.discountCode}" kodu ile ` : ""}
             {formatPrice(state.discountAmount)} indirim uygulandı.
           </p>
         ) : null}
-        <p className="mt-1 text-sm text-foreground/70">
+        <p className="mt-1 text-sm text-[#A3A3A3]">
           Siparişinizi onaylamak için sizi arayacağız. Sorularınız için mağazayla iletişime geçebilirsiniz.
         </p>
       </div>
@@ -209,28 +212,28 @@ export function CheckoutForm({
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   return (
-    <div className="mt-6 rounded-lg border border-black/10 p-4">
-      <div className="mb-4 flex items-center gap-2 text-xs text-foreground/50">
-        <span className={step === 1 ? "font-semibold text-foreground" : undefined}>1. Teslimat Bilgisi</span>
+    <div className="mt-6 rounded-lg border border-[#292929] bg-[#171717] p-4">
+      <div className="mb-4 flex items-center gap-2 text-xs text-[#A3A3A3]">
+        <span className={step === 1 ? "font-semibold text-[#F5F5F5]" : undefined}>1. Teslimat Bilgisi</span>
         <span aria-hidden="true">→</span>
-        <span className={step === 2 ? "font-semibold text-foreground" : undefined}>2. Ödeme Yöntemi</span>
+        <span className={step === 2 ? "font-semibold text-[#F5F5F5]" : undefined}>2. Ödeme Yöntemi</span>
       </div>
 
       {step === 1 ? (
         <div className="space-y-4">
           {step1Error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-400">
               {step1Error}
             </p>
           ) : null}
 
           {savedAddresses.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Teslimat Adresi</p>
+              <p className="text-sm font-medium text-[#F5F5F5]">Teslimat Adresi</p>
               {savedAddresses.map((address) => (
                 <label
                   key={address.id}
-                  className="flex items-start gap-2 rounded-md border border-black/10 p-3 text-sm hover:border-black/20"
+                  className="flex items-start gap-2 rounded-md border border-[#292929] p-3 text-sm hover:border-[#D95F00]"
                 >
                   <input
                     type="radio"
@@ -240,16 +243,16 @@ export function CheckoutForm({
                     className={`mt-0.5 ${storefrontRadioClasses}`}
                   />
                   <span>
-                    <span className="font-medium text-foreground">{address.label || `${address.addressCity} adresi`}</span>
-                    {address.isDefault ? <span className="ml-2 text-xs text-brand-accent">Varsayılan</span> : null}
+                    <span className="font-medium text-[#F5F5F5]">{address.label || `${address.addressCity} adresi`}</span>
+                    {address.isDefault ? <span className="ml-2 text-xs text-[#D95F00]">Varsayılan</span> : null}
                     <br />
-                    <span className="text-foreground/60">
+                    <span className="text-[#A3A3A3]">
                       {address.addressDistrict}, {address.addressCity}
                     </span>
                   </span>
                 </label>
               ))}
-              <label className="flex items-center gap-2 rounded-md border border-black/10 p-3 text-sm hover:border-black/20">
+              <label className="flex items-center gap-2 rounded-md border border-[#292929] p-3 text-sm text-[#F5F5F5] hover:border-[#D95F00]">
                 <input
                   type="radio"
                   name="savedAddressChoice"
@@ -264,7 +267,7 @@ export function CheckoutForm({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="checkout-customerName" className="mb-1.5 block text-sm font-medium text-foreground">
+              <label htmlFor="checkout-customerName" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
                 Ad Soyad
               </label>
               <input
@@ -276,7 +279,7 @@ export function CheckoutForm({
               />
             </div>
             <div>
-              <label htmlFor="checkout-customerPhone" className="mb-1.5 block text-sm font-medium text-foreground">
+              <label htmlFor="checkout-customerPhone" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
                 Telefon
               </label>
               <input
@@ -290,8 +293,8 @@ export function CheckoutForm({
           </div>
 
           <div>
-            <label htmlFor="checkout-customerEmail" className="mb-1.5 block text-sm font-medium text-foreground">
-              E-posta <span className="text-foreground/40">(opsiyonel)</span>
+            <label htmlFor="checkout-customerEmail" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+              E-posta <span className="text-[#A3A3A3]">(opsiyonel)</span>
             </label>
             <input
               id="checkout-customerEmail"
@@ -311,7 +314,7 @@ export function CheckoutForm({
           />
 
           <div>
-            <label htmlFor="checkout-neighborhood" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label htmlFor="checkout-neighborhood" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
               Mahalle
             </label>
             <input
@@ -325,7 +328,7 @@ export function CheckoutForm({
           </div>
 
           <div>
-            <label htmlFor="checkout-addressLine" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label htmlFor="checkout-addressLine" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
               Adres (Sokak / Bina / Daire No)
             </label>
             <textarea
@@ -338,15 +341,15 @@ export function CheckoutForm({
           </div>
 
           <div>
-            <label htmlFor="checkout-note" className="mb-1.5 block text-sm font-medium text-foreground">
-              Not <span className="text-foreground/40">(opsiyonel)</span>
+            <label htmlFor="checkout-note" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+              Not <span className="text-[#A3A3A3]">(opsiyonel)</span>
             </label>
             <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={storefrontInputClasses} />
           </div>
 
-          <Button type="button" size="md" onClick={handleContinue}>
+          <button type="button" onClick={handleContinue} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
             Devam Et
-          </Button>
+          </button>
         </div>
       ) : (
         <form action={formAction} className="space-y-4">
@@ -361,17 +364,17 @@ export function CheckoutForm({
           <input type="hidden" name="note" value={note} />
 
           {state.status === "error" && state.error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-400">
               {state.error}
             </p>
           ) : null}
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Ödeme Yöntemi</p>
-            <p className="mb-2 text-xs text-foreground/50">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
+            <p className="mb-1.5 text-sm font-medium text-[#F5F5F5]">Ödeme Yöntemi</p>
+            <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
             <div className="space-y-2">
               {PAYMENT_METHODS.map((method) => (
-                <label key={method} className="flex items-center gap-2 text-sm text-foreground/80">
+                <label key={method} className="flex items-center gap-2 text-sm text-[#F5F5F5]">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -386,20 +389,20 @@ export function CheckoutForm({
             </div>
           </div>
 
-          <div className="rounded-md border border-black/10 p-3">
-            <h3 className="text-xs font-medium text-foreground/60">Sipariş Özeti</h3>
+          <div className="rounded-md border border-[#292929] p-3">
+            <h3 className="text-xs font-medium text-[#A3A3A3]">Sipariş Özeti</h3>
             <ul className="mt-2 space-y-1 text-sm">
               {items.map((item) => (
                 <li key={item.lineId} className="flex justify-between gap-3">
-                  <span className="text-foreground/80">
+                  <span className="text-[#A3A3A3]">
                     {item.productName}
                     {item.variantLabel ? ` (${item.variantLabel})` : ""} × {item.quantity}
                   </span>
-                  <span className="whitespace-nowrap text-foreground">{formatPrice(item.unitPrice * item.quantity)}</span>
+                  <span className="whitespace-nowrap text-[#F5F5F5]">{formatPrice(item.unitPrice * item.quantity)}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-2 flex justify-between border-t border-black/10 pt-2 text-sm font-semibold text-foreground">
+            <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
               <span>Toplam</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
@@ -415,19 +418,24 @@ export function CheckoutForm({
             OLUŞTURULMAZ — indirimsiz sessizce devam etmez.
           */}
           <div>
-            <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-foreground">
-              İndirim Kodu <span className="font-normal text-foreground/50">(varsa)</span>
+            <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+              İndirim Kodu <span className="font-normal text-[#A3A3A3]">(varsa)</span>
             </label>
             <input id="discountCode" name="discountCode" type="text" className={storefrontInputClasses} placeholder="Örn. HOSGELDIN10" />
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" size="md" variant="outline" onClick={() => setStep(1)} disabled={isPending}>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              disabled={isPending}
+              className={`${spaceGrotesk.className} ${storefrontButtonOutlineClasses}`}
+            >
               Geri
-            </Button>
-            <Button type="submit" size="md" disabled={isPending}>
+            </button>
+            <button type="submit" disabled={isPending} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
               {isPending ? "Gönderiliyor..." : "Siparişi Onayla"}
-            </Button>
+            </button>
           </div>
         </form>
       )}
