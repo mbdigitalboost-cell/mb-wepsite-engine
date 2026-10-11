@@ -65,32 +65,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Kök path yönlendirmesi (taktikalp46-store.vercel.app düzeltmesi) — bu
-  // repo ORİJİNAL olarak Petra Mühendislik'in tek kiracılı sitesiydi, kök
-  // path (/) hâlâ o paylaşılan app/page.tsx'i (Petra'nın içeriği) render
-  // ediyor; Taktikalp46 mağaza motoru (/store/[storeSlug]/**) kodun ÜSTÜNE
-  // eklendi, kök path'e hiç dokunulmadı. taktikalp46-store Vercel projesi
-  // (bu repo'nun `main` dalından deploy ediyor) kendi .vercel.app alt alan
-  // adında ziyaret edilince bu yüzden yanlışlıkla Petra'yı gösteriyordu.
-  // Petra'nın GERÇEK production'ı (petramuhendislik.com) TAMAMEN ayrı bir
-  // Vercel projesinden, ayrı/dondurulmuş bir git dalından (petra-production)
-  // deploy ediyor ve main'deki hiçbir değişiklikten etkilenmiyor (Faz 11'in
-  // kendi "Ignored Build Step" kurulumu) — bu redirect SADECE main dalında
-  // yaşıyor, petra-production'a asla merge edilmeyecek.
-  // `permanent: false` (307, geçici) — tek kiracılı statik bir yönlendirme,
-  // ikinci bir mağaza/kiracı main dalına eklenirse bu kaydın hedefi
-  // (ya da yaklaşımın kendisi) yeniden değerlendirilmesi gerekir; kalıcı
-  // (308) bir yönlendirme tarayıcı/CDN'de gereğinden fazla önbelleğe
-  // alınıp o değişikliği geciktirebilirdi.
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/store/taktikalp46",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

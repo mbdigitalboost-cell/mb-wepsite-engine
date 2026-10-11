@@ -76,6 +76,40 @@ function rewriteForStoreDomain(request: NextRequest): NextResponse | null {
   return NextResponse.rewrite(url);
 }
 
+/**
+ * Kök path (/) yönlendirmesi — bu repo ORİJİNAL olarak Petra Mühendislik'in
+ * tek kiracılı sitesiydi, / hâlâ paylaşılan app/(public)/page.tsx'i
+ * (Petra'nın içeriği) render ediyor; Taktikalp46 mağaza motoru
+ * (/store/[storeSlug]/**) kodun ÜSTÜNE eklendi, köke hiç dokunulmadı.
+ *
+ * ÖNCEKİ (YANLIŞ) DENEME — bkz. commit 50487c5: next.config.ts'e statik bir
+ * redirects() kaydı eklenmişti. Next.js'in kendi belgesi (node_modules/
+ * next/dist/docs/01-app/02-guides/redirecting.md: "redirects runs BEFORE
+ * Proxy") — bu, next.config'teki redirect'in proje-kör olarak HER
+ * deployment'ta (mb-digital-boost-web-panel DAHİL) bu middleware'den ÖNCE
+ * çalışması, PANEL_ONLY_MODE'un kendi "/" -> /login mantığına fırsat
+ * kalmadan devreye girmesi anlamına geliyordu — panelin kendi canlı
+ * deployment'ında GERÇEKTEN test edilip bu regresyon doğrulandı (Cowork'ün
+ * kendi canlı tarayıcı testi). Doğru yer BURASI: aynı middleware, PANEL_ONLY_MODE
+ * ile SİMETRİK dallanıyor — panel projesinde (PANEL_ONLY_MODE=true) kök zaten
+ * aşağıdaki PANEL_ONLY_MODE bloğunda /login'e gidiyor; mağaza projesinde
+ * (PANEL_ONLY_MODE=false/unset) kök burada /store/taktikalp46'a gidiyor.
+ * İkisi asla aynı anda tetiklenmiyor (if/else).
+ *
+ * Tek kiracılı statik bir hedef (`taktikalp46`) — ikinci bir mağaza/kiracı
+ * bu `main` dalına eklenirse bu yaklaşımın (ya da hedefin) yeniden
+ * değerlendirilmesi gerekir. Petra'nın GERÇEK production'ı
+ * (petramuhendislik.com) ayrı bir Vercel projesinden, ayrı/dondurulmuş bir
+ * git dalından (petra-production) deploy ediyor — bu kod o dala hiç
+ * merge edilmeyecek, orayı hiç etkilemiyor.
+ */
+function redirectRootForStoreProject(request: NextRequest): NextResponse | null {
+  if (PANEL_ONLY_MODE) return null;
+  if (request.nextUrl.pathname !== "/") return null;
+
+  return NextResponse.redirect(new URL("/store/taktikalp46", request.url));
+}
+
 export async function proxy(request: NextRequest) {
   const domainRewrite = rewriteForStoreDomain(request);
   if (domainRewrite) return domainRewrite;
@@ -83,6 +117,9 @@ export async function proxy(request: NextRequest) {
   if (PANEL_ONLY_MODE && !isPanelAllowedPath(request.nextUrl.pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  const rootRedirect = redirectRootForStoreProject(request);
+  if (rootRedirect) return rootRedirect;
 
   return updateSupabaseSession(request);
 }
