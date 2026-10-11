@@ -189,8 +189,23 @@ export async function getOwnStoreCustomerOrders(
   return attachItemsToOrders(admin, storeId, data ?? []);
 }
 
+/**
+ * Faz 13 devamı — GERÇEK sipariş verisinde telefonlar tutarsız formatlarda
+ * kayıtlı (bazıları başında "0" ile, bazıları olmadan, bazıları "+90"/"90"
+ * ülke koduyla). Sadece rakamları ayıklamak YETMİYOR: "0555 123 45 67"
+ * (11 rakam, 0 dahil) ile "5551234567" (10 rakam, 0 hariç) aynı numara
+ * ama normalize edilmiş halleri eşit DEĞİL — bu, bir müşterinin checkout'ta
+ * yazdığından farklı bir şekilde (ör. baştaki 0'sız) sorgulaması durumunda
+ * KENDİ siparişini bulamamasına yol açan gerçek bir bug'dı. Çözüm: Türkiye
+ * cep telefonlarının gerçek, sabit-uzunluklu kısmı SON 10 HANE (5XX XXX XX
+ * XX) — baştaki trunk "0" ya da "+90"/"90" ülke kodu ne olursa olsun son
+ * 10 hane aynıdır, bu yüzden karşılaştırma son 10 haneye göre yapılıyor.
+ * 10 haneden kısa bir girdi (geçersiz/eksik numara) olduğu gibi kalır —
+ * iki taraf da aynı kurala tabi olduğu için davranış hâlâ deterministik.
+ */
 function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  const digitsOnly = phone.replace(/\D/g, "");
+  return digitsOnly.slice(-10);
 }
 
 /**
@@ -198,10 +213,10 @@ function normalizePhone(phone: string): string {
  * anon'a hiç açık olmadığı için (migration 0029'un kendi "anon INSERT RLS
  * YOK" kararı — SELECT de yok). Eşleşme: store_id + order_number (defense
  * in depth — order_number zaten global unique) + normalize edilmiş telefon
- * karşılaştırması ("0555 123 45 67" ile "5551234567" aynı sayılır, sadece
- * rakamlar karşılaştırılıyor). Eşleşmezse null — actions.ts bunu "sipariş
- * yok" ile "telefon tutmuyor" arasında AYRIM YAPMADAN tek bir genel hataya
- * çeviriyor (enumeration'a karşı).
+ * karşılaştırması (yukarıdaki normalizePhone'un kendi doc comment'i — son
+ * 10 hane, trunk "0"/ülke kodu farkı aynı sayılır). Eşleşmezse null —
+ * actions.ts bunu "sipariş yok" ile "telefon tutmuyor" arasında AYRIM
+ * YAPMADAN tek bir genel hataya çeviriyor (enumeration'a karşı).
  */
 export async function getGuestOrderByNumberAndPhone(
   storeId: string,
