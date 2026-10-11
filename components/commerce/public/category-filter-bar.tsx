@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import type { PublicBrand } from "@/lib/commerce/public/brands";
 import type { PublicProductSort } from "@/lib/commerce/public/products";
 
@@ -28,6 +28,14 @@ const SORT_OPTIONS: { value: PublicProductSort; label: string }[] = [
  * filtrelenmiş geliyor (getPublicBrandsForCategory, STEP 33'ten beri var
  * olan altyapı) — burada ayrıca bir filtreleme yapılmıyor. Liste boşsa
  * (bugünkü gerçek durum: 11/12 kategori) marka seçici hiç render edilmiyor.
+ *
+ * Devir metni v2 — kanvasta (Kategori.dc.html) marka filtresi bir
+ * <select> DEĞİL, bir CHIP SATIRI ("Marka" etiketi + "Tümü" + her marka
+ * için bir pill, aktif olan dolgulu) — önceki turda ikisi de <select>
+ * olarak yapılmıştı, bu sefer marka filtresi chip'e çevrildi (sıralama
+ * hâlâ select, kanvasta da öyle). Sağ tarafa kanvasın "{N} ürün bulundu"
+ * mono etiketi eklendi — GERÇEK `resultCount` prop'undan, uydurma sayı
+ * değil.
  */
 export function CategoryFilterBar({
   storeSlug,
@@ -35,12 +43,14 @@ export function CategoryFilterBar({
   brands,
   currentSort,
   currentBrand,
+  resultCount,
 }: {
   storeSlug: string;
   categorySlug: string;
   brands: PublicBrand[];
   currentSort: PublicProductSort;
   currentBrand: string;
+  resultCount: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,35 +67,55 @@ export function CategoryFilterBar({
   }
 
   return (
-    <div className="mt-4 flex flex-wrap gap-3">
-      <select
-        value={currentSort}
-        onChange={(event) => updateParam("sort", event.target.value)}
-        aria-label="Sırala"
-        className={ghostSelectClasses}
-      >
-        {SORT_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#292929] pb-5">
       {brands.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className={`${storefrontMonoClasses} mr-1 text-[11px] uppercase text-[#6B6B6B]`}>Marka</span>
+          <button
+            type="button"
+            onClick={() => updateParam("brand", "")}
+            className={`${storefrontDisplayClasses} rounded-full border-[1.5px] px-4 py-1.5 text-xs font-semibold transition-colors ${
+              currentBrand === "" ? "border-[#D95F00] bg-[#D95F00] text-[#1A0D00]" : "border-[#3A3A3A] text-[#A3A3A3] hover:border-[#D95F00]"
+            }`}
+          >
+            Tümü
+          </button>
+          {brands.map((brand) => (
+            <button
+              key={brand.id}
+              type="button"
+              onClick={() => updateParam("brand", brand.slug)}
+              className={`${storefrontDisplayClasses} rounded-full border-[1.5px] px-4 py-1.5 text-xs font-semibold transition-colors ${
+                currentBrand === brand.slug
+                  ? "border-[#D95F00] bg-[#D95F00] text-[#1A0D00]"
+                  : "border-[#3A3A3A] text-[#A3A3A3] hover:border-[#D95F00]"
+              }`}
+            >
+              {brand.name}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div />
+      )}
+
+      <div className="flex items-center gap-3.5">
+        <span className={`${storefrontMonoClasses} text-xs text-[#6B6B6B]`}>
+          {resultCount} ürün bulundu
+        </span>
         <select
-          value={currentBrand}
-          onChange={(event) => updateParam("brand", event.target.value)}
-          aria-label="Marka"
+          value={currentSort}
+          onChange={(event) => updateParam("sort", event.target.value)}
+          aria-label="Sırala"
           className={ghostSelectClasses}
         >
-          <option value="">Tüm Markalar</option>
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.slug}>
-              {brand.name}
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
-      ) : null}
+      </div>
     </div>
   );
 }

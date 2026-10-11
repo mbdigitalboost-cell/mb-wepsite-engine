@@ -187,7 +187,7 @@ export function CheckoutForm({
   // replaced by "cart is empty" on the very next render.
   if (state.status === "success" && state.orderNumber !== null) {
     return (
-      <div className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
+      <div id="checkout-form" className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
         <h2 className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
 
         {/*
@@ -295,7 +295,7 @@ export function CheckoutForm({
   ];
 
   return (
-    <div className="mt-6">
+    <div id="checkout-form" className="mt-6">
       {/* Adım göstergesi — sadece görsel, form mantığına dokunmuyor. */}
       <div className="mx-auto flex max-w-md items-center">
         {stepProgress.map((item, index) => (
@@ -617,6 +617,25 @@ export function CheckoutForm({
               </button>
             </div>
           </form>
+        </div>
+      ) : null}
+
+      {/*
+        Devir metni v2 — kanvasta (Odeme.dc.html) accordion'un ÜÇÜNCÜ bir
+        satırı daha var: pasif/kapalı "3 — Sipariş Özeti & Onay" (sadece
+        soluk bir önizleme, tıklanamaz). Önceki turda (Faz 7.3 devam #13)
+        bu satır BİLEREK atlanmıştı ("gelecek adım tamamen gizleniyor"
+        diye flaglenmişti) — bu tur "eksikse tamamla" dediği için eklendi.
+        Gerçek bir adım DEĞİL (sipariş onaylanınca zaten yukarıdaki
+        success ekranına geçiliyor, bu satıra hiç tıklanmıyor) — sadece
+        kanvasın kendi "sırada bu var" görsel ipucu.
+      */}
+      {step === 2 ? (
+        <div className="flex items-center gap-2.5 border-t border-[#292929] pt-6">
+          <span className={`${storefrontMonoClasses} flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#3A3A3A] text-xs text-[#6B6B6B]`}>
+            3
+          </span>
+          <span className={`${storefrontDisplayClasses} text-sm font-semibold text-[#6B6B6B]`}>Sipariş Özeti &amp; Onay</span>
         </div>
       ) : null}
     </div>

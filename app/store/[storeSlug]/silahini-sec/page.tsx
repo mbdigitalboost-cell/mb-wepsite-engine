@@ -48,6 +48,15 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
             ))}
           </ul>
         )}
+
+        {/* Devir metni v2 — kanvasta (SilahiniSec.dc.html) grid'in altında bu alt metin/link var, canlıda yoktu. */}
+        <p className="mt-7 text-[12.5px] text-[#6B6B6B]">
+          Markanı bulamadın mı?{" "}
+          <Link href={`/store/${storeSlug}/kategoriler`} className="text-[#D95F00] underline-offset-2 hover:underline">
+            Tüm kategorilere
+          </Link>{" "}
+          göz atabilirsin.
+        </p>
       </Container>
 
       {/* Faz 12 devamı — bandın kendi py-14'üne dokunmadan, üstündeki grid'le arasına nefes payı. */}

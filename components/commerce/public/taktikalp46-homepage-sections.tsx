@@ -311,7 +311,22 @@ export function OtherCategoriesSection({
   );
 }
 
-/** 8. Güven rozetleri — teyitsiz sayı yok ("14 gün" gibi), sadece teyitli/nötr ifadeler. */
+/**
+ * Güven rozetleri — teyitsiz sayı yok ("14 gün"/"2-4 iş günü" gibi),
+ * sadece teyitli/nötr ifadeler (aynı 4 ifade, duyuru şeridinde de
+ * kullanılıyor — iki yerde de BİREBİR aynı metin, birbirinden sapmasın).
+ *
+ * Devir metni v2 — kanvasta (Main.dc.html) hero'nun ALTINDA, 4 sütun +
+ * aralarında ince dikey ayraç olan bir "trust bar" var ("Hızlı Kargo /
+ * 2-4 iş günü teslim" gibi başlık+alt metin ikilisi) — bu bölüm ÖNCEDEN
+ * sayfanın daha aşağısında (Diğer Kategoriler'den sonra) tek satırlık
+ * ikon+etiket olarak duruyordu. Artık hero'nun hemen altına taşındı
+ * (bkz. page.tsx) ve kanvasın dikey ayraç düzeni eklendi — ama kanvasın
+ * kendi alt metinleri ("2–4 iş günü teslim", "%100 garantili" gibi)
+ * TEYİT EDİLMEMİŞ iddialar olduğu için KOPYALANMADI, sadece üstteki 4
+ * GERÇEK/onaylı ifade kullanıldı (tek satır başlık, uydurma alt metin
+ * yok).
+ */
 const TRUST_BADGES = [
   { Icon: Truck, label: "2.000 TL Üzeri Ücretsiz Kargo" },
   { Icon: ShieldCheck, label: "Güvenli Ödeme" },
@@ -321,12 +336,17 @@ const TRUST_BADGES = [
 
 export function TrustBadgesSection() {
   return (
-    <div className="border-y border-[#292929] bg-[#0A0A0A] py-8">
-      <Container className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-        {TRUST_BADGES.map(({ Icon, label }) => (
-          <div key={label} className="flex flex-col items-center gap-2 text-center text-xs text-[#F5F5F5]">
-            <Icon size={20} strokeWidth={1.75} className="text-[#D95F00]" aria-hidden="true" />
-            <span className={storefrontDisplayClasses}>{label}</span>
+    <div className="border-b border-[#292929] bg-[#0A0A0A] py-7">
+      <Container className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+        {TRUST_BADGES.map(({ Icon, label }, index) => (
+          <div
+            key={label}
+            className={`flex items-center justify-center gap-3 text-center sm:justify-start sm:text-left ${
+              index < TRUST_BADGES.length - 1 ? "sm:border-r sm:border-[#292929]" : ""
+            } ${index > 0 ? "sm:pl-4" : ""}`}
+          >
+            <Icon size={22} strokeWidth={1.6} className="shrink-0 text-[#D95F00]" aria-hidden="true" />
+            <span className={`${storefrontDisplayClasses} text-xs font-semibold text-[#F5F5F5]`}>{label}</span>
           </div>
         ))}
       </Container>

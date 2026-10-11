@@ -1,16 +1,18 @@
+import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
+
 /**
- * FAZ 7.3 follow-up — sağdan sola sürekli akan, ince duyuru şeridi.
- * Site geneli: app/store/[storeSlug]/layout.tsx'ten, StoreHeader'ın
- * HEMEN ÜSTÜNDE render ediliyor (layout.tsx paylaşımlı olduğu için
- * /kategoriler, /silahini-sec, /hesap dahil her storefront sayfasında
- * görünür — bu istenen davranış). Sabit, onaylı metin; per-store veri
- * yok, bu yüzden props almıyor.
+ * Devir metni v2 — kanvasta (Main.dc.html) bu şerit KAYMIYOR: tek satır,
+ * ortalanmış, mono/uppercase, `#000` zemin üzerinde ("utility bar").
+ * Canlı sitede ÖNCEDEN sağdan sola sürekli akan bir marquee'ydi
+ * (kullanıcının "bu kanvasta yok" diye işaretlediği fark) — animasyon
+ * kaldırıldı, SADECE yerleşim/stil kanvasa göre sadeleştirildi; İÇERİK
+ * (4 gerçek/onaylı ifade) DEĞİŞMEDİ, aynı metinler korundu (taktikalp46-
+ * homepage-sections.tsx'teki TrustBadgesSection ile BİREBİR aynı 4 ifade
+ * — iki yerde de aynı metin, birbirinden sapmasın).
  *
- * Saf CSS animasyonu (`animate-storefront-marquee`, app/globals.css) —
- * JS state yok, Server Component olarak kalabiliyor. Metin, tek kopyanın
- * boşluksuz akması için aynı dizi 3 kez tekrarlanıyor, sonra o blok
- * seamless loop için bir kez daha (aria-hidden) kopyalanıyor — bkz.
- * globals.css'teki keyframe yorumu.
+ * Site geneli: app/store/[storeSlug]/layout.tsx'ten, StoreHeader'ın
+ * HEMEN ÜSTÜNDE render ediliyor — her storefront sayfasında görünür.
+ * Sabit, onaylı metin; per-store veri yok, bu yüzden props almıyor.
  */
 const ANNOUNCEMENT_ITEMS = [
   "2.000 TL Üzeri Ücretsiz Kargo",
@@ -19,31 +21,16 @@ const ANNOUNCEMENT_ITEMS = [
   "Kendi Ürettiğimiz Kydex Kalitesi",
 ];
 
-function AnnouncementRun({ hidden = false }: { hidden?: boolean }) {
-  const repeated = [...ANNOUNCEMENT_ITEMS, ...ANNOUNCEMENT_ITEMS, ...ANNOUNCEMENT_ITEMS];
-  return (
-    <span
-      aria-hidden={hidden}
-      className="flex shrink-0 items-center gap-3 px-3 text-[12px] font-medium tracking-wide text-[#F5F5F5]"
-    >
-      {repeated.map((item, index) => (
-        <span key={index} className="flex items-center gap-3">
-          {item}
-          <span aria-hidden="true" className="text-[#D95F00]">
-            •
-          </span>
-        </span>
-      ))}
-    </span>
-  );
-}
-
 export function StoreAnnouncementBar() {
   return (
-    <div className="h-8 overflow-hidden border-b border-[#292929] bg-[#111111]" role="marquee" aria-label="Duyurular">
-      <div className="flex h-full w-max items-center animate-storefront-marquee">
-        <AnnouncementRun />
-        <AnnouncementRun hidden />
+    <div className="border-b border-[#292929] bg-black">
+      <div className="mx-auto flex h-[34px] max-w-6xl flex-wrap items-center justify-center gap-x-3 px-4 text-center">
+        {ANNOUNCEMENT_ITEMS.map((item, index) => (
+          <span key={item} className={`${storefrontMonoClasses} flex items-center gap-3 text-[10.5px] uppercase text-[#A3A3A3]`}>
+            {index > 0 ? <span aria-hidden="true" className="text-[#D95F00]">·</span> : null}
+            {item}
+          </span>
+        ))}
       </div>
     </div>
   );

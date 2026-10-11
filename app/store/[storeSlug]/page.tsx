@@ -99,31 +99,17 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         </Container>
       ) : null}
 
-      {ctaSection && (ctaSection.title || ctaSection.description) ? (
-        <div className="border-b border-[#292929] bg-[#111111]">
-          <Container className="flex min-h-[76px] flex-col items-center justify-center gap-1 py-4 text-center">
-            {ctaSection.title ? (
-              <p className={`${storefrontDisplayClasses} text-sm font-semibold text-[#F5F5F5]`}>{ctaSection.title}</p>
-            ) : null}
-            {ctaSection.description ? (
-              <p className="text-[13px] text-[#A3A3A3]">{ctaSection.description}</p>
-            ) : null}
-          </Container>
-        </div>
-      ) : null}
-
       {/*
-        FAZ 7.3 follow-up — ctaSection artık yukarıdaki özel şeritte
-        render edildiği için burada tekrar edilmemesi gerekiyor;
-        remainingSections onu zaten dışarıda bırakıyor. Sadece o TEK
-        section (bugünkü gerçek durum) varsa generic bileşenin kendi
-        "Bu mağaza için henüz yayınlanmış bir ana sayfa bölümü yok."
-        boş-durum mesajı YANLIŞ olurdu (section aslında var, sadece
-        başka yerde render ediliyor) — emptyState={<></>} bunu bilinçli
-        olarak bastırıyor, SADECE ctaSection dolu olduğu bu durumda;
-        mağazanın gerçekten hiç section'ı yoksa (ctaSection null) bu hâlâ
-        undefined'a düşüp bileşenin kendi varsayılan boş-durum mesajını
-        gösteriyor, eskisi gibi.
+        Devir metni v2 — tasarım kanvasında (Main.dc.html) bu "EKİPMANIM
+        GÜCÜ, SENİN GÜCÜN." üst şeridinin karşılığı YOK; hero kendi
+        başlık/alt metniyle (aşağıda) aynı mesajı zaten taşıyor, ikisini
+        üst üste tutmak kanvasın istediği sade/tek mesajlı açılışla
+        çelişirdi. BİLEREK KALDIRILDI (ctaSection verisi DB'de duruyor,
+        sadece bu sayfada render edilmiyor — admin panel isterse o
+        section'ı kendi tarafında silebilir, bu bir veri silme işlemi
+        değil). remainingSections zaten bu section'ı filtreliyordu,
+        emptyState={<></>}} hâlâ "yayınlanmış bölüm yok" yanlış mesajını
+        bastırmak için korunuyor.
       */}
       <StoreHomepageSections sections={remainingSections} emptyState={ctaSection ? <></> : undefined} />
 
@@ -182,10 +168,21 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
 
           <div className="relative flex h-full items-end sm:items-center">
             <Container className="pb-10 sm:pb-0">
+              {/*
+                Devir metni v2 — kanvasın (Main.dc.html) hero başlığı,
+                kullanıcının kendi onayıyla "factual risk yok, doğrudan
+                kullanılabilir" denilerek buraya taşındı. Alt metin ise
+                kanvasın KENDİ metni DEĞİL — kanvasta "sahada test
+                edilmiş ürünler, orijinal garantiyle" gibi teyit
+                edilmemiş iddialar vardı, bu session'ın "gerçek olmayan
+                iddia yazma" kuralına göre BİLEREK kopyalanmadı; yerine
+                zaten başka yerde (StorefrontCtaBand) onaylı/kullanılan
+                AYNI cümle korundu.
+              */}
               <h1
                 className={`${storefrontDisplayClasses} max-w-2xl text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl`}
               >
-                TAKTİKALP46 <span className="text-[#D95F00]">GÜVENLE TAŞI.</span>
+                SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
               </h1>
               <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
                 Kydex&apos;in hassasiyeti. Sahaya hazır performans.
@@ -210,6 +207,15 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
       </section>
 
       {/*
+        Devir metni v2 — kanvasta (Main.dc.html) hero'nun HEMEN ALTINDA
+        4 sütunlu bir güven şeridi var, canlı sitede yoktu. TrustBadgesSection
+        zaten vardı (gerçek/onaylı 4 ifade) ama sayfanın daha aşağısında
+        duruyordu — buraya, kanvasın kendi konumuna taşındı (bileşenin
+        kendisi silinmedi, SADECE çağrı sırası değişti).
+      */}
+      <TrustBadgesSection />
+
+      {/*
         FAZ 7.3 follow-up — hero'nun altındaki v2 bölümleri (görevin kendi
         sıralamasıyla, 1'den 10'a). Eski düz "Ürünler" H2 + ProductGrid
         bloğu (tüm ürünleri stilsiz listeleyen) buradan kaldırıldı: aşağıdaki
@@ -229,7 +235,6 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={storefrontDisplayClasses} />
         <BrandStatementSection headingFont={storefrontDisplayClasses} />
         <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
-        <TrustBadgesSection />
         {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={storefrontDisplayClasses} /> : null}
         <StoreFooterV2 storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
       </div>

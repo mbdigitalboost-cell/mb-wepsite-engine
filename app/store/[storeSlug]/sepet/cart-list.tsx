@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils/format-price";
 import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
+import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
 import { resolveCartProductImages } from "./actions";
 import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkout-form";
@@ -63,93 +64,130 @@ export function CartList({
     // yeniden istek atılmasın diye.
   }, [storeSlug, productIdsKey]);
 
+  if (items.length === 0) {
+    return (
+      <div className="mt-6">
+        <p className="text-sm text-[#A3A3A3]">Sepetiniz boş.</p>
+        <Link href={`/store/${storeSlug}`} className="mt-3 inline-block text-sm text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
+          ← Alışverişe devam et
+        </Link>
+        <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-6">
-      {items.length === 0 ? (
-        <div>
-          <p className="text-sm text-[#A3A3A3]">Sepetiniz boş.</p>
-          <Link href={`/store/${storeSlug}`} className="mt-3 inline-block text-sm text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
-            ← Alışverişe devam et
-          </Link>
-        </div>
-      ) : (
-        <>
-          <ul className="divide-y divide-[#292929] rounded-[14px] border border-[#292929] bg-[#171717]">
-            {items.map((item) => (
-              <li key={item.lineId} className="flex flex-wrap items-start gap-4 p-4">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border border-[#292929] bg-[#0A0A0A]">
-                  {(() => {
-                    // Henüz çözülmemiş (key hiç yok) -> eski snapshot fallback.
-                    // Çözülmüş ama null -> ürünün gerçekten görseli yok, HİÇ
-                    // görsel gösterme (sahte/kırık bir src göstermektense boş
-                    // kutu daha doğru, product-grid.tsx'in kendi ImageOff
-                    // deseniyle tutarlı bir "görsel yok" durumu).
-                    const freshUrl = freshImageUrls[item.productId];
-                    const displayUrl = item.productId in freshImageUrls ? freshUrl : item.imageUrl;
-                    return displayUrl ? (
-                      <Image src={displayUrl} alt={item.productName} fill unoptimized sizes="80px" className="object-cover" />
-                    ) : null;
-                  })()}
-                </div>
+    /*
+     * Devir metni v2 — kanvasta (Sepet.dc.html) iki sütunlu düzen: sol
+     * ürün listesi, sağ sticky "Sipariş Özeti" kartı. Checkout gerçek
+     * kodda AYRI bir /odeme sayfası DEĞİL (kanvas bunu varsayıyordu) —
+     * aynı sayfada, ürün listesinin ALTINDA, kendi adım state'iyle
+     * (step 1/2) akıyor. Bu yüzden "Ödemeye Geç" pill butonu, var
+     * olmayan bir sayfaya gitmek yerine AYNI sayfadaki checkout formuna
+     * (#checkout-form, aşağıda) kaydırıyor — gerçek bir route icat
+     * etmeden kanvasın "ödemeye devam et" niyetini koruyan dürüst bir
+     * çözüm.
+     */
+    <div className="mt-6 grid gap-8 lg:grid-cols-[1.6fr_1fr] lg:items-start">
+      <div>
+        <ul className="divide-y divide-[#292929] rounded-[14px] border border-[#292929] bg-[#171717]">
+          {items.map((item) => (
+            <li key={item.lineId} className="flex flex-wrap items-start gap-4 p-4">
+              <div className="relative h-[92px] w-[92px] shrink-0 overflow-hidden rounded-[10px] border border-[#292929] bg-[#0A0A0A]">
+                {(() => {
+                  // Henüz çözülmemiş (key hiç yok) -> eski snapshot fallback.
+                  // Çözülmüş ama null -> ürünün gerçekten görseli yok, HİÇ
+                  // görsel gösterme (sahte/kırık bir src göstermektense boş
+                  // kutu daha doğru, product-grid.tsx'in kendi ImageOff
+                  // deseniyle tutarlı bir "görsel yok" durumu).
+                  const freshUrl = freshImageUrls[item.productId];
+                  const displayUrl = item.productId in freshImageUrls ? freshUrl : item.imageUrl;
+                  return displayUrl ? (
+                    <Image src={displayUrl} alt={item.productName} fill unoptimized sizes="92px" className="object-cover" />
+                  ) : null;
+                })()}
+              </div>
 
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/store/${storeSlug}/urun/${item.productSlug}`}
-                    className="font-medium text-[#F5F5F5] hover:underline"
-                  >
-                    {item.productName}
-                  </Link>
-                  {item.variantLabel ? <p className="mt-0.5 text-xs text-[#A3A3A3]">{item.variantLabel}</p> : null}
-                  {item.addonLabels.length > 0 ? (
-                    <p className="mt-0.5 text-xs text-[#A3A3A3]">{item.addonLabels.join(", ")}</p>
-                  ) : null}
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/store/${storeSlug}/urun/${item.productSlug}`}
+                  className="font-medium text-[#F5F5F5] hover:underline"
+                >
+                  {item.productName}
+                </Link>
+                {item.variantLabel ? <p className="mt-0.5 text-xs text-[#A3A3A3]">{item.variantLabel}</p> : null}
+                {item.addonLabels.length > 0 ? (
+                  <p className="mt-0.5 text-xs text-[#A3A3A3]">{item.addonLabels.join(", ")}</p>
+                ) : null}
 
-                  <div className="mt-2 flex items-center gap-3">
-                    <div className="flex items-center rounded-md border border-[#292929]">
-                      <button
-                        type="button"
-                        aria-label="Adedi azalt"
-                        onClick={() => setQuantity(item.lineId, item.quantity - 1)}
-                        className="px-2.5 py-1 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
-                      >
-                        −
-                      </button>
-                      <span className="min-w-[2ch] px-1.5 text-center text-sm text-[#F5F5F5]">{item.quantity}</span>
-                      <button
-                        type="button"
-                        aria-label="Adedi artır"
-                        onClick={() => setQuantity(item.lineId, item.quantity + 1)}
-                        className="px-2.5 py-1 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
-                      >
-                        +
-                      </button>
-                    </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="flex items-center rounded-full border-[1.5px] border-[#3A3A3A]">
                     <button
                       type="button"
-                      onClick={() => removeItem(item.lineId)}
-                      className="text-xs text-[#A3A3A3] underline-offset-2 hover:text-red-400 hover:underline"
+                      aria-label="Adedi azalt"
+                      onClick={() => setQuantity(item.lineId, item.quantity - 1)}
+                      className="px-2.5 py-1 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
                     >
-                      Kaldır
+                      −
+                    </button>
+                    <span className={`${storefrontMonoClasses} min-w-[2ch] px-1.5 text-center text-sm text-[#F5F5F5]`}>{item.quantity}</span>
+                    <button
+                      type="button"
+                      aria-label="Adedi artır"
+                      onClick={() => setQuantity(item.lineId, item.quantity + 1)}
+                      className="px-2.5 py-1 text-sm text-[#A3A3A3] hover:text-[#F5F5F5]"
+                    >
+                      +
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.lineId)}
+                    className="text-xs text-[#A3A3A3] underline-offset-2 hover:text-red-400 hover:underline"
+                  >
+                    Kaldır
+                  </button>
                 </div>
+              </div>
 
-                <div className="whitespace-nowrap text-right text-sm">
-                  <p className={`${storefrontMonoClasses} text-[#F5F5F5]`}>{formatPrice(item.unitPrice * item.quantity)}</p>
-                  {item.quantity > 1 ? <p className="text-xs text-[#A3A3A3]">{formatPrice(item.unitPrice)} / adet</p> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+              <div className="whitespace-nowrap text-right text-sm">
+                <p className={`${storefrontMonoClasses} text-[#F5F5F5]`}>{formatPrice(item.unitPrice * item.quantity)}</p>
+                {item.quantity > 1 ? <p className="text-xs text-[#A3A3A3]">{formatPrice(item.unitPrice)} / adet</p> : null}
+              </div>
+            </li>
+          ))}
+        </ul>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
-            <span className="text-sm text-[#A3A3A3]">Genel Toplam</span>
-            <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#F5F5F5]`}>{formatPrice(subtotal)}</span>
-          </div>
-        </>
-      )}
+        <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+      </div>
 
-      <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+      {/*
+       * Sağ sütun — sticky "Sipariş Özeti". Kargo satırı "Ücretsiz" —
+       * bu uydurma değil: createOrderAction'ın kendi fiyat hesaplaması
+       * (subtotal - discount_amount) hiçbir zaman ayrı bir kargo bedeli
+       * EKLEMİYOR, yani sistem bugün gerçekten hiçbir sipariş için kargo
+       * ücreti almıyor — "2.000 TL üzeri ücretsiz kargo" mesajıyla
+       * çelişmiyor, ondan daha da geniş (şu an TAMAMEN ücretsiz).
+       */}
+      <div className="rounded-[14px] border border-[#292929] bg-[#171717] p-6 lg:sticky lg:top-6">
+        <p className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Sipariş Özeti</p>
+        <div className="mt-4 flex justify-between text-sm text-[#A3A3A3]">
+          <span>Ara Toplam</span>
+          <span className={storefrontMonoClasses}>{formatPrice(subtotal)}</span>
+        </div>
+        <div className="mt-3 flex justify-between text-sm text-[#A3A3A3]">
+          <span>Kargo</span>
+          <span className={`${storefrontMonoClasses} text-[#3FA34D]`}>Ücretsiz</span>
+        </div>
+        <hr className="my-4 border-[#292929]" />
+        <div className="flex items-center justify-between">
+          <span className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Genel Toplam</span>
+          <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#D95F00]`}>{formatPrice(subtotal)}</span>
+        </div>
+        <a href="#checkout-form" className={`${storefrontButtonClasses} mt-5 w-full`}>
+          Ödemeye Geç
+        </a>
+      </div>
     </div>
   );
 }

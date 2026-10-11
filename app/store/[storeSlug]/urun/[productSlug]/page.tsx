@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import {
   getPublicProductBySlug,
@@ -18,6 +18,7 @@ import { Container } from "@/components/ui/container";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
 import { ProductImageCardGrid } from "@/components/commerce/public/product-image-card-grid";
 import { ProductConfigurator } from "./product-configurator";
+import { ProductInfoAccordion } from "./product-info-accordion";
 
 /**
  * Faz 12 devamı (Part A) — "Çok Satanlar"/"Benzer Ürünler" kartları için her
@@ -112,20 +113,20 @@ export default async function StoreProductPage({
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-[#A3A3A3]">
+        <nav aria-label="Breadcrumb" className={`${storefrontMonoClasses} flex flex-wrap items-center gap-1.5 text-xs text-[#6B6B6B]`}>
           <Link href={`/store/${storeSlug}`} className="hover:text-[#F5F5F5] hover:underline">
             Ana Sayfa
           </Link>
           {category ? (
             <>
-              <span aria-hidden="true">·</span>
+              <span aria-hidden="true">/</span>
               <Link href={`/store/${storeSlug}/kategori/${category.slug}`} className="hover:text-[#F5F5F5] hover:underline">
                 {category.name}
               </Link>
             </>
           ) : null}
-          <span aria-hidden="true">·</span>
-          <span className="font-semibold text-[#F5F5F5]">{product.name}</span>
+          <span aria-hidden="true">/</span>
+          <span className="text-[#A3A3A3]">{product.name}</span>
         </nav>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-2">
@@ -181,9 +182,6 @@ export default async function StoreProductPage({
             {product.shortDescription ? (
               <p className="mt-4 text-sm text-[#A3A3A3]">{product.shortDescription}</p>
             ) : null}
-            {product.description ? (
-              <p className="mt-4 whitespace-pre-line text-sm text-[#A3A3A3]">{product.description}</p>
-            ) : null}
 
             {/*
               FAZ 1 (mağaza sepeti/configurator) — the single price display
@@ -203,6 +201,29 @@ export default async function StoreProductPage({
               optionGroups={optionGroups}
               variants={variants}
               addons={addons}
+            />
+
+            {/*
+              Devir metni v2 — kanvasın (UrunDetay.dc.html) 3 satırlı
+              accordion'u: "Ürün Detayları" (artık product.description,
+              önceden burada loose bir paragraf olarak duruyordu — GERÇEK
+              veri, sadece yeri değişti), "Kargo & İade" (zaten başka
+              yerde onaylı/kullanılan 2 gerçek ifade — kanvastaki
+              "2–4 iş günü kargo" gibi teyitsiz bir süre YAZILMADI),
+              "Yorumlar" (platformda hiç değerlendirme sistemi yok —
+              kanvastaki "(24)" sayısı UYDURULMADI, nötr/dürüst bir boş
+              durum mesajı var). "Ürün Detayları" gerçek description YOKSA
+              hiç eklenmiyor (boş bir accordion satırı göstermek yerine).
+            */}
+            <ProductInfoAccordion
+              items={[
+                ...(product.description ? [{ label: "Ürün Detayları", content: product.description }] : []),
+                {
+                  label: "Kargo & İade",
+                  content: "2.000 TL üzeri siparişlerde kargo ücretsizdir. Kolay iade imkanı sunulur.",
+                },
+                { label: "Yorumlar", content: "Henüz değerlendirme yok." },
+              ]}
             />
           </div>
         </div>

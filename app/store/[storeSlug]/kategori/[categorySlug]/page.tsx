@@ -154,6 +154,7 @@ export default async function StoreCategoryPage({
           brands={categoryBrands}
           currentSort={effectiveSort}
           currentBrand={brandSlug ?? ""}
+          resultCount={products.length}
         />
 
         {products.length === 0 ? (
