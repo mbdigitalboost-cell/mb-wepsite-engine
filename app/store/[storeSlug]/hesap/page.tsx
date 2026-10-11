@@ -72,7 +72,22 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
           </div>
         </div>
 
-        <h2 className="mt-8 text-sm font-semibold text-[#A3A3A3]">Siparişlerim</h2>
+        {/*
+          Devir metni (acil, Part B) — "Siparişlerim" bu sayfada zaten
+          BU listeyi gösteriyordu ama tam sipariş detayına (ürünler/
+          teslimat adresi/kargo bilgisi, bkz. OrderStatusCard) giden bir
+          link YOKTU. Yeni bir sayfa/route DEĞİL — zaten var olan
+          /siparislerim'e (Faz 13) bir giriş noktası daha.
+        */}
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-[#A3A3A3]">Siparişlerim</h2>
+          <Link
+            href={`/store/${storeSlug}/siparislerim`}
+            className="text-xs font-medium text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
+          >
+            Tüm Sipariş Detaylarını Gör →
+          </Link>
+        </div>
 
         {!orders || orders.length === 0 ? (
           <p className="mt-3 text-sm text-[#A3A3A3]">Bu mağazada henüz bir siparişiniz yok.</p>

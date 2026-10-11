@@ -143,14 +143,27 @@ export function StoreMobileMenu({
                 dallanmasını kendi içinde yapıyor (page.tsx). Kanvasın
                 kendi talimatı — turuncu-tonlu hafif zemin + turuncu metin,
                 diğer linklerden görsel olarak öne çıkıyor.
+
+                Devir metni (acil, Part B) — "hesabım kısmında yok"
+                şikayeti: bu link üstteki Hesabım/Giriş satırıyla hiç
+                ilişkilendirilmemişti, kullanıcı doğal olarak "hesap"
+                kavramıyla arayıp bulamıyordu. Küçük bir alt metin
+                eklendi (devir metninin kendi önerdiği cümle) — route/
+                mimari DEĞİŞMEDİ, sadece bu ikisinin aynı kavramsal
+                alanda olduğu netleşti.
               */}
               <Link
                 href={`/store/${storeSlug}/siparislerim`}
                 onClick={() => setOpen(false)}
-                className={`${storefrontDisplayClasses} flex items-center justify-between border-b border-[#292929] px-5 py-4 text-sm font-semibold text-[#D95F00]`}
+                className="flex items-center justify-between border-b border-[#292929] px-5 py-4"
                 style={{ background: "rgba(217,95,0,0.07)" }}
               >
-                Siparişlerim
+                <span>
+                  <span className={`${storefrontDisplayClasses} block text-sm font-semibold text-[#D95F00]`}>Siparişlerim</span>
+                  <span className={`${storefrontMonoClasses} mt-0.5 block text-[11px] text-[#D95F00]/70`}>
+                    Üye olmadan da sipariş kodunla takip edebilirsin
+                  </span>
+                </span>
               </Link>
 
               {/* FAZ 6.2 — only shown when logged in: an address book only means anything for an account, and the addresses page itself redirects a guest to /giris anyway. */}
