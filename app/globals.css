@@ -37,6 +37,24 @@
   --font-brand-heading: var(--font-brand-heading);
   --font-brand-body: var(--font-brand-body);
   --radius-brand: var(--radius-brand);
+
+  /*
+   * Site geneli tasarım sistemi (Taktikalp46 storefront) — Oswald/Barlow/
+   * JetBrains Mono. AYNI "token adı -> aynı adlı CSS değişkeni -> aynı adlı
+   * Tailwind utility" deseni (--font-brand-heading -> font-brand-heading
+   * gibi, bu dosyanın kendi önceki tokenları), ama ayrı bir isim alanıyla
+   * (--font-store- önekiyle) — admin panelin --font-brand- tokenlarıyla/
+   * ThemeProvider'ıyla KARIŞMASIN. Gerçek font DOSYASI/DEĞERİ burada DEĞİL: next/font/google
+   * app/store/[storeSlug]/layout.tsx'te TEK seferde yükleniyor ve bu üç
+   * CSS değişkenini SADECE storefront route ağacını saran bir wrapper'a
+   * (className={oswald.variable} vb.) scoped olarak set ediyor — admin
+   * panel/Petra bu değişkenleri hiç görmüyor, varsayılan olarak boş/unset
+   * kalıyorlar (yani font-store-display vb. utility'leri storefront
+   * DIŞINDA hiçbir şey render etmez).
+   */
+  --font-store-display: var(--font-store-display);
+  --font-store-body: var(--font-store-body);
+  --font-store-mono: var(--font-store-mono);
 }
 
 @media (prefers-color-scheme: dark) {

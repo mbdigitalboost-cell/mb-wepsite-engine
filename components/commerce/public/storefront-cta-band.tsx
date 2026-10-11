@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * Faz 12 devamı (B), Faz 12 devamı (bu tur, Part A) — tam genişlikte turuncu
@@ -49,12 +47,12 @@ export async function StorefrontCtaBand({ storeId, storeSlug }: { storeId: strin
       ? profile.socialLinks.instagram
       : null;
 
-  const ctaClassName = `${spaceGrotesk.className} inline-flex h-12 items-center justify-center rounded-md border-2 border-[#0A0A0A] bg-[#0A0A0A] px-7 text-sm font-semibold text-[#D95F00] transition-colors hover:bg-transparent hover:text-[#0A0A0A]`;
+  const ctaClassName = `${storefrontDisplayClasses} inline-flex h-12 items-center justify-center rounded-full border-2 border-[#0A0A0A] bg-[#0A0A0A] px-7 text-sm font-semibold text-[#D95F00] transition-colors hover:bg-transparent hover:text-[#0A0A0A]`;
 
   return (
     <div style={{ background: "linear-gradient(135deg, #B34C00 0%, #D95F00 100%)" }}>
       <Container className="flex flex-col items-center gap-4 py-14 text-center">
-        <h2 className={`${spaceGrotesk.className} max-w-2xl text-2xl font-bold uppercase leading-tight text-[#0A0A0A] sm:text-3xl`}>
+        <h2 className={`${storefrontDisplayClasses} max-w-2xl text-2xl font-bold leading-tight text-[#0A0A0A] sm:text-3xl`}>
           Her Kydex Parça Kendi Atölyemizde Isıyla Şekillendirilir.
         </h2>
         <p className="max-w-lg text-sm text-[#0A0A0A]">Kydex&apos;in hassasiyeti. Sahaya hazır performans.</p>

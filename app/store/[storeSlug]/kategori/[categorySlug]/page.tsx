@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategoryBySlug, getPublicSubcategories } from "@/lib/commerce/public/categories";
 import { getPublicBrandBySlug, getPublicBrandsForCategory } from "@/lib/commerce/public/brands";
 import { getPublicProducts, type PublicProductSort } from "@/lib/commerce/public/products";
 import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { CategoryFilterBar } from "@/components/commerce/public/category-filter-bar";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 2C-3 STEP 22 / FAZ 2C-4 STEP 23 / FAZ 2C STEP 33 — category listing.
@@ -106,21 +104,34 @@ export default async function StoreCategoryPage({
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{category.name}</h1>
-        {category.description ? <p className="mt-2 text-sm text-[#A3A3A3]">{category.description}</p> : null}
-
+        {/*
+          Tasarım kanvası (Kategori.dc.html) — görsel varsa başlık/açıklama
+          artık banner'ın İÇİNDE (fotoğraf + soldan sağa koyulaşan gradyan
+          üzerine bindirilmiş metin), görsel yoksa (bugünkü gerçek durum —
+          12 kategorinin hiçbirinde image_url dolu değil) eskisi gibi düz,
+          banner'sız başlık.
+        */}
         {category.imageUrl ? (
-          <div className="relative mt-4 h-32 w-full overflow-hidden rounded-lg sm:h-44">
-            <Image
-              src={category.imageUrl}
-              alt={category.name}
-              fill
-              unoptimized
-              sizes="100vw"
-              className="object-cover"
+          <div className="relative mt-4 flex min-h-[180px] items-end overflow-hidden rounded-[14px] border border-[#292929] p-7 sm:min-h-[220px] sm:p-10">
+            <Image src={category.imageUrl} alt={category.name} fill unoptimized sizes="100vw" className="object-cover opacity-55" />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(90deg, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.55) 55%, rgba(10,10,10,0.2) 100%)" }}
             />
+            <div className="relative">
+              <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5] sm:text-4xl`}>{category.name}</h1>
+              {category.description ? (
+                <p className="mt-2.5 max-w-lg text-sm leading-relaxed text-[#A3A3A3]">{category.description}</p>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{category.name}</h1>
+            {category.description ? <p className="mt-2 text-sm text-[#A3A3A3]">{category.description}</p> : null}
+          </>
+        )}
 
         {subcategories.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-2">
@@ -146,7 +157,7 @@ export default async function StoreCategoryPage({
         />
 
         {products.length === 0 ? (
-          <div className="mt-8 flex flex-col items-center gap-4 rounded-lg border border-[#292929] bg-[#171717] px-6 py-12 text-center">
+          <div className="mt-8 flex flex-col items-center gap-4 rounded-[14px] border border-[#292929] bg-[#171717] px-6 py-12 text-center">
             <p className="text-sm text-[#A3A3A3]">
               {hasActiveFilter
                 ? "Seçtiğiniz filtrelere uygun ürün bulunamadı."
@@ -162,7 +173,7 @@ export default async function StoreCategoryPage({
             ) : (
               <Link
                 href={`/store/${storeSlug}/kategoriler`}
-                className="rounded-md bg-[#D95F00] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#F26A00]"
+                className={`${storefrontDisplayClasses} rounded-full bg-[#D95F00] px-6 py-3 text-sm font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00]`}
               >
                 Tüm Kategorileri Gör
               </Link>

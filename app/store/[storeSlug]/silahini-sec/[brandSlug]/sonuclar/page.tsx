@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandBySlug } from "@/lib/commerce/public/brands";
 import { getPublicProducts } from "@/lib/commerce/public/products";
@@ -8,8 +7,7 @@ import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb, SelectedBrandChip } from "@/components/commerce/public/silahini-sec-progress";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 
 /**
  * FAZ 7.2 — "Silahını Seç" akışı, adım 3: sonuçlar. `?model=` yoksa bu
@@ -48,7 +46,7 @@ export default async function StoreChooseWeaponResultsPage({
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <SilahiniSecBreadcrumb activeStep={3} />
+        <SilahiniSecBreadcrumb storeSlug={storeSlug} activeStep={3} brandName={brand.name} />
         <Link
           href={`/store/${storeSlug}/silahini-sec/${brandSlug}`}
           className="mt-3 inline-block text-xs text-[#A3A3A3] hover:text-[#F5F5F5] hover:underline"
@@ -56,7 +54,7 @@ export default async function StoreChooseWeaponResultsPage({
           ← {brand.name}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>
+          <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>
             {brand.name}
             {model ? ` — ${model}` : ""}
           </h1>

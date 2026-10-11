@@ -1,12 +1,10 @@
 import { notFound } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 import { CartList } from "./cart-list";
 import type { InitialCustomer, SavedAddress } from "./checkout-form";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 5.1 — pre-fills checkout step 1 for a signed-in customer. email
@@ -123,7 +121,7 @@ export default async function StoreCartPage({ params }: { params: Promise<{ stor
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Sepetim</h1>
+        <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Sepetim</h1>
         <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
       </Container>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils/format-price";
+import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
 import { resolveCartProductImages } from "./actions";
 import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkout-form";
@@ -73,7 +74,7 @@ export function CartList({
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-[#292929] rounded-lg border border-[#292929] bg-[#171717]">
+          <ul className="divide-y divide-[#292929] rounded-[14px] border border-[#292929] bg-[#171717]">
             {items.map((item) => (
               <li key={item.lineId} className="flex flex-wrap items-start gap-4 p-4">
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md border border-[#292929] bg-[#0A0A0A]">
@@ -134,16 +135,16 @@ export function CartList({
                 </div>
 
                 <div className="whitespace-nowrap text-right text-sm">
-                  <p className="text-[#F5F5F5]">{formatPrice(item.unitPrice * item.quantity)}</p>
+                  <p className={`${storefrontMonoClasses} text-[#F5F5F5]`}>{formatPrice(item.unitPrice * item.quantity)}</p>
                   {item.quantity > 1 ? <p className="text-xs text-[#A3A3A3]">{formatPrice(item.unitPrice)} / adet</p> : null}
                 </div>
               </li>
             ))}
           </ul>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[#292929] bg-[#171717] p-4">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
             <span className="text-sm text-[#A3A3A3]">Genel Toplam</span>
-            <span className="text-xl font-semibold text-[#F5F5F5]">{formatPrice(subtotal)}</span>
+            <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#F5F5F5]`}>{formatPrice(subtotal)}</span>
           </div>
         </>
       )}

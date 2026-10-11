@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandBySlug, getPublicBrandModels } from "@/lib/commerce/public/brands";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb, SelectedBrandChip } from "@/components/commerce/public/silahini-sec-progress";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 
 /**
  * FAZ 7.2 — "Silahını Seç" akışı, adım 2: model seçimi. Model listesi
@@ -37,7 +35,7 @@ export default async function StoreChooseWeaponBrandPage({
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <SilahiniSecBreadcrumb activeStep={2} />
+        <SilahiniSecBreadcrumb storeSlug={storeSlug} activeStep={2} brandName={brand.name} />
         <Link
           href={`/store/${storeSlug}/silahini-sec`}
           className="mt-3 inline-block text-xs text-[#A3A3A3] hover:text-[#F5F5F5] hover:underline"
@@ -45,7 +43,7 @@ export default async function StoreChooseWeaponBrandPage({
           ← Markalar
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{brand.name}</h1>
+          <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{brand.name}</h1>
           <SelectedBrandChip brandName={brand.name} />
         </div>
 
@@ -67,7 +65,7 @@ export default async function StoreChooseWeaponBrandPage({
                 <li key={model}>
                   <Link
                     href={`/store/${storeSlug}/silahini-sec/${brandSlug}/sonuclar?model=${encodeURIComponent(model)}`}
-                    className={`${spaceGrotesk.className} flex h-20 items-center justify-center rounded-lg border border-[#292929] bg-[#171717] p-4 text-center text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00]`}
+                    className={`${storefrontDisplayClasses} flex h-20 items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] p-4 text-center text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00]`}
                   >
                     {model}
                   </Link>

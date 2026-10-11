@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { ShoppingCart } from "lucide-react";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { useCart } from "./cart-context";
 import { StoreMobileMenu } from "./store-mobile-menu";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 1 (mağaza sepeti/configurator) — minimal persistent header, mounted
@@ -72,7 +70,7 @@ export function StoreHeader({
               // eslint-disable-next-line @next/next/no-img-element -- store-provided public Storage URL, arbitrary per tenant; not worth a next.config.ts remotePatterns entry for a small header logo.
               <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain" />
             ) : (
-              <span className={`${spaceGrotesk.className} text-sm font-bold uppercase tracking-wide text-[#F5F5F5] hover:text-[#D95F00]`}>
+              <span className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5] hover:text-[#D95F00]`}>
                 {storeName}
               </span>
             )}
@@ -80,10 +78,10 @@ export function StoreHeader({
         </div>
         <Link
           href={`/store/${storeSlug}/sepet`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#292929] bg-[#171717] px-3 py-1.5 text-sm text-[#F5F5F5] transition-colors hover:border-[#D95F00]"
+          className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[#3A3A3A] bg-[#171717] px-3 py-1.5 text-sm text-[#F5F5F5] transition-colors hover:border-[#D95F00]"
         >
           <ShoppingCart size={16} aria-hidden="true" />
-          Sepetim {itemCount > 0 ? `(${itemCount})` : ""}
+          Sepetim {itemCount > 0 ? <span className={storefrontMonoClasses}>({itemCount})</span> : ""}
         </Link>
       </div>
     </header>

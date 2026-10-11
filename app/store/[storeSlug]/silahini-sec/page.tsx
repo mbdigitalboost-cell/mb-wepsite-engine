@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb } from "@/components/commerce/public/silahini-sec-progress";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 
 /**
  * FAZ 7.2 — "Silahını Seç" akışı, adım 1: marka seçimi.
@@ -30,8 +28,8 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <SilahiniSecBreadcrumb activeStep={1} />
-        <h1 className={`${spaceGrotesk.className} mt-3 text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Silahını Seç</h1>
+        <SilahiniSecBreadcrumb storeSlug={storeSlug} activeStep={1} />
+        <h1 className={`${storefrontDisplayClasses} mt-3 text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Silahını Seç</h1>
         <p className="mt-1 text-sm text-[#A3A3A3]">Önce bir marka seçin.</p>
 
         {brands.length === 0 ? (
@@ -42,7 +40,7 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
               <li key={brand.id}>
                 <Link
                   href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
-                  className={`${spaceGrotesk.className} flex h-24 items-center justify-center rounded-lg border border-[#292929] bg-[#171717] p-4 text-center text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00]`}
+                  className={`${storefrontDisplayClasses} flex h-24 items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] p-4 text-center text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00]`}
                 >
                   {brand.name}
                 </Link>

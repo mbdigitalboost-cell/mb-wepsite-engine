@@ -6,6 +6,7 @@ import type { PublicBrand } from "@/lib/commerce/public/brands";
 import type { PublicProduct } from "@/lib/commerce/public/products";
 import { CATEGORY_FALLBACK_IMAGES } from "@/lib/commerce/public/category-fallback-images";
 import { formatPrice } from "@/lib/utils/format-price";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 
 /**
@@ -27,7 +28,8 @@ import { Container } from "@/components/ui/container";
  * erken-dönüş kontrolü).
  */
 
-const HEADING = "font-bold uppercase tracking-tight";
+/** `headingFont` çağıranlardan storefrontDisplayClasses geliyor (uppercase/tracking-wide zaten onun içinde) — burada SADECE kalınlık ekleniyor, çakışan bir ikinci uppercase/tracking class'ı YOK. */
+const HEADING = "font-bold";
 
 /** 1. Neden Kydex? — statik, genel Kydex malzeme gerçekleri (ürün-spesifik iddia değil). */
 const WHY_KYDEX_ITEMS = [
@@ -47,7 +49,7 @@ export function WhyKydexSection({ headingFont }: { headingFont: string }) {
         </div>
         <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
           {WHY_KYDEX_ITEMS.map((item) => (
-            <div key={item.n} className="rounded-[6px] border border-[#292929] bg-[#171717] p-6">
+            <div key={item.n} className="rounded-[14px] border border-[#292929] bg-[#171717] p-6">
               <div className={`${headingFont} text-xl font-bold text-[#D95F00]`}>{item.n}</div>
               <div className={`${headingFont} mt-2.5 text-[15px] font-semibold text-[#F5F5F5]`}>{item.title}</div>
               <div className="mt-2 text-[13px] leading-relaxed text-[#A3A3A3]">{item.body}</div>
@@ -81,7 +83,7 @@ function CategoryImageCard({
   return (
     <Link
       href={`/store/${storeSlug}/kategori/${category.slug}`}
-      className={`group relative block ${height} overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
+      className={`group relative block ${height} overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
     >
       {imageUrl ? (
         <Image
@@ -167,10 +169,10 @@ export function BrandFinderSection({
             <Link
               key={brand.id}
               href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
-              className={`${headingFont} rounded-[4px] px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 ${
+              className={`${headingFont} rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 ${
                 index === 0
-                  ? "bg-[#D95F00] text-white hover:bg-[#F26A00]"
-                  : "border border-[#292929] bg-[#171717] text-[#F5F5F5] hover:border-[#D95F00]"
+                  ? "bg-[#D95F00] text-[#1A0D00] hover:bg-[#F26A00]"
+                  : "border-[1.5px] border-[#3A3A3A] bg-[#171717] text-[#F5F5F5] hover:border-[#D95F00]"
               }`}
             >
               {brand.name.toLocaleUpperCase("tr")}
@@ -212,7 +214,7 @@ export function FeaturedProductsSection({
             <Link
               key={product.id}
               href={`/store/${storeSlug}/urun/${product.slug}`}
-              className="group block overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+              className="group block overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
               <div className="relative h-[170px] bg-[#1D1D1B]">
                 {product.imageUrl ? (
@@ -232,10 +234,10 @@ export function FeaturedProductsSection({
               </div>
               <div className="p-3.5">
                 <div className="text-[13px] font-semibold text-[#F5F5F5]">{product.name}</div>
-                <div className={`${headingFont} mt-2 text-[15px] font-bold text-[#D95F00]`}>
+                <div className={`${storefrontMonoClasses} mt-2 text-[15px] font-bold text-[#D95F00]`}>
                   {formatPrice(product.price)}
                 </div>
-                <div className="mt-2.5 rounded-[3px] border border-[#292929] py-2 text-center text-xs text-[#F5F5F5] transition-colors group-hover:border-[#D95F00]">
+                <div className="mt-2.5 rounded-full border-[1.5px] border-[#3A3A3A] py-2 text-center text-xs font-medium text-[#F5F5F5] transition-colors group-hover:border-[#D95F00]">
                   İncele
                 </div>
               </div>
@@ -299,7 +301,7 @@ export function OtherCategoriesSection({
           ))}
           <Link
             href={`/store/${storeSlug}/kategoriler`}
-            className="flex h-[150px] items-center justify-center rounded-[6px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
+            className="flex h-[150px] items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
           >
             Tümünü Gör →
           </Link>
@@ -324,7 +326,7 @@ export function TrustBadgesSection() {
         {TRUST_BADGES.map(({ Icon, label }) => (
           <div key={label} className="flex flex-col items-center gap-2 text-center text-xs text-[#F5F5F5]">
             <Icon size={20} strokeWidth={1.75} className="text-[#D95F00]" aria-hidden="true" />
-            <span>{label}</span>
+            <span className={storefrontDisplayClasses}>{label}</span>
           </div>
         ))}
       </Container>
@@ -342,7 +344,7 @@ export function InstagramSection({ instagramUrl, headingFont }: { instagramUrl: 
           href={instagramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${headingFont} inline-flex items-center gap-2 rounded-[4px] border border-[#292929] bg-[#171717] px-6 py-3 text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00] hover:text-[#D95F00]`}
+          className={`${headingFont} inline-flex items-center gap-2 rounded-full border-[1.5px] border-[#3A3A3A] bg-[#171717] px-6 py-3 text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00] hover:text-[#D95F00]`}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
             <rect x="2" y="2" width="20" height="20" rx="5" />

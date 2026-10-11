@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ImageOff } from "lucide-react";
 import type { PublicProduct } from "@/lib/commerce/public/products";
 import { formatPrice } from "@/lib/utils/format-price";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 
 /**
  * Faz 12 devamı — ürün detay sayfasının "Çok Satanlar" ve "Benzer Ürünler"
@@ -29,13 +30,13 @@ export function ProductImageCardGrid({
 
   return (
     <div className="mt-12">
-      <h2 className="text-lg font-semibold text-[#F5F5F5]">{heading}</h2>
+      <h2 className={`${storefrontDisplayClasses} text-lg font-semibold text-[#F5F5F5]`}>{heading}</h2>
       <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {products.map((product) => (
           <li key={product.id}>
             <Link
               href={`/store/${storeSlug}/urun/${product.slug}`}
-              className="group block overflow-hidden rounded-[6px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00] hover:shadow-lg"
+              className="group block overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00] hover:shadow-lg"
             >
               <div className="relative h-[140px] bg-[#1D1D1B]">
                 {product.imageUrl ? (
@@ -55,7 +56,7 @@ export function ProductImageCardGrid({
               </div>
               <div className="p-3">
                 <p className="truncate text-xs font-medium text-[#F5F5F5]">{product.name}</p>
-                <p className="mt-1 text-xs font-semibold text-[#D95F00]">{formatPrice(product.price)}</p>
+                <p className={`${storefrontMonoClasses} mt-1 text-xs font-semibold text-[#D95F00]`}>{formatPrice(product.price)}</p>
               </div>
             </Link>
           </li>

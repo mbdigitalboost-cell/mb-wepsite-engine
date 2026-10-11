@@ -1,9 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import type { PublicBrand } from "@/lib/commerce/public/brands";
 import type { PublicProductSort } from "@/lib/commerce/public/products";
+
+/** Tasarım kanvası (Kategori.dc.html) — `select.ghost`: pill şekli, Oswald uppercase, storefrontInputClasses'ın (dikdörtgen, form alanları için) AYRI bir varyantı. */
+const ghostSelectClasses =
+  `${storefrontDisplayClasses} w-auto rounded-full border-[1.5px] border-[#3A3A3A] bg-[#171717] px-4 py-2.5 text-xs font-semibold text-[#F5F5F5] transition-colors focus-visible:border-[#D95F00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D95F00]/30`;
 
 const SORT_OPTIONS: { value: PublicProductSort; label: string }[] = [
   { value: "newest", label: "En Yeni" },
@@ -58,7 +62,7 @@ export function CategoryFilterBar({
         value={currentSort}
         onChange={(event) => updateParam("sort", event.target.value)}
         aria-label="Sırala"
-        className={`${storefrontInputClasses} w-auto`}
+        className={ghostSelectClasses}
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -72,7 +76,7 @@ export function CategoryFilterBar({
           value={currentBrand}
           onChange={(event) => updateParam("brand", event.target.value)}
           aria-label="Marka"
-          className={`${storefrontInputClasses} w-auto`}
+          className={ghostSelectClasses}
         >
           <option value="">Tüm Markalar</option>
           {brands.map((brand) => (

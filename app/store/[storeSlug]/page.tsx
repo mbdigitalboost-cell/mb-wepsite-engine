@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
@@ -22,22 +22,6 @@ import {
   InstagramSection,
   StoreFooterV2,
 } from "@/components/commerce/public/taktikalp46-homepage-sections";
-
-/**
- * FAZ 7.3 — v2 hero tasarımı SADECE bu sayfaya özel bir başlık fontu
- * istiyor (Space Grotesk); platform genelinde henüz bir ThemeProvider/
- * BrandTheme font sistemi storefront'a bağlanmadığı için (bkz. aşağıdaki
- * eski FAZ 2C-3 STEP 22 notu, hâlâ doğru) global bir font eklemek yerine
- * bu dosyaya scoped next/font/google kullanılıyor — Petra'ya ya da panel'e
- * hiç dokunmuyor.
- *
- * FAZ 7.3 follow-up — Inter, v2'nin "gövde Inter" talimatı için eklendi;
- * yeni bölümlerdeki gövde metinlerine className olarak veriliyor (bkz.
- * taktikalp46-homepage-sections.tsx'e geçirilen `bodyFont`/`headingFont`
- * class'ları).
- */
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 /**
  * FAZ 2C-3 STEP 22 — Taktikalp46 / multi-tenant commerce storefront
@@ -119,7 +103,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         <div className="border-b border-[#292929] bg-[#111111]">
           <Container className="flex min-h-[76px] flex-col items-center justify-center gap-1 py-4 text-center">
             {ctaSection.title ? (
-              <p className={`${spaceGrotesk.className} text-sm font-semibold text-[#F5F5F5]`}>{ctaSection.title}</p>
+              <p className={`${storefrontDisplayClasses} text-sm font-semibold text-[#F5F5F5]`}>{ctaSection.title}</p>
             ) : null}
             {ctaSection.description ? (
               <p className="text-[13px] text-[#A3A3A3]">{ctaSection.description}</p>
@@ -199,7 +183,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
           <div className="relative flex h-full items-end sm:items-center">
             <Container className="pb-10 sm:pb-0">
               <h1
-                className={`${spaceGrotesk.className} max-w-2xl text-3xl font-bold uppercase leading-tight text-white sm:text-5xl lg:text-6xl`}
+                className={`${storefrontDisplayClasses} max-w-2xl text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl`}
               >
                 TAKTİKALP46 <span className="text-[#D95F00]">GÜVENLE TAŞI.</span>
               </h1>
@@ -209,13 +193,13 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href={`/store/${storeSlug}/silahini-sec`}
-                  className={`${spaceGrotesk.className} inline-flex h-14 w-full items-center justify-center rounded-md bg-[#D95F00] px-8 text-base font-semibold text-white transition-colors hover:bg-[#F26A00] sm:w-auto`}
+                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
                 >
                   Silahını Seç
                 </Link>
                 <Link
                   href={`/store/${storeSlug}/kategoriler`}
-                  className={`${spaceGrotesk.className} inline-flex h-14 w-full items-center justify-center rounded-md border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
+                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
                 >
                   Tüm Kategoriler
                 </Link>
@@ -238,16 +222,16 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         istisna Instagram (aşağıda instagramUrl null ise hiç render
         edilmiyor, çünkü o bileşen linksiz render edilmeyi desteklemiyor).
       */}
-      <div className={inter.className}>
-        <WhyKydexSection headingFont={spaceGrotesk.className} />
-        <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
-        <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={spaceGrotesk.className} />
-        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={spaceGrotesk.className} />
-        <BrandStatementSection headingFont={spaceGrotesk.className} />
-        <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
+      <div>
+        <WhyKydexSection headingFont={storefrontDisplayClasses} />
+        <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
+        <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={storefrontDisplayClasses} />
+        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={storefrontDisplayClasses} />
+        <BrandStatementSection headingFont={storefrontDisplayClasses} />
+        <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
         <TrustBadgesSection />
-        {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={spaceGrotesk.className} /> : null}
-        <StoreFooterV2 storeSlug={storeSlug} categories={topLevelCategories} headingFont={spaceGrotesk.className} />
+        {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={storefrontDisplayClasses} /> : null}
+        <StoreFooterV2 storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
       </div>
     </div>
   );

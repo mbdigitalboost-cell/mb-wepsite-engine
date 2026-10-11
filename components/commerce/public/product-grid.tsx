@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PublicProduct } from "@/lib/commerce/public/products";
+import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 
 interface ProductGridProps {
   storeSlug: string;
@@ -34,6 +35,17 @@ function formatPrice(value: number) {
  * /silahini-sec/[brandSlug]/sonuclar — ikisi de artık koyu temalı, bu
  * yüzden bu bileşenin kendisini koyulaştırmak güvenli (üçüncü, hâlâ açık
  * temalı bir çağıranı yok).
+ *
+ * Site geneli tasarım sistemi (Faz 12 devamı) — kart rounded-[14px]'e
+ * (kanvasın `.card` token'ı), marka etiketi mono/uppercase, fiyat mono.
+ * Kanvasta (Kategori.dc.html) kartın köşesinde dairesel bir "+" Sepete
+ * Ekle butonu da var — BİLEREK eklenmedi: bu kart tek bir <Link>
+ * (ürün detayına gidiyor) ve canvas'ın kendi yapısı bir <button>'ı bir
+ * <a>'nın İÇİNE koyuyor (iç içe interaktif eleman, erişilebilirlik
+ * ihlali) — ayrıca varyant/ek ürünü olan bir ürünü tek tıkla, seçim
+ * yapmadan sepete eklemek gerçek bir davranış değişikliği olurdu
+ * (bu turun kendi "sadece görsel katman, iş mantığı değişmiyor" sınırını
+ * aşar). Kart yine de tek, net bir hedefe (ürün sayfası) gidiyor.
  */
 export function ProductGrid({ storeSlug, products }: ProductGridProps) {
   if (products.length === 0) {
@@ -46,16 +58,16 @@ export function ProductGrid({ storeSlug, products }: ProductGridProps) {
         <li key={product.id}>
           <Link
             href={`/store/${storeSlug}/urun/${product.slug}`}
-            className="block rounded-lg border border-[#292929] bg-[#171717] p-3 text-sm transition-colors hover:border-[#D95F00]"
+            className="block rounded-[14px] border border-[#292929] bg-[#171717] p-3 text-sm transition-colors hover:border-[#D95F00]"
           >
             {/* STEP 33 display-only — product.brand already resolved by getPublicProducts/attachBrandsToProducts, no extra query here. No link/filter, plain label. */}
             {product.brand ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-[#A3A3A3]">{product.brand.name}</p>
+              <p className={`${storefrontMonoClasses} text-[11px] uppercase text-[#6B6B6B]`}>{product.brand.name}</p>
             ) : null}
-            <p className="font-medium text-[#F5F5F5]">{product.name}</p>
-            <p className="mt-1 text-[#F5F5F5]">{formatPrice(product.price)}</p>
+            <p className="mt-1 font-medium text-[#F5F5F5]">{product.name}</p>
+            <p className={`${storefrontMonoClasses} mt-1.5 font-semibold text-[#D95F00]`}>{formatPrice(product.price)}</p>
             {product.compareAtPrice ? (
-              <p className="text-xs text-[#A3A3A3] line-through">{formatPrice(product.compareAtPrice)}</p>
+              <p className={`${storefrontMonoClasses} text-xs text-[#6B6B6B] line-through`}>{formatPrice(product.compareAtPrice)}</p>
             ) : null}
           </Link>
         </li>

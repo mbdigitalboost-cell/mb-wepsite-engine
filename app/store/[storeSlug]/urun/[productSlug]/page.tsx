@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import {
   getPublicProductBySlug,
@@ -40,9 +40,6 @@ async function attachPrimaryImages(
     }),
   );
 }
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500"] });
 
 /**
  * FAZ 2C-3 STEP 22, configurator mounted in FAZ 1 (mağaza sepeti) —
@@ -115,7 +112,7 @@ export default async function StoreProductPage({
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
-        <nav aria-label="Breadcrumb" className={`${inter.className} flex flex-wrap items-center gap-1.5 text-xs text-[#A3A3A3]`}>
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-[#A3A3A3]">
           <Link href={`/store/${storeSlug}`} className="hover:text-[#F5F5F5] hover:underline">
             Ana Sayfa
           </Link>
@@ -131,10 +128,10 @@ export default async function StoreProductPage({
           <span className="font-semibold text-[#F5F5F5]">{product.name}</span>
         </nav>
 
-        <div className={`${inter.className} mt-6 grid gap-8 lg:grid-cols-2`}>
+        <div className="mt-6 grid gap-8 lg:grid-cols-2">
           <div>
             {primaryImage?.url ? (
-              <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-[#292929] bg-[#171717]">
+              <div className="relative aspect-square w-full overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717]">
                 {/* unoptimized — signed URL, short-lived and not on next.config.ts's remotePatterns allowlist (which only covers the public object path shape), same reasoning as the admin ImagePreview in images/page.tsx. */}
                 <Image
                   src={primaryImage.url}
@@ -146,7 +143,7 @@ export default async function StoreProductPage({
                 />
               </div>
             ) : (
-              <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-[#292929] bg-[#171717] text-sm text-[#A3A3A3]">
+              <div className="flex aspect-square w-full items-center justify-center rounded-[14px] border border-dashed border-[#292929] bg-[#171717] text-sm text-[#A3A3A3]">
                 Görsel yok
               </div>
             )}
@@ -156,7 +153,7 @@ export default async function StoreProductPage({
                 {images.map((image) => (
                   <li
                     key={image.id}
-                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-[#292929] bg-[#171717]"
+                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#292929] bg-[#171717]"
                   >
                     {image.url ? (
                       <Image
@@ -179,7 +176,7 @@ export default async function StoreProductPage({
             {product.brand ? (
               <p className="text-xs font-medium uppercase tracking-wide text-[#A3A3A3]">{product.brand.name}</p>
             ) : null}
-            <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{product.name}</h1>
+            <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{product.name}</h1>
 
             {product.shortDescription ? (
               <p className="mt-4 text-sm text-[#A3A3A3]">{product.shortDescription}</p>
@@ -211,10 +208,8 @@ export default async function StoreProductPage({
         </div>
 
         {/* Ürün bilgisinin ALTINA, StorefrontCtaBand'in ÜSTÜNE — bant sayfanın kapanışı olarak en altta kalıyor. */}
-        <div className={inter.className}>
-          <ProductImageCardGrid storeSlug={storeSlug} heading="Çok Satanlar" products={bestSellersWithImages} />
-          <ProductImageCardGrid storeSlug={storeSlug} heading="Benzer Ürünler" products={similarWithImages} />
-        </div>
+        <ProductImageCardGrid storeSlug={storeSlug} heading="Çok Satanlar" products={bestSellersWithImages} />
+        <ProductImageCardGrid storeSlug={storeSlug} heading="Benzer Ürünler" products={similarWithImages} />
       </Container>
 
       <div className="mt-16">

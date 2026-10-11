@@ -1,16 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Space_Grotesk } from "next/font/google";
 import { formatPrice } from "@/lib/utils/format-price";
 import { computeConfiguredPrice, resolveRequiredAddonIds } from "@/lib/commerce/pricing";
 import { useCart, makeCartLineId } from "@/components/commerce/public/cart/cart-context";
 import { storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { getColorSwatch } from "@/lib/utils/color-swatch-map";
 import type { PublicOptionGroup, PublicProductAddon, PublicProductVariant } from "@/lib/commerce/public/products";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 interface ProductConfiguratorProps {
   productId: string;
@@ -166,12 +164,12 @@ export function ProductConfigurator({
   return (
     <div className="mt-6">
       <div className="flex flex-wrap items-center gap-3">
-        <span className={`${spaceGrotesk.className} text-3xl font-bold text-[#F5F5F5]`}>{formatPrice(priced.totalPrice)}</span>
+        <span className={`${storefrontMonoClasses} text-3xl font-bold text-[#F5F5F5]`}>{formatPrice(priced.totalPrice)}</span>
         {priced.baseCompareAtPrice ? (
-          <span className="text-base text-[#A3A3A3] line-through">{formatPrice(priced.baseCompareAtPrice)}</span>
+          <span className={`${storefrontMonoClasses} text-base text-[#A3A3A3] line-through`}>{formatPrice(priced.baseCompareAtPrice)}</span>
         ) : null}
         {discountPercent !== null ? (
-          <span className={`${spaceGrotesk.className} rounded-full bg-[#D95F00]/15 px-2.5 py-1 text-xs font-bold text-[#D95F00]`}>
+          <span className={`${storefrontDisplayClasses} rounded-full bg-[#D95F00]/15 px-2.5 py-1 text-xs font-bold text-[#D95F00]`}>
             %{discountPercent} İndirim
           </span>
         ) : null}
@@ -179,7 +177,14 @@ export function ProductConfigurator({
 
       {optionGroups.map((group) => (
         <div key={group.id} className="mt-6">
-          <p className="text-sm font-medium text-[#F5F5F5]">{group.name}</p>
+          <p className={`${storefrontMonoClasses} text-xs uppercase text-[#6B6B6B]`}>{group.name}</p>
+          {/*
+            Tasarım kanvası (UrunDetay.dc.html) — "swatch" stili: küçük,
+            kare köşeli (rounded-[10px]) kutular, seçiliyken border-strong
+            yerine turuncu border + hafif turuncu ring (box-shadow). Eski
+            tam-pill (rounded-full) stilin yerini aldı — bu sadece görsel,
+            seçim/validasyon mantığı (toggleOptionValue) DEĞİŞMEDİ.
+          */}
           <div role="radiogroup" aria-label={group.name} className="mt-2 flex flex-wrap gap-2.5">
             {group.values.map((value) => {
               const isSelected = selectedOptionValueIdByGroup[group.id] === value.id;
@@ -191,10 +196,11 @@ export function ProductConfigurator({
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => toggleOptionValue(group.id, value.id)}
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  style={isSelected ? { boxShadow: "0 0 0 2px rgba(217,95,0,0.25)" } : undefined}
+                  className={`inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-2 rounded-[10px] border-[1.5px] px-3 text-sm font-medium transition-colors ${
                     isSelected
-                      ? "border-[#D95F00] bg-[#D95F00] text-white"
-                      : "border-[#292929] bg-[#171717] text-[#A3A3A3] hover:border-[#D95F00] hover:text-[#F5F5F5]"
+                      ? "border-[#D95F00] bg-[#171717] text-[#F5F5F5]"
+                      : "border-[#3A3A3A] bg-[#171717] text-[#A3A3A3] hover:border-[#D95F00] hover:text-[#F5F5F5]"
                   }`}
                 >
                   {swatch ? (
@@ -224,7 +230,7 @@ export function ProductConfigurator({
                 <li key={addon.id}>
                   <label
                     htmlFor={`addon-${addon.id}`}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                    className={`flex items-center gap-3 rounded-[14px] border p-3 text-sm transition-colors ${
                       isChecked ? "border-[#D95F00] bg-[#D95F00]/10" : "border-[#292929] bg-[#171717]"
                     } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-[#D95F00]"}`}
                   >
@@ -250,7 +256,7 @@ export function ProductConfigurator({
       ) : null}
 
       <div className="mt-7 flex flex-wrap items-center gap-3">
-        <div className="flex items-center rounded-md border border-[#292929]">
+        <div className="flex items-center rounded-full border-[1.5px] border-[#3A3A3A]">
           <button
             type="button"
             aria-label="Adedi azalt"
@@ -270,12 +276,7 @@ export function ProductConfigurator({
           </button>
         </div>
 
-        <button
-          type="button"
-          disabled={!canAddToCart}
-          onClick={handleAddToCart}
-          className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}
-        >
+        <button type="button" disabled={!canAddToCart} onClick={handleAddToCart} className={storefrontButtonClasses}>
           {justAdded ? "Sepete Eklendi ✓" : "Sepete Ekle"}
         </button>
       </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Space_Grotesk } from "next/font/google";
-import { Check } from "lucide-react";
+import { Check, Banknote, CreditCard, Landmark, Info } from "lucide-react";
 import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses, storefrontButtonOutlineClasses } from "@/lib/utils/storefront-button-classes";
+import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
 import { formatPrice } from "@/lib/utils/format-price";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/validation/order";
@@ -12,7 +12,12 @@ import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/compone
 import { createOrderAction } from "./actions";
 import { initialCheckoutFormState } from "./form-state";
 
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
+/** Tasarım kanvası (Odeme.dc.html) — ödeme yöntemi seçimi düz radio yerine ikon+başlık+açıklamalı seçilebilir kart. Gerçek value'lar lib/validation/order.ts'in PAYMENT_METHODS'ı ile BİREBİR (yeni bir ödeme yöntemi İCAT EDİLMEDİ, sadece 3 gerçek seçeneğin görsel sunumu). */
+const PAYMENT_METHOD_DETAILS: Record<PaymentMethod, { Icon: typeof Banknote; description: string }> = {
+  "Kapıda Nakit": { Icon: Banknote, description: "Teslimat anında nakit ödeme" },
+  "Kapıda Kart": { Icon: CreditCard, description: "Teslimat anında kartla ödeme" },
+  "Havale-EFT": { Icon: Landmark, description: "IBAN bilgisi sipariş sonrası gösterilir" },
+};
 
 function toWireCartLine(item: CartItem) {
   return {
@@ -182,8 +187,8 @@ export function CheckoutForm({
   // replaced by "cart is empty" on the very next render.
   if (state.status === "success" && state.orderNumber !== null) {
     return (
-      <div className="mt-6 rounded-lg border border-[#292929] bg-[#171717] p-4">
-        <h2 className={`${spaceGrotesk.className} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
+      <div className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
+        <h2 className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
 
         {/*
           "Siparişlerim" devir metni — orders.order_number zaten global
@@ -192,12 +197,14 @@ export function CheckoutForm({
           burada sadece düz metinle gösteriliyordu, müşteriye SAKLAMASI
           gerektiği hiç söylenmiyordu — şimdi ayrı, turuncu vurgulu bir
           blokta, "Siparişlerim" sorgusunda neye ihtiyaç duyacağı AÇIKÇA
-          belirtilerek gösteriliyor.
+          belirtilerek gösteriliyor. Kod kendisi mono (JetBrains Mono) —
+          site geneli tasarım sisteminin "kısa teknik etiketler mono"
+          kuralı, sipariş kodu da tam olarak bu sınıfa giriyor.
         */}
-        <div className="mt-3 rounded-md border border-[#D95F00]/40 bg-[#D95F00]/10 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#D95F00]">Sipariş Kodunuz</p>
+        <div className="mt-3 rounded-[14px] border border-[#D95F00]/40 bg-[#D95F00]/10 p-3">
+          <p className={`${storefrontDisplayClasses} text-xs font-semibold text-[#D95F00]`}>Sipariş Kodunuz</p>
           <div className="mt-1.5 flex items-center justify-between gap-3">
-            <span className={`${spaceGrotesk.className} text-2xl font-bold text-[#F5F5F5]`}>#{state.orderNumber}</span>
+            <span className={`${storefrontMonoClasses} text-2xl font-bold text-[#F5F5F5]`}>#{state.orderNumber}</span>
             <OrderCodeCopyButton orderNumber={state.orderNumber} />
           </div>
           <p className="mt-2 text-xs text-[#A3A3A3]">
@@ -274,17 +281,57 @@ export function CheckoutForm({
     .filter(Boolean)
     .join(" · ");
 
+  // Tasarım kanvası (Odeme.dc.html) — üstte 3 noktalı adım göstergesi
+  // (Teslimat / Ödeme / Onay). Gerçek state hâlâ `step` (1|2) + sipariş
+  // başarı durumu — yeni bir state YOK, sadece bu üçünün görsel özeti.
+  // "Onay" kendi başına bir form adımı değil (sipariş onaylanınca direkt
+  // başarı ekranına geçiliyor) ama devir metninin kendi "adım 3'ü soluk
+  // ama görünür yap" isteğine uyarak burada üçüncü bir nokta olarak
+  // gösteriliyor — tıklanamaz, sadece "sırada bu var" bilgisi.
+  const stepProgress: { label: string; state: "done" | "active" | "upcoming" }[] = [
+    { label: "Teslimat", state: step === 1 ? "active" : "done" },
+    { label: "Ödeme", state: step === 2 ? "active" : "upcoming" },
+    { label: "Onay", state: "upcoming" },
+  ];
+
   return (
     <div className="mt-6">
+      {/* Adım göstergesi — sadece görsel, form mantığına dokunmuyor. */}
+      <div className="mx-auto flex max-w-md items-center">
+        {stepProgress.map((item, index) => (
+          <div key={item.label} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${storefrontMonoClasses} text-xs font-bold ${
+                  item.state === "done"
+                    ? "bg-[#3FA34D] text-[#06210c]"
+                    : item.state === "active"
+                      ? "bg-[#D95F00] text-[#1A0D00]"
+                      : "border-[1.5px] border-[#3A3A3A] text-[#6B6B6B]"
+                }`}
+              >
+                {item.state === "done" ? <Check size={13} aria-hidden="true" /> : index + 1}
+              </div>
+              <span className={`${storefrontMonoClasses} text-[10.5px] ${item.state === "upcoming" ? "text-[#6B6B6B]" : "text-[#A3A3A3]"}`}>
+                {item.label}
+              </span>
+            </div>
+            {index < stepProgress.length - 1 ? (
+              <div className={`mx-2.5 mb-5 h-[1.5px] flex-1 ${item.state === "done" ? "bg-[#3FA34D]" : "bg-[#3A3A3A]"}`} />
+            ) : null}
+          </div>
+        ))}
+      </div>
+
       {/* Adım 1 — Teslimat Bilgisi */}
-      <div className="border-t border-[#292929] pt-6">
+      <div className="border-t border-[#292929] pt-6 mt-6">
         {step === 1 ? (
           <div>
             <div className="flex items-center gap-2.5">
-              <span className={`${spaceGrotesk.className} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-white`}>
+              <span className={`${storefrontMonoClasses} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-[#1A0D00]`}>
                 1
               </span>
-              <h2 className={`${spaceGrotesk.className} text-base font-bold text-[#F5F5F5]`}>Teslimat Bilgisi</h2>
+              <h2 className={`${storefrontDisplayClasses} text-base font-bold text-[#F5F5F5]`}>Teslimat Bilgisi</h2>
             </div>
 
             <div className="mt-5 space-y-4">
@@ -414,7 +461,7 @@ export function CheckoutForm({
                 <textarea id="checkout-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={storefrontInputClasses} />
               </div>
 
-              <button type="button" onClick={handleContinue} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
+              <button type="button" onClick={handleContinue} className={storefrontButtonClasses}>
                 Devam Et
               </button>
             </div>
@@ -448,10 +495,10 @@ export function CheckoutForm({
       {step === 2 ? (
         <div className="border-t border-[#292929] pt-6">
           <div className="flex items-center gap-2.5">
-            <span className={`${spaceGrotesk.className} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-white`}>
+            <span className={`${storefrontMonoClasses} flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D95F00] text-xs font-bold text-[#1A0D00]`}>
               2
             </span>
-            <h2 className={`${spaceGrotesk.className} text-base font-bold text-[#F5F5F5]`}>Ödeme Yöntemi</h2>
+            <h2 className={`${storefrontDisplayClasses} text-base font-bold text-[#F5F5F5]`}>Ödeme Yöntemi</h2>
           </div>
 
           <form action={formAction} className="mt-5 space-y-4">
@@ -474,25 +521,46 @@ export function CheckoutForm({
             <div>
               <p className="mb-1.5 text-sm font-medium text-[#F5F5F5]">Ödeme Yöntemi</p>
               <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
-              <div className="space-y-2">
-                {PAYMENT_METHODS.map((method) => (
-                  <label key={method} className="flex items-center gap-2 text-sm text-[#F5F5F5]">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method}
-                      checked={paymentMethod === method}
-                      onChange={() => setPaymentMethod(method)}
-                      className={storefrontRadioClasses}
-                    />
-                    {method}
-                  </label>
-                ))}
+              {/*
+                Tasarım kanvası (Odeme.dc.html) — düz radio listesi yerine
+                ikon+başlık+açıklamalı seçilebilir kart. Gerçek <input
+                type="radio"> KORUNDU (form semantiği/validasyonu
+                değişmedi) — sadece onu saran <label> artık kanvasın
+                `.radiocard`/`.dot` stiline uygun render oluyor, seçili
+                olan turuncu border + hafif turuncu zemin alıyor.
+              */}
+              <div className="space-y-2.5">
+                {PAYMENT_METHODS.map((method) => {
+                  const { Icon, description } = PAYMENT_METHOD_DETAILS[method];
+                  const isSelected = paymentMethod === method;
+                  return (
+                    <label
+                      key={method}
+                      className={`flex items-center gap-3.5 rounded-[12px] border-[1.5px] p-4 transition-colors ${
+                        isSelected ? "border-[#D95F00] bg-[#D95F00]/[0.06]" : "border-[#3A3A3A] hover:border-[#D95F00]/60"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method}
+                        checked={isSelected}
+                        onChange={() => setPaymentMethod(method)}
+                        className={`shrink-0 ${storefrontRadioClasses}`}
+                      />
+                      <Icon size={20} strokeWidth={1.6} className="shrink-0 text-[#A3A3A3]" aria-hidden="true" />
+                      <span className="flex-1">
+                        <span className="block text-sm font-semibold text-[#F5F5F5]">{method}</span>
+                        <span className="mt-0.5 block text-xs text-[#6B6B6B]">{description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="rounded-md border border-[#292929] p-3">
-              <h3 className="text-xs font-medium text-[#A3A3A3]">Sipariş Özeti</h3>
+            <div className="rounded-[14px] border border-[#292929] p-3">
+              <h3 className={`${storefrontDisplayClasses} text-xs font-medium text-[#A3A3A3]`}>Sipariş Özeti</h3>
               <ul className="mt-2 space-y-1 text-sm">
                 {items.map((item) => (
                   <li key={item.lineId} className="flex justify-between gap-3">
@@ -500,14 +568,28 @@ export function CheckoutForm({
                       {item.productName}
                       {item.variantLabel ? ` (${item.variantLabel})` : ""} × {item.quantity}
                     </span>
-                    <span className="whitespace-nowrap text-[#F5F5F5]">{formatPrice(item.unitPrice * item.quantity)}</span>
+                    <span className={`${storefrontMonoClasses} whitespace-nowrap text-[#F5F5F5]`}>{formatPrice(item.unitPrice * item.quantity)}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
                 <span>Toplam</span>
-                <span>{formatPrice(subtotal)}</span>
+                <span className={storefrontMonoClasses}>{formatPrice(subtotal)}</span>
               </div>
+            </div>
+
+            {/*
+              Devir metni (C) — sipariş kodu hatırlatma kutusu, HENÜZ
+              sipariş verilmeden (post-order success ekranındaki AYNI
+              kutudan AYRI — o zaten var, bu ÖNDEN bir bilgilendirme).
+              Kanvasın (Odeme.dc.html) kendi metni temel alındı.
+            */}
+            <div className="flex items-start gap-3 rounded-[14px] border border-[#D95F00]/30 bg-[#D95F00]/5 p-4">
+              <Info size={18} className="mt-0.5 shrink-0 text-[#D95F00]" aria-hidden="true" />
+              <p className="text-xs leading-relaxed text-[#A3A3A3]">
+                Sipariş verdiğinde sana özel bir <strong className="text-[#F5F5F5]">sipariş kodu</strong> verilecek —
+                &quot;Siparişlerim&quot; bölümünden durumunu her zaman takip edebilirsin, üye olman gerekmiyor.
+              </p>
             </div>
 
             {/*
@@ -527,15 +609,10 @@ export function CheckoutForm({
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                disabled={isPending}
-                className={`${spaceGrotesk.className} ${storefrontButtonOutlineClasses}`}
-              >
+              <button type="button" onClick={() => setStep(1)} disabled={isPending} className={storefrontButtonOutlineClasses}>
                 Geri
               </button>
-              <button type="submit" disabled={isPending} className={`${spaceGrotesk.className} ${storefrontButtonClasses}`}>
+              <button type="submit" disabled={isPending} className={storefrontButtonClasses}>
                 {isPending ? "Gönderiliyor..." : "Siparişi Onayla"}
               </button>
             </div>

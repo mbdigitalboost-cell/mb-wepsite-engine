@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Oswald, Barlow, JetBrains_Mono } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
@@ -6,6 +7,21 @@ import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 import { StoreAnnouncementBar } from "@/components/commerce/public/store-announcement-bar";
+
+/**
+ * Site geneli tasarım sistemi — bu route ağacının TEK font yükleme noktası
+ * (bkz. lib/utils/storefront-typography.ts'in kendi doc comment'i: önceden
+ * ~15+ dosya kendi Space_Grotesk/Inter next/font/google çağrısını
+ * yapıyordu, merkezi bir nokta YOKTU). `variable` seçeneği next/font/
+ * google'ın kendi mekanizması — her biri sadece aşağıdaki wrapper div'e
+ * (ve onun tüm çocuklarına) scoped bir CSS değişkeni set ediyor, admin
+ * paneli/Petra'yı hiç etkilemiyor. Gerçek font-family ataması globals.css'in
+ * `@theme inline` bloğundaki --font-store-display/body/mono -> Tailwind
+ * font-store-* utility eşlemesiyle oluyor.
+ */
+const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-store-display" });
+const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-store-body" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-store-mono" });
 
 /**
  * Per-store tab title. Without this, every /store/[storeSlug]/** page
@@ -96,17 +112,19 @@ export default async function StoreLayout({
   const topLevelCategories = allCategories.filter((category) => category.parentId === null);
 
   return (
-    <CartProvider storeSlug={storeSlug}>
-      {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
-      <StoreAnnouncementBar />
-      <StoreHeader
-        storeSlug={storeSlug}
-        storeName={store.name}
-        logoUrl={profile?.logoUrl ?? null}
-        isLoggedIn={Boolean(user)}
-        categories={topLevelCategories}
-      />
-      {children}
-    </CartProvider>
+    <div className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable} font-store-body`}>
+      <CartProvider storeSlug={storeSlug}>
+        {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
+        <StoreAnnouncementBar />
+        <StoreHeader
+          storeSlug={storeSlug}
+          storeName={store.name}
+          logoUrl={profile?.logoUrl ?? null}
+          isLoggedIn={Boolean(user)}
+          categories={topLevelCategories}
+        />
+        {children}
+      </CartProvider>
+    </div>
   );
 }
