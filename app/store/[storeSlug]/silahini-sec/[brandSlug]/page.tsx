@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandBySlug, getPublicBrandModels } from "@/lib/commerce/public/brands";
+import { getPublicProducts } from "@/lib/commerce/public/products";
 import { Container } from "@/components/ui/container";
 import { SilahiniSecBreadcrumb, SelectedBrandChip } from "@/components/commerce/public/silahini-sec-progress";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
+import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 
 /**
@@ -13,6 +15,16 @@ import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
  * admin "Model" alanı boş bırakılmış olabilir) akışı tıkamıyor: bir boş
  * durum mesajı + o markanın TÜM ürünlerini gösteren bir link sunuyor
  * (aynı /sonuclar sayfası, sadece ?model= olmadan).
+ *
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım B — SAVUNMA
+ * DERİNLİĞİ: /silahini-sec'in kendi marka ızgarası artık 0 ürünlü bir
+ * markayı (SARSILMAZ/GLOCK) hiç tıklanabilir yapmıyor, ama biri BU
+ * sayfaya doğrudan bir linkle gelirse (ör. paylaşılmış URL) GERÇEKTEN
+ * 0 ürünü olan bir marka için model/sonuç akışına hiç girmeden nazik
+ * bir boş-durum ekranı gösteriliyor — kanvasın kendi boş-durum kart
+ * dili (components/commerce/public/product-grid.tsx'in "Henüz ürün
+ * eklenmemiş" paterniyle AYNI ton) yeniden kullanıldı, yeni bir dil
+ * icat edilmedi.
  *
  * Faz 12 devamı — v2 koyu tema (bkz. silahini-sec-progress.tsx'in doc
  * comment'i: bu akış tenant-bağımsız/genel).
@@ -30,7 +42,10 @@ export default async function StoreChooseWeaponBrandPage({
   const brand = await getPublicBrandBySlug(store.id, brandSlug);
   if (!brand) notFound();
 
-  const models = await getPublicBrandModels(store.id, brand.id);
+  const [models, products] = await Promise.all([
+    getPublicBrandModels(store.id, brand.id),
+    getPublicProducts(store.id, { brandId: brand.id }),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -47,7 +62,22 @@ export default async function StoreChooseWeaponBrandPage({
           <SelectedBrandChip brandName={brand.name} />
         </div>
 
-        {models.length === 0 ? (
+        {products.length === 0 ? (
+          <div className="mt-8 flex flex-col items-center gap-4 rounded-[14px] border border-[#292929] bg-[#171717] px-6 py-12 text-center">
+            <p className="text-sm text-[#A3A3A3]">Bu markada henüz ürün yok.</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link href={`/store/${storeSlug}/silahini-sec`} className={storefrontButtonClasses}>
+                Silahını Seç&apos;e Dön
+              </Link>
+              <Link
+                href={`/store/${storeSlug}/kategoriler`}
+                className="text-sm font-medium text-[#D95F00] hover:text-[#F26A00]"
+              >
+                Tüm Kategoriler&apos;e Göz At
+              </Link>
+            </div>
+          </div>
+        ) : models.length === 0 ? (
           <div className="mt-6">
             <p className="text-sm text-[#A3A3A3]">Bu markada henüz model girilmemiş.</p>
             <Link

@@ -8,6 +8,7 @@ import { CATEGORY_FALLBACK_IMAGES } from "@/lib/commerce/public/category-fallbac
 import { formatPrice } from "@/lib/utils/format-price";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
+import { BrandAvatar } from "@/components/commerce/public/brand-avatar";
 
 /**
  * FAZ 7.3 follow-up — Taktikalp46'nın v2 ana sayfa bölümleri (hero'nun
@@ -75,36 +76,6 @@ export function WhyKydexSection({ headingFont }: { headingFont: string }) {
         </div>
       </Container>
     </div>
-  );
-}
-
-/**
- * Marka logosu/harf rozeti — hem bu dosyadaki köprü bölümünde hem
- * /silahini-sec sayfalarında (Kısım B) kullanılan paylaşımlı küçük
- * yardımcı. logoUrl GERÇEK (brands.logo_url, admin "Markalar ve
- * Modeller" ekranından yüklenmiş) varsa onu gösterir; yoksa markanın
- * baş harfinden sade bir rozet (kanvasın kendi "C" harfi örneği) —
- * admin logo yükleyince OTOMATİK gerçek logoya döner, uydurma bir
- * görsel asla yok.
- */
-function BrandAvatar({ name, logoUrl, size = 48 }: { name: string; logoUrl: string | null; size?: number }) {
-  if (logoUrl) {
-    return (
-      <span
-        className="relative shrink-0 overflow-hidden rounded-[10px] border border-[#292929] bg-[#0A0A0A]"
-        style={{ width: size, height: size }}
-      >
-        <Image src={logoUrl} alt={name} fill unoptimized sizes={`${size}px`} className="object-contain p-1.5" />
-      </span>
-    );
-  }
-  return (
-    <span
-      className={`${storefrontDisplayClasses} flex shrink-0 items-center justify-center rounded-[10px] border border-[#292929] bg-[#0A0A0A] font-bold text-[#D95F00]`}
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
-    >
-      {name.charAt(0).toLocaleUpperCase("tr")}
-    </span>
   );
 }
 
