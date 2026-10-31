@@ -11,6 +11,7 @@ import { assertImportFileIsSafe, detectImportFileFormat, MAX_IMPORT_ROWS } from 
 import { mapHeadersToRows, REQUIRED_HEADER_COLUMNS } from "@/lib/commerce/import/product-import-columns";
 import { validateImportRows } from "@/lib/commerce/import/validate-import-rows";
 import { toFriendlyError } from "@/lib/commerce/product-errors";
+import { ensureBrandModelsExist } from "@/lib/commerce/brand-models";
 import type { ImportPreviewState, ImportCommitState } from "./form-state";
 
 /**
@@ -171,6 +172,14 @@ export async function commitImportAction(
         rowErrors.push({ fileRowNumber: result.fileRowNumber, errors: [toFriendlyError(error)] });
       } else {
         updated++;
+        // Devir metni (Kısım C) — Excel import'un Model sütunu AYRIŞTIRMA
+        // mantığı DEĞİŞMEDİ (kapsam dışı bırakılmıştı), sadece yeni bir
+        // model adı girilmişse brand_models'e de eklensin kuralı — ürün
+        // formuyla AYNI best-effort yan etki, import'un kendi başarı/
+        // hata sayaçlarını hiç etkilemiyor.
+        if (result.data.brandId && result.data.models && result.data.models.length > 0) {
+          await ensureBrandModelsExist(storeId, result.data.brandId, result.data.models);
+        }
       }
     } else {
       const { error } = await supabase.from("products").insert(payload);
@@ -179,6 +188,9 @@ export async function commitImportAction(
         rowErrors.push({ fileRowNumber: result.fileRowNumber, errors: [toFriendlyError(error)] });
       } else {
         added++;
+        if (result.data.brandId && result.data.models && result.data.models.length > 0) {
+          await ensureBrandModelsExist(storeId, result.data.brandId, result.data.models);
+        }
       }
     }
   }

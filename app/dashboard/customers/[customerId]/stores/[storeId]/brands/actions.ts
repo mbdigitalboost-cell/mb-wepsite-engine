@@ -6,7 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { brandFormSchema } from "@/lib/validation/brand";
 import { storeBrandsTag } from "@/lib/commerce/cache-tags";
 import { logAuditEvent } from "@/lib/auth/audit-log";
-import type { BrandFormState } from "./form-state";
+import { uploadStoreBrandingAsset } from "@/lib/commerce/upload-store-branding-asset";
+import type { BrandFormState, BrandLogoFormState, BrandModelFormState } from "./form-state";
 
 const DUPLICATE_SLUG_MESSAGE = "Bu slug bu mağazada zaten kullanılıyor.";
 
@@ -170,6 +171,176 @@ export async function deleteBrandAction(customerId: string, storeId: string, bra
     entityType: "brand",
     entityId: brandId,
   });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/brands`);
+  revalidateTag(storeBrandsTag(storeId), "max");
+}
+
+/**
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım C —
+ * "Markalar ve Modeller" ekranı. Logo yükleme SADECE store_admin+ —
+ * brands_update_editor_tier (RLS) kendi başına editor+'a izin verse de,
+ * storage.objects'in store-branding bucket RLS'i (migration 0035)
+ * SADECE is_store_admin_member'a yazma izni veriyor. Bu action'ı
+ * BİLEREK requireStoreAdminAccess ile koruyoruz — editor bir dosya
+ * seçip gönderirse app katmanında net bir "yetkin yok" mesajı alsın,
+ * kafa karıştıran bir Storage RLS hatasına düşmesin.
+ */
+export async function uploadBrandLogoAction(
+  customerId: string,
+  storeId: string,
+  brandId: string,
+  _prevState: BrandLogoFormState,
+  formData: FormData,
+): Promise<BrandLogoFormState> {
+  const { user } = await requireStoreAdminAccess(storeId);
+
+  const file = formData.get("logoFile");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Bir dosya seçin." };
+  }
+
+  const uploadResult = await uploadStoreBrandingAsset({ storeId, assetType: `brands/${brandId}`, file });
+  if (uploadResult.error) return { error: uploadResult.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("brands")
+    .update({ logo_url: uploadResult.publicUrl })
+    .eq("id", brandId)
+    .eq("store_id", storeId);
+
+  if (error) {
+    return { error: `Kaydedilemedi: ${error.message}` };
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "brand.update",
+    entityType: "brand",
+    entityId: brandId,
+    metadata: { logoUploaded: true },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/brands`);
+  revalidateTag(storeBrandsTag(storeId), "max");
+  return { error: null };
+}
+
+/** Model ekleme — store_editor+ (RLS: brand_models_insert_editor_tier). Yeni model listenin sonuna eklenir (mevcut en büyük sort_order + 1). */
+export async function addBrandModelAction(
+  customerId: string,
+  storeId: string,
+  brandId: string,
+  _prevState: BrandModelFormState,
+  formData: FormData,
+): Promise<BrandModelFormState> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { error: "Model adı zorunlu." };
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: last } = await supabase
+    .from("brand_models")
+    .select("sort_order")
+    .eq("store_id", storeId)
+    .eq("brand_id", brandId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("brand_models")
+    .insert({ store_id: storeId, brand_id: brandId, name, sort_order: (last?.sort_order ?? -1) + 1 });
+
+  if (error) {
+    // unique_violation (brand_models_brand_id_name_unique_idx, case-insensitive).
+    if (error.code === "23505") return { error: "Bu model bu markada zaten var." };
+    return { error: `Kaydedilemedi: ${error.message}` };
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "brand.update",
+    entityType: "brand",
+    entityId: brandId,
+    metadata: { modelAdded: name },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/brands`);
+  revalidateTag(storeBrandsTag(storeId), "max");
+  return { error: null };
+}
+
+/** Model silme — store_admin+ (RLS: brand_models_delete_admin_tier, brands'in kendi delete tier'ıyla TUTARLI). */
+export async function deleteBrandModelAction(
+  customerId: string,
+  storeId: string,
+  brandId: string,
+  modelId: string,
+): Promise<void> {
+  const { user } = await requireStoreAdminAccess(storeId);
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("brand_models").delete().eq("id", modelId).eq("store_id", storeId);
+  if (error) {
+    console.error("[brands] failed to delete brand model:", error.message);
+    return;
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "brand.update",
+    entityType: "brand",
+    entityId: brandId,
+    metadata: { modelDeleted: modelId },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/brands`);
+  revalidateTag(storeBrandsTag(storeId), "max");
+}
+
+/**
+ * Model sıralama — devir metninin kendi "basit yukarı/aşağı ok" tercihi
+ * (sürükle-bırak YAZILMADI, iki seçenekten daha basit/az riskli olanı).
+ * store_editor+ (RLS: brand_models_update_editor_tier). Komşu modelle
+ * sort_order'ı TAKAS eder — yeni bir "boşluk aç" mantığı gerektirmez.
+ */
+export async function moveBrandModelAction(
+  customerId: string,
+  storeId: string,
+  brandId: string,
+  modelId: string,
+  direction: "up" | "down",
+): Promise<void> {
+  await requireStoreEditorAccess(storeId);
+
+  const supabase = await createSupabaseServerClient();
+  const { data: models } = await supabase
+    .from("brand_models")
+    .select("id, sort_order")
+    .eq("store_id", storeId)
+    .eq("brand_id", brandId)
+    .order("sort_order", { ascending: true });
+
+  if (!models) return;
+
+  const index = models.findIndex((m) => m.id === modelId);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || swapIndex < 0 || swapIndex >= models.length) return;
+
+  const current = models[index];
+  const neighbor = models[swapIndex];
+
+  await Promise.all([
+    supabase.from("brand_models").update({ sort_order: neighbor.sort_order }).eq("id", current.id).eq("store_id", storeId),
+    supabase.from("brand_models").update({ sort_order: current.sort_order }).eq("id", neighbor.id).eq("store_id", storeId),
+  ]);
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/brands`);
   revalidateTag(storeBrandsTag(storeId), "max");

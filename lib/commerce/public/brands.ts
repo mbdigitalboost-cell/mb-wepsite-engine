@@ -110,45 +110,35 @@ export async function getPublicBrandsForCategory(storeId: string, categoryId: st
 
 /**
  * FAZ 7.1 — infrastructure only when first written, wired into
- * /silahini-sec/[brandSlug] since Faz 7.2. FAZ 9 — `products.model`
- * (single text) became `products.models` (text[], migration
- * 0034_products_models_array.sql) so a product can list more than one
- * model; this function now flattens every matching row's `models` array
- * client-side (no server-side `unnest` — the Supabase-js query builder has
- * no operator for that, and this stays consistent with every other
- * lib/commerce/public/* function's "no raw SQL" posture) before
- * deduping/sorting. DISTINCT, non-empty values across ALL of a brand's
- * products in this store, alphabetically sorted. Same fail-soft contract
- * and the same "RLS is the real gate" posture as getPublicProducts (this
- * file's sibling, lib/commerce/public/products.ts) — no extra
- * `is_active` filter here either, migration 0017's own
- * `products_select_public_active` policy already restricts anon rows to
- * active products on a publicly-visible store.
+ * /silahini-sec/[brandSlug] since Faz 7.2.
+ *
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım C — artık
+ * products.models'ten TÜRETİLMİYOR, migration 0038'in merkezi
+ * brand_models kataloğundan (admin "Markalar ve Modeller" ekranının
+ * yazdığı/okuduğu AYNI tablo) okunuyor, sort_order'a göre sıralı — bu
+ * sayede storefront'taki model listesi artık admin'in belirlediği
+ * tutarlı sırayla geliyor, ürünlere serbest metin olarak girilmiş
+ * dağınık/tutarsız veriden değil. Dönüş TİPİ (string[]) ve bu
+ * fonksiyonu çağıran /silahini-sec/[brandSlug]/page.tsx KASITLI OLARAK
+ * DEĞİŞMEDİ — sadece veri kaynağı değişti, çağıran kod sıfır değişiklikle
+ * çalışıyor. Aynı fail-soft sözleşmesi (hata -> [], asla throw).
  */
 export async function getPublicBrandModels(storeId: string, brandId: string): Promise<string[]> {
   const client = createSupabasePublicClient();
 
   const { data, error } = await client
-    .from("products")
-    .select("models")
+    .from("brand_models")
+    .select("name")
     .eq("store_id", storeId)
     .eq("brand_id", brandId)
-    .not("models", "is", null);
+    .order("sort_order", { ascending: true });
 
   if (error) {
     console.error("[commerce/public] getPublicBrandModels failed:", error.message);
     return [];
   }
 
-  const models = new Set<string>();
-  for (const row of data ?? []) {
-    for (const model of row.models ?? []) {
-      const trimmed = model?.trim();
-      if (trimmed) models.add(trimmed);
-    }
-  }
-
-  return [...models].sort((a, b) => a.localeCompare(b, "tr"));
+  return (data ?? []).map((row) => row.name);
 }
 
 /**

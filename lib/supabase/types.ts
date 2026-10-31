@@ -774,6 +774,41 @@ export type Database = {
           },
         ];
       };
+      /** Migration 0038_brand_models.sql — merkezi marka/model kataloğu. No updated_at (option_values ile aynı gerekçe). */
+      brand_models: {
+        Row: {
+          id: string;
+          store_id: string;
+          brand_id: string;
+          name: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          brand_id: string;
+          name: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          brand_id?: string;
+          name?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "brand_models_brand_id_store_id_fkey";
+            columns: ["brand_id", "store_id"];
+            referencedRelation: "brands";
+            referencedColumns: ["id", "store_id"];
+          },
+        ];
+      };
       /**
        * FAZ 2A, migration 0017_products.sql. Production'a uygulandı.
        * category_id/brand_id: composite FK (col, store_id) -> categories/brands(id, store_id),

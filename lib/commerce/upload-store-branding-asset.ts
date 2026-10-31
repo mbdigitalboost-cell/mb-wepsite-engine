@@ -8,7 +8,16 @@ import {
 import { MAX_STORE_BRANDING_ASSET_SIZE_BYTES, STORE_BRANDING_BUCKET } from "@/lib/commerce/store-branding-constants";
 import { verifyImageSignature } from "@/lib/commerce/product-image-signature";
 
-export type StoreBrandingAssetType = "logo" | "favicon";
+/**
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım C — marka
+ * logosu yüklemesi için `brands/${brandId}` eklendi (bir markanın en
+ * fazla 1 logosu var, `logo`/`favicon` ile AYNI "sabit path + upsert"
+ * mantığı — bir mağazada birden fazla marka olabileceği için path'e
+ * brandId gömülü). RLS (migration 0035) sadece `stores/{storeId}/...`
+ * ön ekine bakıyor, tam dosya adını kısıtlamıyor — bu yüzden yeni bir
+ * bucket/migration GEREKMEDİ, aynı altyapı genişletildi.
+ */
+export type StoreBrandingAssetType = "logo" | "favicon" | `brands/${string}`;
 
 export interface UploadStoreBrandingAssetResult {
   publicUrl?: string;

@@ -8,6 +8,7 @@ import { productFormSchema } from "@/lib/validation/product";
 import { storeProductsTag } from "@/lib/commerce/cache-tags";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { toFriendlyError } from "@/lib/commerce/product-errors";
+import { ensureBrandModelsExist } from "@/lib/commerce/brand-models";
 import type { ProductFormState } from "./form-state";
 
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
@@ -131,6 +132,15 @@ export async function createProductAction(
     return { error: "Kaydedilemedi: bilinmeyen hata" };
   }
 
+  // Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım C —
+  // "serbest giriş otomatik kataloğa eklenir" kuralı. Markasız bir ürün
+  // (brandId boş) için model kataloğu anlamsız, atlanıyor. Ana ürün
+  // kaydı bu adımdan ÖNCE zaten başarıyla tamamlandı — bu sadece bir
+  // yan etki, best-effort (kendi doc comment'i).
+  if (parsed.data.brandId && parsed.data.models.length > 0) {
+    await ensureBrandModelsExist(storeId, parsed.data.brandId, parsed.data.models);
+  }
+
   await logAuditEvent({
     userId: user.id,
     customerId,
@@ -195,6 +205,10 @@ export async function updateProductAction(
 
   if (error) {
     return { error: toFriendlyError(error) };
+  }
+
+  if (parsed.data.brandId && parsed.data.models.length > 0) {
+    await ensureBrandModelsExist(storeId, parsed.data.brandId, parsed.data.models);
   }
 
   await logAuditEvent({

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireStoreAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getStoreModelsByBrand } from "@/lib/commerce/product-models-by-brand";
+import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
@@ -57,7 +57,7 @@ export default async function EditProductPage({
     supabase.from("products").select("*").eq("id", productId).eq("store_id", storeId).maybeSingle(),
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
-    getStoreModelsByBrand(storeId),
+    getBrandModelsSuggestionMap(storeId),
   ]);
 
   if (!product) notFound();
