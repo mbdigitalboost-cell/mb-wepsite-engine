@@ -160,14 +160,14 @@ async function attachBrandsToProducts(products: MappedProduct[], storeId: string
   }
 
   const client = createSupabasePublicClient();
-  const { data, error } = await client.from("brands").select("id, name, slug").eq("store_id", storeId).in("id", brandIds);
+  const { data, error } = await client.from("brands").select("id, name, slug, logo_url").eq("store_id", storeId).in("id", brandIds);
 
   if (error) {
     console.error("[commerce/public] attachBrandsToProducts failed:", error.message);
     return products.map((p) => ({ ...p, brand: null }));
   }
 
-  const brandById = new Map((data ?? []).map((b) => [b.id, { id: b.id, name: b.name, slug: b.slug }]));
+  const brandById = new Map((data ?? []).map((b) => [b.id, { id: b.id, name: b.name, slug: b.slug, logoUrl: b.logo_url }]));
   return products.map((p) => ({ ...p, brand: p.brandId ? (brandById.get(p.brandId) ?? null) : null }));
 }
 

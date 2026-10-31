@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Truck, ShieldCheck, RotateCcw, Headphones, ImageOff } from "lucide-react";
+import { Truck, ShieldCheck, RotateCcw, Headphones, ImageOff, Feather, Flame, Settings2 } from "lucide-react";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
-import type { PublicBrand } from "@/lib/commerce/public/brands";
+import type { PublicBrand, PublicBrandWithCount } from "@/lib/commerce/public/brands";
 import type { PublicProduct } from "@/lib/commerce/public/products";
 import { CATEGORY_FALLBACK_IMAGES } from "@/lib/commerce/public/category-fallback-images";
 import { formatPrice } from "@/lib/utils/format-price";
@@ -31,12 +31,18 @@ import { Container } from "@/components/ui/container";
 /** `headingFont` çağıranlardan storefrontDisplayClasses geliyor (uppercase/tracking-wide zaten onun içinde) — burada SADECE kalınlık ekleniyor, çakışan bir ikinci uppercase/tracking class'ı YOK. */
 const HEADING = "font-bold";
 
-/** 1. Neden Kydex? — statik, genel Kydex malzeme gerçekleri (ürün-spesifik iddia değil). */
+/**
+ * 1. Neden Kydex? — statik, genel Kydex malzeme gerçekleri (ürün-spesifik
+ * iddia değil). Metinler/sıra DEĞİŞMEDİ (Site Tasarımı v3 devir metninin
+ * kendi talimatı — "metin/başlıklar AYNEN kalıyor, sadece görsel
+ * zenginleştirme") — sadece her karta ince bir ikon + hafif radial
+ * gradient doku eklendi.
+ */
 const WHY_KYDEX_ITEMS = [
-  { n: "01", title: "Hafif Yapı", body: "Günlük taşıma ve operasyonel kullanım için optimize edilmiş yapı." },
-  { n: "02", title: "Yüksek Dayanıklılık", body: "Darbe ve zorlu kullanım koşullarına karşı dayanıklı malzeme yapısı." },
-  { n: "03", title: "Formunu Korur", body: "Isıl şekillendirilmiş Kydex yapı sayesinde ürün formunu korur." },
-  { n: "04", title: "Kullanıma Özel Tasarım", body: "Farklı modeller ve taşıma ihtiyaçları için ürün seçenekleri." },
+  { n: "01", Icon: Feather, title: "Hafif Yapı", body: "Günlük taşıma ve operasyonel kullanım için optimize edilmiş yapı." },
+  { n: "02", Icon: ShieldCheck, title: "Yüksek Dayanıklılık", body: "Darbe ve zorlu kullanım koşullarına karşı dayanıklı malzeme yapısı." },
+  { n: "03", Icon: Flame, title: "Formunu Korur", body: "Isıl şekillendirilmiş Kydex yapı sayesinde ürün formunu korur." },
+  { n: "04", Icon: Settings2, title: "Kullanıma Özel Tasarım", body: "Farklı modeller ve taşıma ihtiyaçları için ürün seçenekleri." },
 ];
 
 export function WhyKydexSection({ headingFont }: { headingFont: string }) {
@@ -49,12 +55,138 @@ export function WhyKydexSection({ headingFont }: { headingFont: string }) {
         </div>
         <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
           {WHY_KYDEX_ITEMS.map((item) => (
-            <div key={item.n} className="rounded-[14px] border border-[#292929] bg-[#171717] p-6">
-              <div className={`${headingFont} text-xl font-bold text-[#D95F00]`}>{item.n}</div>
-              <div className={`${headingFont} mt-2.5 text-[15px] font-semibold text-[#F5F5F5]`}>{item.title}</div>
-              <div className="mt-2 text-[13px] leading-relaxed text-[#A3A3A3]">{item.body}</div>
+            <div
+              key={item.n}
+              className="relative overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] p-6 transition-colors hover:border-[#D95F00]/50"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-60"
+                style={{ background: "radial-gradient(circle, rgba(217,95,0,0.16) 0%, transparent 70%)" }}
+              />
+              <div className="relative flex items-center justify-between">
+                <div className={`${headingFont} text-xl font-bold text-[#D95F00]`}>{item.n}</div>
+                <item.Icon size={20} strokeWidth={1.6} className="text-[#D95F00]/70" aria-hidden="true" />
+              </div>
+              <div className={`${headingFont} relative mt-2.5 text-[15px] font-semibold text-[#F5F5F5]`}>{item.title}</div>
+              <div className="relative mt-2 text-[13px] leading-relaxed text-[#A3A3A3]">{item.body}</div>
             </div>
           ))}
+        </div>
+      </Container>
+    </div>
+  );
+}
+
+/**
+ * Marka logosu/harf rozeti — hem bu dosyadaki köprü bölümünde hem
+ * /silahini-sec sayfalarında (Kısım B) kullanılan paylaşımlı küçük
+ * yardımcı. logoUrl GERÇEK (brands.logo_url, admin "Markalar ve
+ * Modeller" ekranından yüklenmiş) varsa onu gösterir; yoksa markanın
+ * baş harfinden sade bir rozet (kanvasın kendi "C" harfi örneği) —
+ * admin logo yükleyince OTOMATİK gerçek logoya döner, uydurma bir
+ * görsel asla yok.
+ */
+function BrandAvatar({ name, logoUrl, size = 48 }: { name: string; logoUrl: string | null; size?: number }) {
+  if (logoUrl) {
+    return (
+      <span
+        className="relative shrink-0 overflow-hidden rounded-[10px] border border-[#292929] bg-[#0A0A0A]"
+        style={{ width: size, height: size }}
+      >
+        <Image src={logoUrl} alt={name} fill unoptimized sizes={`${size}px`} className="object-contain p-1.5" />
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`${storefrontDisplayClasses} flex shrink-0 items-center justify-center rounded-[10px] border border-[#292929] bg-[#0A0A0A] font-bold text-[#D95F00]`}
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {name.charAt(0).toLocaleUpperCase("tr")}
+    </span>
+  );
+}
+
+/**
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım A — YENİ
+ * bölüm, kategori ızgarasından (Kydex Koleksiyonu) ÖNCE: "Silahını Seç"
+ * akışını tanıtan görsel bir panel. GERÇEK markalar + GERÇEK ürün
+ * sayıları (getPublicBrandsWithProductCounts, Kısım A/B için eklendi) —
+ * uydurma sayı/marka yok. CANİK (productCount > 0): aktif/tıklanabilir
+ * kart, turuncu border, "AKTİF KATALOG" rozeti. SARSILMAZ/GLOCK
+ * (productCount === 0, bugünkü gerçek durum): donuk/dashed kart,
+ * "Yakında" rozeti, BİLEREK Link DEĞİL (devir metninin kendi "tıklanabilir
+ * de olmamalı" tercihi) — düz <div>, tıklanamaz.
+ */
+export function SilahiniSecBridgeSection({
+  storeSlug,
+  brands,
+  headingFont,
+}: {
+  storeSlug: string;
+  brands: PublicBrandWithCount[];
+  headingFont: string;
+}) {
+  if (brands.length === 0) return null;
+
+  return (
+    <div className="bg-[#0A0A0A] py-14">
+      <Container>
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className={`${HEADING} ${headingFont} text-[26px] text-[#F5F5F5]`}>Silahını Seç</h2>
+            <p className="mt-2 text-[13px] text-[#A3A3A3]">Markanı seç, sana tam uyumlu kılıf ve ekipmanı birlikte bulalım.</p>
+          </div>
+          <Link
+            href={`/store/${storeSlug}/silahini-sec`}
+            className={`${headingFont} flex items-center gap-1.5 text-xs font-semibold text-[#D95F00] hover:text-[#F26A00]`}
+          >
+            Tüm Markalar →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {brands.slice(0, 3).map((brand) =>
+            brand.productCount > 0 ? (
+              <Link
+                key={brand.id}
+                href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
+                className="group relative overflow-hidden rounded-[14px] border border-[#D95F00]/50 bg-[#171717] p-6 transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00]"
+              >
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: "radial-gradient(240px 160px at 85% -10%, rgba(217,95,0,.12), transparent 70%)" }}
+                />
+                <span
+                  className={`${storefrontMonoClasses} relative inline-block rounded-full bg-[#D95F00] px-2.5 py-0.5 text-[10px] font-bold text-[#1A0D00]`}
+                >
+                  AKTİF KATALOG
+                </span>
+                <div className="relative mt-4 flex items-center gap-3">
+                  <BrandAvatar name={brand.name} logoUrl={brand.logoUrl} />
+                  <div>
+                    <p className={`${headingFont} text-base font-bold text-[#F5F5F5]`}>{brand.name}</p>
+                    <p className={`${storefrontMonoClasses} text-xs text-[#A3A3A3]`}>{brand.productCount} ürün</p>
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div
+                key={brand.id}
+                className="relative rounded-[14px] border border-dashed border-[#292929] bg-[#171717]/50 p-6 opacity-60"
+              >
+                <span className="inline-block rounded-full border border-[#3A3A3A] px-2.5 py-0.5 text-[10px] font-semibold text-[#6B6B6B]">
+                  Yakında
+                </span>
+                <div className="mt-4 flex items-center gap-3">
+                  <BrandAvatar name={brand.name} logoUrl={brand.logoUrl} />
+                  <p className={`${headingFont} text-base font-bold text-[#A3A3A3]`}>{brand.name}</p>
+                </div>
+              </div>
+            ),
+          )}
         </div>
       </Container>
     </div>
@@ -326,6 +458,12 @@ export function OtherCategoriesSection({
  * TEYİT EDİLMEMİŞ iddialar olduğu için KOPYALANMADI, sadece üstteki 4
  * GERÇEK/onaylı ifade kullanıldı (tek satır başlık, uydurma alt metin
  * yok).
+ *
+ * Site Tasarımı v3 devir metni — "ince, ikon+metin, ayraç çizgili TEK
+ * SATIR" talimatı: önceki 2×2/4 sütunlu GRID (mobilde 2 satır) artık
+ * tek bir flex satırı — geniş ekranda hep tek satır, dar ekranda sadece
+ * gerektiğinde sarıyor (grid'in zorladığı sabit 2 sütun YOK). Dikey
+ * ayraçlar artık ekran genişliğinden bağımsız (sm: öneki kaldırıldı).
  */
 const TRUST_BADGES = [
   { Icon: Truck, label: "2.000 TL Üzeri Ücretsiz Kargo" },
@@ -336,16 +474,14 @@ const TRUST_BADGES = [
 
 export function TrustBadgesSection() {
   return (
-    <div className="border-b border-[#292929] bg-[#0A0A0A] py-7">
-      <Container className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+    <div className="border-b border-[#292929] bg-[#0A0A0A] py-5">
+      <Container className="flex flex-wrap items-center justify-center gap-y-3">
         {TRUST_BADGES.map(({ Icon, label }, index) => (
           <div
             key={label}
-            className={`flex items-center justify-center gap-3 text-center sm:justify-start sm:text-left ${
-              index < TRUST_BADGES.length - 1 ? "sm:border-r sm:border-[#292929]" : ""
-            } ${index > 0 ? "sm:pl-4" : ""}`}
+            className={`flex items-center gap-2.5 px-5 ${index < TRUST_BADGES.length - 1 ? "border-r border-[#292929]" : ""}`}
           >
-            <Icon size={22} strokeWidth={1.6} className="shrink-0 text-[#D95F00]" aria-hidden="true" />
+            <Icon size={18} strokeWidth={1.6} className="shrink-0 text-[#D95F00]" aria-hidden="true" />
             <span className={`${storefrontDisplayClasses} text-xs font-semibold text-[#F5F5F5]`}>{label}</span>
           </div>
         ))}

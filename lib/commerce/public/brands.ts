@@ -14,12 +14,14 @@ export interface PublicBrand {
   id: string;
   name: string;
   slug: string;
+  /** Site Tasarımı v3 devir metni — marka kartlarında (anasayfa köprüsü + /silahini-sec) gerçek logo varsa göstermek için eklendi. `null` ise çağıran taraf harf rozeti gösteriyor, uydurma bir görsel YOK. */
+  logoUrl: string | null;
 }
 
-const BRAND_COLUMNS = "id, name, slug";
+const BRAND_COLUMNS = "id, name, slug, logo_url";
 
-function mapBrand(row: { id: string; name: string; slug: string }): PublicBrand {
-  return { id: row.id, name: row.name, slug: row.slug };
+function mapBrand(row: { id: string; name: string; slug: string; logo_url: string | null }): PublicBrand {
+  return { id: row.id, name: row.name, slug: row.slug, logoUrl: row.logo_url };
 }
 
 /**
@@ -180,4 +182,46 @@ export async function getPublicBrandsWithProducts(storeId: string): Promise<Publ
   }
 
   return (brandRows ?? []).map(mapBrand);
+}
+
+export interface PublicBrandWithCount extends PublicBrand {
+  /** GERÇEK, canlı sayım (bu mağazadaki aktif ürün sayısı) — uydurma/sabit bir sayı değil. 0 olabilir (ör. SARSILMAZ/GLOCK — henüz hiç ürünü olmayan gerçek markalar). */
+  productCount: number;
+}
+
+/**
+ * Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım A/B —
+ * getPublicBrandsWithProducts'ın (SADECE en az 1 ürünü olan markaları
+ * döndürür) AKSİNE, bu fonksiyon mağazanın TÜM aktif markalarını, HER
+ * BİRİNİN gerçek ürün sayısıyla birlikte döndürür — "Silahını Seç"
+ * köprüsünün/marka seçim ızgarasının "SARSILMAZ/GLOCK: 0 ürün, Yakında
+ * rozeti" durumunu dürüstçe göstermesi için şart (0 ürünlü bir marka,
+ * getPublicBrandsWithProducts'ta hiç görünmez). İki sorgu, N+1 değil:
+ * (1) tüm aktif markalar, (2) store'un tüm ürünlerinin brand_id'si,
+ * client-side sayılıp eşleniyor — getPublicBrandsForCategory'nin kendi
+ * "iki sorgu, client-side eşleştir" deseniyle AYNI.
+ */
+export async function getPublicBrandsWithProductCounts(storeId: string): Promise<PublicBrandWithCount[]> {
+  const client = createSupabasePublicClient();
+
+  const [{ data: brandRows, error: brandsError }, { data: productRows, error: productsError }] = await Promise.all([
+    client.from("brands").select(BRAND_COLUMNS).eq("store_id", storeId).order("name", { ascending: true }),
+    client.from("products").select("brand_id").eq("store_id", storeId).not("brand_id", "is", null),
+  ]);
+
+  if (brandsError) {
+    console.error("[commerce/public] getPublicBrandsWithProductCounts brand lookup failed:", brandsError.message);
+    return [];
+  }
+  if (productsError) {
+    console.error("[commerce/public] getPublicBrandsWithProductCounts product lookup failed:", productsError.message);
+  }
+
+  const countByBrandId = new Map<string, number>();
+  for (const row of productRows ?? []) {
+    if (!row.brand_id) continue;
+    countByBrandId.set(row.brand_id, (countByBrandId.get(row.brand_id) ?? 0) + 1);
+  }
+
+  return (brandRows ?? []).map((row) => ({ ...mapBrand(row), productCount: countByBrandId.get(row.id) ?? 0 }));
 }

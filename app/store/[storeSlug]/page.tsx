@@ -8,13 +8,13 @@ import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
 import { getPublicStoreHomepageSections } from "@/lib/commerce/public/homepage";
 import { getPublicProducts, getPublicProductImages } from "@/lib/commerce/public/products";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
-import { getPublicBrandsWithProducts } from "@/lib/commerce/public/brands";
+import { getPublicBrandsWithProductCounts } from "@/lib/commerce/public/brands";
 import { StoreHomepageSections } from "@/components/commerce/public/homepage-sections/store-homepage-sections";
 import { Container } from "@/components/ui/container";
 import {
   WhyKydexSection,
+  SilahiniSecBridgeSection,
   KydexCollectionSection,
-  BrandFinderSection,
   FeaturedProductsSection,
   BrandStatementSection,
   OtherCategoriesSection,
@@ -44,12 +44,16 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [mainNav, sections, allProducts, categories, brands, profile] = await Promise.all([
+  const [mainNav, sections, allProducts, categories, brandsWithCounts, profile] = await Promise.all([
     getPublicStoreNavigation(store.id, "main"),
     getPublicStoreHomepageSections(store.id),
     getPublicProducts(store.id),
     getPublicCategories(store.id),
-    getPublicBrandsWithProducts(store.id),
+    // Site Tasarımı v3 devir metni, Kısım A — eski getPublicBrandsWithProducts
+    // (SADECE ürünü olan markalar) yerine getPublicBrandsWithProductCounts
+    // (TÜM aktif markalar + gerçek sayım) — yeni "Silahını Seç" köprüsünün
+    // SARSILMAZ/GLOCK gibi 0 ürünlü markaları da dürüstçe göstermesi için.
+    getPublicBrandsWithProductCounts(store.id),
     getPublicStoreProfile(store.id),
   ]);
 
@@ -144,64 +148,64 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         one to <h1> is what keeps the page at exactly one semantic
         heading rather than zero.
       */}
-      <section className="relative isolate overflow-hidden bg-neutral-950">
-        <div className="relative h-[560px] w-full sm:h-[640px] lg:h-[720px]">
-          <Image
-            src="/images/hero/kydex-sarjor-kilifi-hero.jpg"
-            alt="Taktikalp46 Kydex şarjör kılıfı, taktik kemer üzerinde"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[65%_25%] sm:object-[75%_30%]"
-          />
-          {/* v2 palette — soldan sağa koyulaşan gradient, okunabilirlik için */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.65) 45%, rgba(10,10,10,0.2) 100%)",
-            }}
-          />
-          {/* Dar ekranda yatay gradient metnin arkasını yeterince koyultmuyor — ek, tam kaplayan bir scrim */}
-          <div aria-hidden="true" className="absolute inset-0 bg-black/35 sm:hidden" />
-
-          <div className="relative flex h-full items-end sm:items-center">
-            <Container className="pb-10 sm:pb-0">
-              {/*
-                Devir metni v2 — kanvasın (Main.dc.html) hero başlığı,
-                kullanıcının kendi onayıyla "factual risk yok, doğrudan
-                kullanılabilir" denilerek buraya taşındı. Alt metin ise
-                kanvasın KENDİ metni DEĞİL — kanvasta "sahada test
-                edilmiş ürünler, orijinal garantiyle" gibi teyit
-                edilmemiş iddialar vardı, bu session'ın "gerçek olmayan
-                iddia yazma" kuralına göre BİLEREK kopyalanmadı; yerine
-                zaten başka yerde (StorefrontCtaBand) onaylı/kullanılan
-                AYNI cümle korundu.
-              */}
-              <h1
-                className={`${storefrontDisplayClasses} max-w-2xl text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl`}
+      {/*
+        Site Tasarımı v3 devir metni, Kısım A — "şu anki ortalanmış/düz
+        hero yerine asimetrik iki sütunlu düzen". Sol: başlık+CTA'lar
+        (koyu düz zemin). Sağ: gerçek hero fotoğrafı + ince turuncu
+        duoton overlay + köşede küçük bir rozet kart. İstatistik şeridi
+        ("500+ Üretilen Kılıf" gibi) BİLEREK EKLENMEDİ — hiçbir gerçek/
+        teyitli sayı bu oturumda doğrulanamadı, uydurma bir rakam
+        yayınlanmadı (devir metninin kendi "UYDURMA sayı YAYINA
+        ÇIKMASIN" kuralı). Köşedeki rozet metni ("Isıl Şekillendirilmiş
+        Kydex") YENİ bir iddia DEĞİL — WhyKydexSection'ın kendi 3. kartında
+        ("Isıl şekillendirilmiş Kydex yapı sayesinde ürün formunu korur")
+        zaten onaylı/kullanılan AYNI gerçek, sadece burada tekrarlanıyor.
+      */}
+      <section className="relative isolate overflow-hidden bg-[#0A0A0A]">
+        <div className="grid lg:grid-cols-2">
+          <div className="relative z-10 flex flex-col justify-center px-6 py-14 sm:px-10 sm:py-20 lg:py-28">
+            <h1 className={`${storefrontDisplayClasses} max-w-lg text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl`}>
+              SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
+            </h1>
+            <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
+              Kydex&apos;in hassasiyeti. Sahaya hazır performans.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link
+                href={`/store/${storeSlug}/silahini-sec`}
+                className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
               >
-                SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
-              </h1>
-              <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
-                Kydex&apos;in hassasiyeti. Sahaya hazır performans.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  href={`/store/${storeSlug}/silahini-sec`}
-                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
-                >
-                  Silahını Seç
-                </Link>
-                <Link
-                  href={`/store/${storeSlug}/kategoriler`}
-                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
-                >
-                  Tüm Kategoriler
-                </Link>
-              </div>
-            </Container>
+                Silahını Seç
+              </Link>
+              <Link
+                href={`/store/${storeSlug}/kategoriler`}
+                className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
+              >
+                Tüm Kategoriler
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative h-[320px] sm:h-[420px] lg:h-[640px]">
+            <Image
+              src="/images/hero/kydex-sarjor-kilifi-hero.jpg"
+              alt="Taktikalp46 Kydex şarjör kılıfı, taktik kemer üzerinde"
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover object-[65%_25%] sm:object-[75%_30%]"
+            />
+            {/* İnce turuncu duoton overlay — fotoğrafın kendisi/ürünü DEĞİŞTİRMİYOR, sadece üzerine marka rengiyle uyumlu bir ton katıyor. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(160deg, rgba(217,95,0,.28) 0%, rgba(10,10,10,.65) 75%)", mixBlendMode: "multiply" }}
+            />
+            <div aria-hidden="true" className="absolute inset-0 bg-black/20" />
+
+            <div className="absolute bottom-5 right-5 max-w-[200px] rounded-[14px] border border-[#292929] bg-[#171717]/90 px-4 py-3 backdrop-blur-sm">
+              <p className={`${storefrontDisplayClasses} text-xs font-semibold text-[#F5F5F5]`}>Isıl Şekillendirilmiş Kydex</p>
+            </div>
           </div>
         </div>
       </section>
@@ -230,8 +234,22 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
       */}
       <div>
         <WhyKydexSection headingFont={storefrontDisplayClasses} />
+        {/*
+          Site Tasarımı v3 devir metni, Kısım A — YENİ "Silahını Seç
+          köprüsü", kategori ızgarasından ÖNCE (devir metninin kendi
+          konumlandırma talimatı). Eski BrandFinderSection ("Silahına
+          Uygun Kılıfı Bul", sadece ürünü olan markaları pill olarak
+          gösteren, sayfanın daha aşağısındaki eski bölüm) BİLEREK
+          KALDIRILDI — aynı "marka seç" niyetini şimdi bu YENİ, daha
+          zengin bölüm (gerçek ürün sayısı + Yakında rozeti + logo/harf
+          rozeti ile) karşılıyor; ikisini aynı sayfada tutmak aynı
+          mesajı iki kez tekrarlardı. BrandFinderSection'ın kendisi
+          dosyadan SİLİNMEDİ (bu kod tabanının "referans için bırak"
+          kuralı, bkz. lib/commerce/product-models-by-brand.ts'in AYNI
+          kararı), sadece buradan çağrılmıyor.
+        */}
+        <SilahiniSecBridgeSection storeSlug={storeSlug} brands={brandsWithCounts} headingFont={storefrontDisplayClasses} />
         <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
-        <BrandFinderSection storeSlug={storeSlug} brands={brands} headingFont={storefrontDisplayClasses} />
         <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={storefrontDisplayClasses} />
         <BrandStatementSection headingFont={storefrontDisplayClasses} />
         <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
