@@ -1,7 +1,8 @@
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { InviteForm } from "./invite-form";
+import { CreateUserForm } from "./create-user-form";
 import { RoleForm } from "./role-form";
+import { ResetPasswordForm } from "./reset-password-form";
 
 /**
  * Admin-only user list + invite form. Three separate flat queries merged
@@ -47,9 +48,13 @@ export default async function UsersPage() {
       </p>
 
       <div className="mt-6 rounded-lg border border-black/10 p-5">
-        <h2 className="text-sm font-semibold tracking-tight">Kullanıcı Davet Et</h2>
+        <h2 className="text-sm font-semibold tracking-tight">Yeni Kullanıcı Oluştur</h2>
+        <p className="mt-1 text-xs text-foreground/50">
+          E-posta daveti yok — hesap doğrudan oluşturulur, geçici bir şifre bir kerelik gösterilir. İlk girişte
+          şifre değiştirmesi zorunlu tutulur.
+        </p>
         <div className="mt-4">
-          <InviteForm customers={customers ?? []} />
+          <CreateUserForm customers={customers ?? []} />
         </div>
       </div>
 
@@ -72,6 +77,7 @@ export default async function UsersPage() {
                       {profile?.email}
                       {membership.customer_id ? ` · ${customersById.get(membership.customer_id) ?? "Bilinmeyen müşteri"}` : ""}
                     </p>
+                    {profile?.email ? <ResetPasswordForm userId={membership.user_id} email={profile.email} /> : null}
                   </div>
                   <RoleForm
                     membershipId={membership.id}

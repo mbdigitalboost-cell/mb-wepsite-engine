@@ -30,7 +30,7 @@ export interface AdminContext {
  *
  * PHASE 2 CRITICAL REMEDIATION (CRITICAL 2 — bkz.
  * PHASE_2_CRITICAL_REMEDIATION_PLAN.md §8-9): platform admin işlemleri
- * (Level 3/4 — `changeUserRoleAction`, `inviteUserAction` dahil TÜM
+ * (Level 3/4 — `changeUserRoleAction`, `createUserAction` dahil TÜM
  * admin-only Server Action'lar) `requireAal2()` çağırır — SADECE
  * dashboard layout'ta değil, bu fonksiyonun kendi kod yolunda, her
  * invocation'da. Bkz. lib/auth/require-aal2.ts'in dosya yorumu.

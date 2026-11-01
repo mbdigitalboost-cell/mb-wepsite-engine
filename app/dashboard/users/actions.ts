@@ -4,37 +4,37 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { inviteUser } from "@/lib/auth/invite-user";
-import { inviteUserFormSchema, userRoleFormSchema } from "@/lib/validation/invite";
+import { createUserWithPassword, resetUserPassword } from "@/lib/auth/create-user-with-password";
+import { createUserFormSchema, userRoleFormSchema, resetPasswordFormSchema } from "@/lib/validation/invite";
 import { reauthenticateWithPassword } from "@/lib/auth/reauthenticate";
 import { logAuditEvent } from "@/lib/auth/audit-log";
-import type { InviteFormState, RoleFormState } from "./form-state";
+import type { CreateUserFormState, RoleFormState, ResetPasswordFormState } from "./form-state";
 
 /**
- * Invite → create-account → assign-role, all in one action:
- *  1. `inviteUser()` sends the Supabase Auth invite email. This is what
- *     actually creates the `auth.users` row (and, via the
- *     `handle_new_user` trigger from migration 0004, the matching
- *     `profiles` row) — there is no separate "create account" step.
- *  2. The service-role admin client sets `profiles.full_name`, because
- *     RLS only lets a profile update ITSELF (migration 0004) — an admin
- *     inviting someone else cannot do this through the normal RLS-backed
- *     client, and rightly so.
- *  3. A `customer_users` row is inserted with the chosen role/customer —
- *     this is what actually grants access; being invited alone grants
- *     nothing.
+ * Admin Kullanıcı Oluşturma devir metni — eski inviteUserAction'ın (Supabase
+ * e-posta davet akışı) YERİNE geçti. Create-account → assign-role, tek
+ * action:
+ *  1. `createUserWithPassword()` hesabı DOĞRUDAN oluşturur + doğrulanmış
+ *     sayar + rastgele bir geçici şifre atar — hiçbir e-posta gönderilmez,
+ *     hiçbir onay beklenmez (bkz. lib/auth/create-user-with-password.ts'in
+ *     kendi KÖK NEDEN yorumu: Supabase'in varsayılan e-posta gönderimi +
+ *     hâlâ localhost'ta duran Auth Site URL ayarı yüzünden davet akışı
+ *     gerçek kullanıcılar için ÇALIŞMIYORDU).
+ *  2. Service-role admin client ile `profiles.full_name` set edilir (RLS
+ *     sadece bir profilin KENDİSİNİ güncellemesine izin verir).
+ *  3. `customer_users` satırı eklenir — asıl erişimi bu verir.
  *
- * At no point does this action see, generate, or store a password — the
- * invited user sets their own at /auth/set-password after clicking the
- * emailed link (see lib/auth/invite-user.ts's redirectTo default).
+ * Üretilen şifre SADECE bu action'ın DÖNÜŞ DEĞERİNDE bir kez var — ne
+ * veritabanına ne audit log metadata'sına ne de hiçbir yere düz metin
+ * olarak yazılmıyor.
  */
-export async function inviteUserAction(
-  _prevState: InviteFormState,
+export async function createUserAction(
+  _prevState: CreateUserFormState,
   formData: FormData,
-): Promise<InviteFormState> {
+): Promise<CreateUserFormState> {
   const { user } = await requireAdmin();
 
-  const parsed = inviteUserFormSchema.safeParse({
+  const parsed = createUserFormSchema.safeParse({
     email: formData.get("email"),
     fullName: formData.get("fullName"),
     role: formData.get("role"),
@@ -48,23 +48,23 @@ export async function inviteUserAction(
   const { email, fullName, role, customerId } = parsed.data;
   const scopedCustomerId = role === "store_admin" ? customerId || null : null;
 
-  const inviteResult = await inviteUser({ email, fullName });
-  if (!inviteResult.ok || !inviteResult.userId) {
-    return { error: inviteResult.error ?? "Davet gönderilemedi.", success: null };
+  const createResult = await createUserWithPassword({ email, fullName });
+  if (!createResult.ok || !createResult.userId || !createResult.tempPassword) {
+    return { error: createResult.error ?? "Kullanıcı oluşturulamadı.", success: null };
   }
 
   const admin = createSupabaseAdminClient();
-  await admin.from("profiles").update({ full_name: fullName }).eq("id", inviteResult.userId);
+  await admin.from("profiles").update({ full_name: fullName }).eq("id", createResult.userId);
 
   const { error: membershipError } = await admin.from("customer_users").insert({
-    user_id: inviteResult.userId,
+    user_id: createResult.userId,
     role,
     customer_id: scopedCustomerId,
   });
 
   if (membershipError) {
     return {
-      error: `Davet gönderildi ancak rol atanamadı: ${membershipError.message}. Kullanıcılar listesinden tekrar deneyin.`,
+      error: `Kullanıcı oluşturuldu ancak rol atanamadı: ${membershipError.message}. Kullanıcılar listesinden tekrar deneyin.`,
       success: null,
     };
   }
@@ -72,14 +72,14 @@ export async function inviteUserAction(
   await logAuditEvent({
     userId: user.id,
     customerId: scopedCustomerId,
-    action: "user.invite",
+    action: "user.create",
     entityType: "user",
-    entityId: inviteResult.userId,
+    entityId: createResult.userId,
     metadata: { email, fullName, role },
   });
 
   revalidatePath("/dashboard/users");
-  return { error: null, success: `${email} adresine davet gönderildi.` };
+  return { error: null, success: { email, tempPassword: createResult.tempPassword } };
 }
 
 /**
@@ -147,4 +147,61 @@ export async function changeUserRoleAction(
 
   revalidatePath("/dashboard/users");
   return { error: null };
+}
+
+/**
+ * Admin Kullanıcı Oluşturma devir metni — "Şifreyi Sıfırla". Sıkışmış/
+ * giremeyen bir kullanıcıyı (ör. e-posta davet akışının hiç çalışmadığı
+ * taktikalp46@gmail.com) kurtarmak için GENEL, tekrar kullanılabilir bir
+ * araç — bu action'ın kendisi, o hesabın canlıda gerçekten düzeltilmesi
+ * için de kullanıldı.
+ *
+ * changeUserRoleAction'ın AYNI reauth deseni (currentPassword) — bir
+ * kullanıcının şifresini sıfırlayabilmek platform admin yetkisi vermek
+ * kadar (hatta ondan da riskli — doğrudan hesap ele geçirme imkanı)
+ * kritik bir işlem.
+ */
+export async function resetUserPasswordAction(
+  userId: string,
+  email: string,
+  _prevState: ResetPasswordFormState,
+  formData: FormData,
+): Promise<ResetPasswordFormState> {
+  const { user } = await requireAdmin();
+
+  const parsed = resetPasswordFormSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Geçersiz form.", success: null };
+  }
+
+  const reauth = await reauthenticateWithPassword(user, parsed.data.currentPassword);
+  if (!reauth.ok) {
+    await logAuditEvent({
+      userId: user.id,
+      customerId: null,
+      action: "user.password_reset_reauth_failed",
+      entityType: "user",
+      entityId: userId,
+    });
+    return { error: reauth.error, success: null };
+  }
+
+  const result = await resetUserPassword(userId);
+  if (!result.ok || !result.tempPassword) {
+    return { error: result.error ?? "Şifre sıfırlanamadı.", success: null };
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId: null,
+    action: "user.password_reset",
+    entityType: "user",
+    entityId: userId,
+  });
+
+  revalidatePath("/dashboard/users");
+  return { error: null, success: { email, tempPassword: result.tempPassword } };
 }

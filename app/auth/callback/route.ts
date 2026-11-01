@@ -11,8 +11,11 @@ import { resolveSafeNextPath } from "@/lib/security/safe-redirect";
  * used everywhere else), then we forward the user on.
  *
  * `next` lets a specific flow choose where to land afterwards (defaults
- * to the dashboard) — see lib/auth/invite-user.ts for the one caller
- * that sets it today (`?next=/auth/set-password`).
+ * to the dashboard) — see app/store/[storeSlug]/hesap/sifremi-unuttum/
+ * actions.ts for the one caller that sets it today (storefront password
+ * recovery). Admin account creation no longer uses an email link at all
+ * (Admin Kullanıcı Oluşturma devir metni — lib/auth/create-user-with-password.ts
+ * replaced the old invite-email flow that used to redirect through here).
  *
  * GÜVENLİK (Phase 1, PHASE_0 bulgusu H1): `next` daha önce hiç
  * doğrulanmadan `${origin}${next}` şeklinde birleştiriliyordu. Bu, bir

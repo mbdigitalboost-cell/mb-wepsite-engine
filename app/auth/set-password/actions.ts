@@ -33,7 +33,15 @@ export async function setPasswordAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  // Admin Kullanıcı Oluşturma devir metni — `must_change_password` flag'i
+  // burada, AYNI çağrıda temizleniyor. GoTrue'nun self-service `updateUser`
+  // `data` alanı mevcut user_metadata'ya MERGE eder (admin API'nin
+  // updateUserById'si gibi elle merge gerektirmez) — full_name gibi diğer
+  // alanlar korunur, sadece bu tek flag false'a döner.
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+    data: { must_change_password: false },
+  });
 
   if (error) {
     return { error: `Şifre belirlenemedi: ${error.message}` };

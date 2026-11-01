@@ -41,6 +41,18 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
     redirect("/mfa-challenge");
   }
 
+  // Admin Kullanıcı Oluşturma devir metni — MFA gate'iyle AYNI tek
+  // kontrol noktası deseni (proxy.ts'teki middleware DEĞİL, araştırma
+  // sonucu burasının doğru yer olduğu teyit edildi: MFA gate'i zaten
+  // burada yaşıyor, aynı mantıkla bu da burada). Admin'in (createUserAction)
+  // oluşturduğu bir hesap `must_change_password: true` ile gelir — bu
+  // flag temizlenene kadar /dashboard'un HİÇBİR sayfası render edilmeden
+  // /auth/set-password'e yönlendirilir. `/auth/set-password` kendi ayrı
+  // route ağacında (bu layout'un dışında) olduğu için döngü riski yok.
+  if (user.user_metadata?.must_change_password === true) {
+    redirect("/auth/set-password");
+  }
+
   const memberships = await getCurrentMemberships(user.id);
   const isAdmin = isAdminMembership(memberships);
 

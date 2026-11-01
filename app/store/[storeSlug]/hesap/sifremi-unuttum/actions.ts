@@ -15,9 +15,11 @@ const RESET_RATE_LIMIT_PER_IP = { limit: 10, windowMs: 15 * 60 * 1000 };
  * FAZ 5.1 — spec: "Supabase Auth'un kendi 'reset password' e-posta akışını
  * kullan (resetPasswordForEmail) — ayrı bir e-posta gönderim sistemi
  * kurma." Reuses app/auth/callback/route.ts UNCHANGED (already a generic,
- * safe `?code=...&next=...` handler — see lib/auth/invite-user.ts for the
- * same reuse on the admin invite side) with `next` pointing at this
- * store's own sifre-guncelle page, not the dashboard's /auth/set-password.
+ * safe `?code=...&next=...` handler) with `next` pointing at this store's
+ * own sifre-guncelle page, not the dashboard's /auth/set-password. (The
+ * admin side used to reuse this same route for invite emails — Admin
+ * Kullanıcı Oluşturma devir metni replaced that with direct account
+ * creation, no email link involved anymore.)
  *
  * Always returns the same "sent" status whether or not the email has an
  * account — same account-enumeration reasoning as the dashboard's own

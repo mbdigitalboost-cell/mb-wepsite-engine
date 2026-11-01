@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 /**
- * Backs the "Kullanıcı Davet Et" form. `role` + `customerId` together
- * decide what gets written to `customer_users`:
+ * Backs the "Yeni Kullanıcı Oluştur" form (Admin Kullanıcı Oluşturma devir
+ * metni — eski "Kullanıcı Davet Et" e-posta akışının yerini aldı, aynı
+ * alan şekli korundu, sadece isim "invite" değil "create" artık). `role` +
+ * `customerId` together decide what gets written to `customer_users`:
  *   - role "platform_admin" → customerId must be empty (customer_id =
  *                             NULL, enforced by
  *                             customer_users_role_scope_check, migration
@@ -18,7 +20,7 @@ import { z } from "zod";
  * kullanım senaryosu yok (Phase 2'nin mağaza/store yönetim UI'ı ile
  * birlikte gelecek). Şema hazır; UI kasıtlı olarak dar.
  */
-export const inviteUserFormSchema = z
+export const createUserFormSchema = z
   .object({
     email: z.string().trim().toLowerCase().email("Geçerli bir e-posta girin.").max(255),
     fullName: z
@@ -38,7 +40,7 @@ export const inviteUserFormSchema = z
     path: ["customerId"],
   });
 
-export type InviteUserFormInput = z.infer<typeof inviteUserFormSchema>;
+export type CreateUserFormInput = z.infer<typeof createUserFormSchema>;
 
 export const userRoleFormSchema = z
   .object({
@@ -77,3 +79,21 @@ export const setPasswordFormSchema = z
   });
 
 export type SetPasswordFormInput = z.infer<typeof setPasswordFormSchema>;
+
+/**
+ * Admin Kullanıcı Oluşturma devir metni — "Şifreyi Sıfırla" formunu
+ * destekler (sıkışmış/giremeyen bir kullanıcıyı kurtarmak için). Bir
+ * kullanıcının şifresini SIFIRLAYABİLMEK platform admin yetkisi vermek
+ * kadar (hatta ondan da fazla — doğrudan hesap ele geçirme imkanı)
+ * riskli bir işlem, bu yüzden userRoleFormSchema'nın AYNI `currentPassword`
+ * (reauth) deseni burada da uygulanıyor — Phase 1'in "en riskli işleme
+ * ek şifre onayı" kararıyla tutarlı. `userId` BİLEREK burada DEĞİL —
+ * actions.ts'in resetUserPasswordAction'ı onu formData'dan değil,
+ * .bind() ile sabitlenmiş (route/satırdan gelen, client tarafından
+ * değiştirilemeyen) bir parametreden alıyor.
+ */
+export const resetPasswordFormSchema = z.object({
+  currentPassword: z.string().min(1, "Onay için şifrenizi girin."),
+});
+
+export type ResetPasswordFormInput = z.infer<typeof resetPasswordFormSchema>;
