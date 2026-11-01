@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CreateUserForm } from "./create-user-form";
 import { RoleForm } from "./role-form";
 import { ResetPasswordForm } from "./reset-password-form";
+import { resetUserPasswordAction } from "./actions";
 
 /**
  * Admin-only user list + invite form. Three separate flat queries merged
@@ -77,7 +78,12 @@ export default async function UsersPage() {
                       {profile?.email}
                       {membership.customer_id ? ` · ${customersById.get(membership.customer_id) ?? "Bilinmeyen müşteri"}` : ""}
                     </p>
-                    {profile?.email ? <ResetPasswordForm userId={membership.user_id} email={profile.email} /> : null}
+                    {profile?.email ? (
+                      <ResetPasswordForm
+                        action={resetUserPasswordAction.bind(null, membership.user_id, profile.email)}
+                        email={profile.email}
+                      />
+                    ) : null}
                   </div>
                   <RoleForm
                     membershipId={membership.id}
