@@ -5,8 +5,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inputClasses } from "@/lib/utils/input-classes";
+import { LOW_STOCK_THRESHOLD } from "@/lib/commerce/inventory";
 import { bulkUpdateProductsAction, duplicateProductAction } from "./actions";
 import { DuplicateProductButton } from "./duplicate-product-button";
+import { ProductSearchInput } from "./product-search-input";
+import { BulkActionControls } from "./bulk-action-controls";
 
 interface ProductRow {
   id: string;
@@ -25,10 +28,27 @@ interface ProductsSearchParams {
   categoryId?: string;
   brandId?: string;
   active?: string;
+  stock?: string;
+  sort?: string;
   page?: string;
+  /** Yalnızca bulkUpdateProductsAction'ın "deleteForever" redirect'inden gelir — buildQuery tarafından ASLA sayfalar arasında taşınmaz, tek seferlik bir banner. */
+  bulkDeleted?: string;
+  bulkSkipped?: string;
 }
 
 const PAGE_SIZE = 20;
+
+/** Admin Panel İşlevsellik devir metni, Kısım C — isim/fiyat/stok/oluşturulma tarihi, artan/azalan. */
+const SORT_OPTIONS: Record<string, { column: "name" | "price" | "stock" | "created_at"; ascending: boolean }> = {
+  name_asc: { column: "name", ascending: true },
+  name_desc: { column: "name", ascending: false },
+  price_asc: { column: "price", ascending: true },
+  price_desc: { column: "price", ascending: false },
+  stock_asc: { column: "stock", ascending: true },
+  stock_desc: { column: "stock", ascending: false },
+  created_at_desc: { column: "created_at", ascending: false },
+  created_at_asc: { column: "created_at", ascending: true },
+};
 
 /**
  * PostgREST `.or()` treats `,()."` as syntax characters and `ilike`
@@ -56,6 +76,8 @@ function buildQuery(sp: ProductsSearchParams, overrides: Partial<ProductsSearchP
   if (merged.categoryId) params.set("categoryId", merged.categoryId);
   if (merged.brandId) params.set("brandId", merged.brandId);
   if (merged.active) params.set("active", merged.active);
+  if (merged.stock) params.set("stock", merged.stock);
+  if (merged.sort) params.set("sort", merged.sort);
   if (merged.page && merged.page !== "1") params.set("page", merged.page);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
@@ -113,9 +135,30 @@ export default async function StoreProductsPage({
   if (sp.active === "true") query = query.eq("is_active", true);
   if (sp.active === "false") query = query.eq("is_active", false);
 
-  const { data: products, count } = await query
-    .order("sort_order", { ascending: true })
-    .range(offset, offset + PAGE_SIZE - 1);
+  // Admin Panel İşlevsellik devir metni, Kısım C — Stok filtresi, Kısım
+  // B'nin "düşük stok" sayısıyla AYNI eşiği kullanıyor (LOW_STOCK_
+  // THRESHOLD). "Stokta" = sınırsız takip (track_inventory=false) VEYA
+  // eşiğin üzerinde stok — ikisi de .or() ile tek sorguda, ayrı bir
+  // .eq("track_inventory", true) şartı GEREKMİYOR: track_inventory=false
+  // olan satırlar birinci dalla, track_inventory=true VE stock>eşik olan
+  // satırlar ikinci dalla zaten doğru şekilde yakalanıyor.
+  if (sp.stock === "out") {
+    query = query.eq("track_inventory", true).eq("stock", 0);
+  } else if (sp.stock === "low") {
+    query = query.eq("track_inventory", true).gt("stock", 0).lte("stock", LOW_STOCK_THRESHOLD);
+  } else if (sp.stock === "in") {
+    query = query.or(`track_inventory.eq.false,stock.gt.${LOW_STOCK_THRESHOLD}`);
+  }
+
+  const sortOption = sp.sort ? SORT_OPTIONS[sp.sort] : undefined;
+  if (sortOption) {
+    query = query.order(sortOption.column, { ascending: sortOption.ascending });
+  } else {
+    // Varsayılan — admin'in kendi elle sıraladığı sort_order, eski davranış.
+    query = query.order("sort_order", { ascending: true });
+  }
+
+  const { data: products, count } = await query.range(offset, offset + PAGE_SIZE - 1);
 
   const rows = (products ?? []) as ProductRow[];
   // FAZ 7.1 — reuses the `brands` list already fetched above for the
@@ -147,15 +190,31 @@ export default async function StoreProductsPage({
         </div>
       </div>
       <p className="mt-1 text-sm text-foreground/60">
-        Ürün kataloğu. store_editor+ ekleyip düzenleyebilir; kalıcı silme store_admin+&apos;e ayrılmış.
+        Ürün kataloğu. store_editor+ ekleyip düzenleyebilir; kalıcı silme (tekli veya toplu) store_admin+&apos;e ayrılmış ve
+        sadece hiç sipariş edilmemiş ürünlerde mümkün.
       </p>
+
+      {/*
+        Admin Panel İşlevsellik devir metni, Kısım C — bulkUpdateProductsAction'ın
+        "deleteForever" dalının redirect'iyle gelen tek seferlik sonuç
+        banner'ı. buildQuery bu iki param'ı ASLA taşımadığı için bir
+        sayfa yenileme/filtre değişikliğinde kendiliğinden kaybolur.
+      */}
+      {sp.bulkDeleted !== undefined || sp.bulkSkipped !== undefined ? (
+        <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
+          {sp.bulkDeleted} ürün kalıcı olarak silindi
+          {Number(sp.bulkSkipped ?? 0) > 0
+            ? `, ${sp.bulkSkipped} ürün sipariş geçmişi olduğu için atlandı (sipariş geçmişi korunuyor).`
+            : "."}
+        </p>
+      ) : null}
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4">
         <div className="flex-1 min-w-[180px]">
           <label htmlFor="q" className="mb-1.5 block text-xs text-foreground/60">
             Ara (isim / SKU)
           </label>
-          <input id="q" name="q" type="text" defaultValue={sp.q ?? ""} className={inputClasses} />
+          <ProductSearchInput basePath={basePath} initialValue={sp.q ?? ""} />
         </div>
         <div className="min-w-[160px]">
           <label htmlFor="categoryId" className="mb-1.5 block text-xs text-foreground/60">
@@ -193,10 +252,37 @@ export default async function StoreProductsPage({
             <option value="false">Pasif</option>
           </select>
         </div>
+        <div className="min-w-[140px]">
+          <label htmlFor="stock" className="mb-1.5 block text-xs text-foreground/60">
+            Stok
+          </label>
+          <select id="stock" name="stock" defaultValue={sp.stock ?? ""} className={inputClasses}>
+            <option value="">Tümü</option>
+            <option value="in">Stokta</option>
+            <option value="low">Düşük Stok</option>
+            <option value="out">Tükendi</option>
+          </select>
+        </div>
+        <div className="min-w-[160px]">
+          <label htmlFor="sort" className="mb-1.5 block text-xs text-foreground/60">
+            Sırala
+          </label>
+          <select id="sort" name="sort" defaultValue={sp.sort ?? ""} className={inputClasses}>
+            <option value="">Varsayılan (manuel sıra)</option>
+            <option value="name_asc">İsim (A-Z)</option>
+            <option value="name_desc">İsim (Z-A)</option>
+            <option value="price_asc">Fiyat (Düşük-Yüksek)</option>
+            <option value="price_desc">Fiyat (Yüksek-Düşük)</option>
+            <option value="stock_asc">Stok (Düşük-Yüksek)</option>
+            <option value="stock_desc">Stok (Yüksek-Düşük)</option>
+            <option value="created_at_desc">Eklenme Tarihi (Yeni-Eski)</option>
+            <option value="created_at_asc">Eklenme Tarihi (Eski-Yeni)</option>
+          </select>
+        </div>
         <Button type="submit" size="sm" variant="outline">
           Filtrele
         </Button>
-        {sp.q || sp.categoryId || sp.brandId || sp.active ? (
+        {sp.q || sp.categoryId || sp.brandId || sp.active || sp.stock || sp.sort ? (
           <Link href={basePath} className="text-xs text-foreground/50 underline-offset-2 hover:underline">
             Filtreleri temizle
           </Link>
@@ -205,7 +291,7 @@ export default async function StoreProductsPage({
 
       {rows.length === 0 ? (
         <p className="mt-6 text-sm text-foreground/60">
-          {q || sp.categoryId || sp.brandId || sp.active ? "Filtrelere uyan ürün yok." : "Henüz ürün yok."}
+          {q || sp.categoryId || sp.brandId || sp.active || sp.stock || sp.sort ? "Filtrelere uyan ürün yok." : "Henüz ürün yok."}
         </p>
       ) : (
         /**
@@ -219,27 +305,8 @@ export default async function StoreProductsPage({
          */
         <form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>
           <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
-            {/*
-              A standalone class string, NOT `${inputClasses} h-8 w-auto py-0
-              text-xs` — inputClasses already bakes in `w-full`/`py-2.5`, and
-              concatenating on top to override them left the winner up to
-              Tailwind's own generated-CSS order rather than source order,
-              which is what actually clipped this element visually. Same
-              base look (border/rounded/focus ring) as inputClasses, just
-              with its own non-conflicting compact sizing utilities.
-            */}
-            <select
-              name="bulkAction"
-              defaultValue="activate"
-              className="h-8 w-auto rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground transition-colors focus-visible:border-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20"
-            >
-              <option value="activate">Seçilenleri Aktif Yap</option>
-              <option value="deactivate">Seçilenleri Pasif Yap</option>
-            </select>
-            <Button type="submit" size="sm" variant="outline">
-              Uygula
-            </Button>
-            <span>Kalıcı silme, ürün detay sayfasından tek tek yapılır.</span>
+            <BulkActionControls categories={categories ?? []} />
+            <span>Kalıcı sil: sipariş geçmişi olanlar otomatik atlanır.</span>
           </div>
 
           <ul className="mt-2 divide-y divide-black/10 rounded-lg border border-black/10">

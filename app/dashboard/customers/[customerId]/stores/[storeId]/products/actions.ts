@@ -469,16 +469,26 @@ export async function duplicateProductAction(customerId: string, storeId: string
   redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${copy.id}`);
 }
 
-const BULK_PRODUCT_ACTIONS = new Set(["activate", "deactivate"]);
+const BULK_PRODUCT_ACTIONS = new Set(["activate", "deactivate", "changeCategory", "deleteForever"]);
 
 /**
- * FAZ 2B-P1 — Ürün listesinde çoklu seçim + toplu aktif/pasif yapma.
- * store_editor+ (toggleProductActiveAction ile aynı tier — reversible).
+ * FAZ 2B-P1 — Ürün listesinde çoklu seçim + toplu işlem.
  *
- * Kalıcı silme BİLEREK bu toplu action'a dahil edilmedi: cascade'li ve
- * geri alınamaz bir işlemi "birden fazla ürünü tek tıkla sil" haline
- * getirmenin riski, tek tek delete-product-button.tsx'in kendi
- * window.confirm()'üyle sınırlı kalmalı.
+ * Admin Panel İşlevsellik devir metni, Kısım C — iki yeni işlem eklendi:
+ * "changeCategory" (store_editor+, aktivasyon kadar geri alınabilir) ve
+ * "deleteForever" (store_admin+, Kısım A'daki TEK satırlık
+ * deleteProductAction ile AYNI iş kuralı: order_items'ı olan bir ürün
+ * ASLA silinmez — burada client'ın hangi ürünleri seçtiğine değil,
+ * sunucunun o anki gerçek order_items durumuna bakılıyor, sipariş
+ * geçmişi olanlar sessizce atlanıp sadece olmayanlar silinir, sonuç
+ * sayıları query param'larla ?bulkDeleted=N&bulkSkipped=M olarak
+ * sayfaya geri taşınıyor (page.tsx bunu bir banner olarak gösteriyor).
+ *
+ * Her işlem KENDİ minimum tier kontrolünü BAĞIMSIZ çağırıyor (hepsi için
+ * tek bir ortak requireStoreEditorAccess çağrısının üstüne "deleteForever
+ * ekstra admin ister" eklemek yerine) — bu codebase'in zaten her action'da
+ * tekrarladığı "her action kendi erişim kapısını kendi başına çağırır"
+ * disiplini.
  *
  * Bound edilmiyor — products/page.tsx'te doğrudan
  * `<form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>`
@@ -486,15 +496,102 @@ const BULK_PRODUCT_ACTIONS = new Set(["activate", "deactivate"]);
  * üzerinden (checkbox'lar + bir <select>) geliyor.
  */
 export async function bulkUpdateProductsAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
-
   const productIds = formData.getAll("productIds").map(String).filter(Boolean);
   const bulkAction = String(formData.get("bulkAction") ?? "");
+  const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/products`;
 
   if (productIds.length === 0 || !BULK_PRODUCT_ACTIONS.has(bulkAction)) {
     return;
   }
 
+  if (bulkAction === "deleteForever") {
+    const { user } = await requireStoreAdminAccess(storeId);
+    const supabase = await createSupabaseServerClient();
+
+    const { data: orderedRows } = await supabase
+      .from("order_items")
+      .select("product_id")
+      .eq("store_id", storeId)
+      .in("product_id", productIds);
+    const orderedProductIds = new Set((orderedRows ?? []).map((row) => row.product_id).filter((id): id is string => Boolean(id)));
+
+    const deletableIds = productIds.filter((id) => !orderedProductIds.has(id));
+    const skippedCount = productIds.length - deletableIds.length;
+    let deletedCount = 0;
+
+    if (deletableIds.length > 0) {
+      const { data: images } = await supabase
+        .from("product_images")
+        .select("storage_path")
+        .eq("store_id", storeId)
+        .in("product_id", deletableIds);
+      if (images && images.length > 0) {
+        await Promise.all(images.map((image) => removeProductImageObject(image.storage_path)));
+      }
+
+      const { data: deleted, error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", deletableIds)
+        .eq("store_id", storeId)
+        .select("id");
+
+      if (error) {
+        console.error("[products] bulk permanent delete failed:", error.message);
+      } else {
+        deletedCount = deleted?.length ?? 0;
+        await logAuditEvent({
+          userId: user.id,
+          customerId,
+          action: "product.delete",
+          entityType: "product",
+          entityId: null,
+          metadata: { bulk: true, deletedIds: deleted?.map((row) => row.id) ?? [], skippedCount },
+        });
+      }
+    }
+
+    revalidatePath(basePath);
+    revalidateTag(storeProductsTag(storeId), "max");
+    redirect(`${basePath}?bulkDeleted=${deletedCount}&bulkSkipped=${skippedCount}`);
+  }
+
+  if (bulkAction === "changeCategory") {
+    const { user } = await requireStoreEditorAccess(storeId);
+    const categoryId = String(formData.get("bulkCategoryId") ?? "").trim();
+    if (!categoryId) return;
+
+    const validCategory = await assertBelongsToStore("categories", categoryId, storeId);
+    if (!validCategory) return;
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ category_id: categoryId })
+      .in("id", productIds)
+      .eq("store_id", storeId);
+
+    if (error) {
+      console.error("[products] bulk category change failed:", error.message);
+      return;
+    }
+
+    await logAuditEvent({
+      userId: user.id,
+      customerId,
+      action: "product.update",
+      entityType: "product",
+      entityId: null,
+      metadata: { bulk: true, bulkAction, productIds, categoryId },
+    });
+
+    revalidatePath(basePath);
+    revalidateTag(storeProductsTag(storeId), "max");
+    return;
+  }
+
+  // activate / deactivate — eski davranış, değişmedi.
+  const { user } = await requireStoreEditorAccess(storeId);
   const nextActive = bulkAction === "activate";
 
   const supabase = await createSupabaseServerClient();
@@ -522,6 +619,6 @@ export async function bulkUpdateProductsAction(customerId: string, storeId: stri
     metadata: { bulk: true, bulkAction, productIds, isActive: nextActive },
   });
 
-  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
+  revalidatePath(basePath);
   revalidateTag(storeProductsTag(storeId), "max");
 }
