@@ -12,6 +12,8 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_BADGE_VARIANT,
 } from "@/lib/commerce/order-status-labels";
+import { bulkUpdateOrdersAction, bulkAdvanceOrderStatusAction, bulkPrepareForShipmentAction } from "./actions";
+import { SelectAllCheckbox } from "./select-all-checkbox";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 
 interface OrderRow {
@@ -31,6 +33,9 @@ interface OrdersSearchParams {
   from?: string;
   to?: string;
   page?: string;
+  /** Yalnızca toplu durum değiştirme action'larının redirect'inden gelir — buildQuery tarafından ASLA sayfalar arasında taşınmaz, tek seferlik bir banner (Faz 17/Kısım C'nin bulkDeleted/bulkSkipped banner'ıyla AYNI desen). */
+  bulkUpdated?: string;
+  bulkSkipped?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -121,6 +126,37 @@ export default async function StoreOrdersPage({
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/orders`;
 
+  // Siparişler: Toplu Durum Değiştirme devir metni — admin hangi durum
+  // sekmesini (sp.status) açmışsa, o akışın bir sonraki adımına özel TEK
+  // bir hızlı buton gösterilir. returnPath, toplu aksiyonun (skip'li
+  // olanların) redirect'le geri döneceği, o anki filtreleri KORUYAN URL —
+  // buildQuery zaten bulkUpdated/bulkSkipped'i hiç taşımadığı için banner
+  // bir sonraki navigasyonda kendiliğinden kaybolur.
+  const returnPath = `${basePath}${buildQuery(sp, {})}`;
+  type QuickAction = { label: string; action: (formData: FormData) => Promise<void> };
+  let quickAction: QuickAction | null = null;
+  if (sp.status === "pending") {
+    quickAction = {
+      label: "Toplu Onayla",
+      action: bulkAdvanceOrderStatusAction.bind(null, customerId, storeId, "pending", "confirmed", returnPath),
+    };
+  } else if (sp.status === "confirmed") {
+    quickAction = {
+      label: "Toplu Hazırlanıyor Yap",
+      action: bulkAdvanceOrderStatusAction.bind(null, customerId, storeId, "confirmed", "preparing", returnPath),
+    };
+  } else if (sp.status === "preparing") {
+    quickAction = {
+      label: "Kargoya Hazırla",
+      action: bulkPrepareForShipmentAction.bind(null, customerId, storeId, returnPath),
+    };
+  } else if (sp.status === "shipped") {
+    quickAction = {
+      label: "Toplu Tamamlandı Yap",
+      action: bulkAdvanceOrderStatusAction.bind(null, customerId, storeId, "shipped", "completed", returnPath),
+    };
+  }
+
   return (
     <div>
       <Link
@@ -138,6 +174,19 @@ export default async function StoreOrdersPage({
         Mağaza vitrininden gelen sipariş talepleri. Ödeme entegrasyonu yok — ödeme durumu admin tarafından elle
         işaretlenir.
       </p>
+
+      {/*
+        Siparişler: Toplu Durum Değiştirme devir metni — bulkAdvanceOrderStatusAction
+        ve bulkPrepareForShipmentAction'ın redirect'inden gelen tek seferlik
+        sonuç banner'ı (Faz 17/Kısım C'nin bulkDeleted/bulkSkipped banner'ıyla
+        AYNI desen).
+      */}
+      {sp.bulkUpdated !== undefined || sp.bulkSkipped !== undefined ? (
+        <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
+          {sp.bulkUpdated} sipariş güncellendi
+          {Number(sp.bulkSkipped ?? 0) > 0 ? `, ${sp.bulkSkipped} sipariş zaten bu adımda değildi, atlandı.` : "."}
+        </p>
+      ) : null}
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4">
         <div className="min-w-[160px]">
@@ -216,30 +265,84 @@ export default async function StoreOrdersPage({
       {rows.length === 0 ? (
         <p className="mt-6 text-sm text-foreground/60">{hasAnyFilter(sp) ? "Filtreye uyan sipariş yok." : "Henüz sipariş yok."}</p>
       ) : (
-        <ul className="mt-6 divide-y divide-black/10 rounded-lg border border-black/10">
-          {rows.map((order) => (
-            <li key={order.id}>
-              <Link
-                href={`${basePath}/${order.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-brand-accent/5"
+        /**
+         * Siparişler: Toplu Durum Değiştirme devir metni — Faz 17/Kısım C'nin
+         * ürün listesindeki AYNI toplu seçim/işlem deseni: filtre formundan
+         * (yukarıda, method="get") AYRI bir <form> (POST/server action),
+         * satır checkbox'ları + "tümünü seç" + sabit bir toplu aksiyon
+         * çubuğu. Varsayılan form action'ı genel bulkUpdateOrdersAction;
+         * bağlama duyarlı hızlı buton (varsa) kendi formAction'ıyla AYNI
+         * seçimi (orderIds) FARKLI bir server action'a yönlendiriyor —
+         * Next.js'in "<form> içinde birden fazla <button formAction>"
+         * deseni, hiçbir gizli input/JS state gerekmeden.
+         */
+        <form action={bulkUpdateOrdersAction.bind(null, customerId, storeId)}>
+          <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
+            <SelectAllCheckbox />
+            <span>Tümünü seç</span>
+            <select
+              name="targetStatus"
+              defaultValue=""
+              className="h-8 w-auto rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground transition-colors focus-visible:border-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20"
+            >
+              <option value="" disabled>
+                Durumu seç…
+              </option>
+              {ORDER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {ORDER_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="h-8 rounded-md border border-black/15 px-3 text-xs text-foreground/80 hover:border-black/30"
+            >
+              Uygula
+            </button>
+            {quickAction ? (
+              <button
+                type="submit"
+                formAction={quickAction.action}
+                className="h-8 rounded-md bg-brand-accent px-3 text-xs font-medium text-white hover:opacity-90"
               >
-                <span>
-                  <span className="font-medium text-foreground">#{order.order_number}</span>{" "}
-                  <span className="text-foreground/70">{order.customer_name}</span>{" "}
-                  <span className="text-xs text-foreground/50">{order.customer_phone}</span>
-                </span>
-                <span className="flex items-center gap-3 text-xs text-foreground/50">
-                  {formatPrice(Number(order.subtotal))}
-                  <span>{new Date(order.created_at).toLocaleDateString("tr-TR")}</span>
-                  <Badge variant={PAYMENT_STATUS_BADGE_VARIANT[order.payment_status]}>
-                    {PAYMENT_STATUS_LABELS[order.payment_status]}
-                  </Badge>
-                  <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                {quickAction.label}
+              </button>
+            ) : null}
+          </div>
+
+          <ul className="mt-2 divide-y divide-black/10 rounded-lg border border-black/10">
+            {rows.map((order) => (
+              <li key={order.id} className="flex items-center gap-1 px-2">
+                <input
+                  type="checkbox"
+                  name="orderIds"
+                  value={order.id}
+                  aria-label={`#${order.order_number} seç`}
+                  className="h-4 w-4 shrink-0 rounded border-black/20"
+                />
+                <Link
+                  href={`${basePath}/${order.id}`}
+                  className="flex flex-1 flex-wrap items-center justify-between gap-2 px-2 py-3 text-sm hover:bg-brand-accent/5"
+                >
+                  <span>
+                    <span className="font-medium text-foreground">#{order.order_number}</span>{" "}
+                    <span className="text-foreground/70">{order.customer_name}</span>{" "}
+                    <span className="text-xs text-foreground/50">{order.customer_phone}</span>
+                  </span>
+                  <span className="flex items-center gap-3 text-xs text-foreground/50">
+                    {formatPrice(Number(order.subtotal))}
+                    <span>{new Date(order.created_at).toLocaleDateString("tr-TR")}</span>
+                    <Badge variant={PAYMENT_STATUS_BADGE_VARIANT[order.payment_status]}>
+                      {PAYMENT_STATUS_LABELS[order.payment_status]}
+                    </Badge>
+                    <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </form>
       )}
 
       {totalPages > 1 ? (

@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { isOrderStatus, isPaymentStatus } from "@/lib/commerce/order-status-labels";
+import type { OrderStatus } from "@/lib/supabase/types";
 
 /**
  * store_editor+ (RLS: orders_update_editor_tier) — same tier as
@@ -175,4 +177,188 @@ export async function updateShippingInfoAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders/${orderId}`);
+}
+
+/**
+ * Siparişler: Toplu Durum Değiştirme devir metni — genel "Durumu Değiştir"
+ * toplu aksiyonu. store_editor+ (updateOrderStatusAction ile AYNI tier —
+ * aynı RLS policy'yi paylaşıyor, migration 0029'un kendi notuna göre).
+ * Seçilen TÜM siparişlere KOŞULSUZ hedef durum uygulanır (devir metninin
+ * kendi "Seçilen TÜM siparişlere bu durum uygulanır" kuralı) — aşağıdaki
+ * bulkAdvanceOrderStatusAction'ın AKSİNE burada "sadece uygun başlangıç
+ * durumundakiler" filtresi YOK, bilerek: bu, admin'in "hepsini X yap"
+ * dediği genel araç, akış-farkında olan değil.
+ *
+ * products/actions.ts'teki bulkUpdateProductsAction'ın aynı "tek sorgu,
+ * N ayrı istek değil" deseni (.in(orderIds)).
+ */
+export async function bulkUpdateOrdersAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
+  const targetStatus = String(formData.get("targetStatus") ?? "");
+  if (orderIds.length === 0 || !isOrderStatus(targetStatus)) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: updated, error } = await supabase
+    .from("orders")
+    .update({ status: targetStatus })
+    .in("id", orderIds)
+    .eq("store_id", storeId)
+    .select("id");
+
+  if (error) {
+    console.error("[orders] bulk status update failed:", error.message);
+    return;
+  }
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "order.status_update",
+    entityType: "order",
+    entityId: null,
+    metadata: { bulk: true, orderIds: updated?.map((row) => row.id) ?? [], status: targetStatus },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
+}
+
+/**
+ * Duruma özel hızlı aksiyon (Toplu Onayla / Toplu Hazırlanıyor Yap /
+ * Toplu Tamamlandı Yap) — bulkUpdateOrdersAction'ın AKSİNE, SADECE o anda
+ * GERÇEKTEN `fromStatus`'ta olan siparişlere uygulanır (client'ın hangi
+ * satırları seçtiğine değil, sunucunun o anki canlı durumuna bakılıyor —
+ * aynen Faz 17/Kısım A'nın koşullu silme mantığındaki "server client
+ * state'e güvenmez" disiplini); karışık durumlu bir seçimde diğerleri
+ * sessizce atlanır, sonuç `?bulkUpdated=N&bulkSkipped=M` query param'larıyla
+ * geri taşınır (Kısım A'nın "N ürün silindi, M atlandı" özetiyle AYNI
+ * desen). `fromStatus`/`toStatus`/`returnPath` page.tsx'te üç farklı
+ * buton (Onayla/Hazırla/Tamamla) için üç farklı `.bind()` ile sabitlenir
+ * — aynı fonksiyonun üç parametrelendirmesi, kod tekrarı yok.
+ */
+export async function bulkAdvanceOrderStatusAction(
+  customerId: string,
+  storeId: string,
+  fromStatus: OrderStatus,
+  toStatus: OrderStatus,
+  returnPath: string,
+  formData: FormData,
+): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
+  if (orderIds.length === 0) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: eligible } = await supabase
+    .from("orders")
+    .select("id")
+    .in("id", orderIds)
+    .eq("store_id", storeId)
+    .eq("status", fromStatus);
+
+  const eligibleIds = (eligible ?? []).map((row) => row.id);
+  const skippedCount = orderIds.length - eligibleIds.length;
+  let updatedCount = 0;
+
+  if (eligibleIds.length > 0) {
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({ status: toStatus })
+      .in("id", eligibleIds)
+      .eq("store_id", storeId)
+      .select("id");
+
+    if (error) {
+      console.error("[orders] bulk advance failed:", error.message);
+    } else {
+      updatedCount = updated?.length ?? 0;
+      await logAuditEvent({
+        userId: user.id,
+        customerId,
+        action: "order.status_update",
+        entityType: "order",
+        entityId: null,
+        metadata: { bulk: true, fromStatus, toStatus, orderIds: eligibleIds, skippedCount },
+      });
+    }
+  }
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
+  const separator = returnPath.includes("?") ? "&" : "?";
+  redirect(`${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}`);
+}
+
+/**
+ * Kargoya Hazırla — YARINKI "Basit Kargo" entegrasyonu için BİLEREK ayrı,
+ * isimlendirilmiş bir action. bulkAdvanceOrderStatusAction'dan BİLEREK
+ * AYRI tutuldu (onu çağırmıyor, ondan çağrılmıyor) — yarın Basit Kargo
+ * eklenince SADECE bu fonksiyonun İÇİ değişecek (gerçek API çağrısı +
+ * carrier/tracking_number doldurma), fonksiyon imzası ve çağrıldığı yer
+ * (page.tsx'teki "Kargoya Hazırla" butonu) SABİT kalacak — UI/seçim
+ * mantığına hiç dokunulmayacak. Skip/özet mantığı bulkAdvanceOrderStatusAction
+ * ile AYNI FİKİR ama kasıtlı olarak KENDİ bağımsız kopyası, paylaşılan bir
+ * helper'a çıkarılmadı — ileride buranın içini değiştirmek diğer akışları
+ * hiç etkilemesin diye.
+ *
+ * shipped_at BİLEREK set edilmiyor — bu codebase'de o alan SADECE
+ * updateShippingInfoAction'ın gerçek kargo bilgisi girildiği an set
+ * ediliyor (mevcut invariant, bkz. o fonksiyonun kendi yorumu), sadece
+ * durum 'shipped' olması bunu tetiklemiyor; bu davranış burada da aynen
+ * korunuyor.
+ */
+export async function bulkPrepareForShipmentAction(
+  customerId: string,
+  storeId: string,
+  returnPath: string,
+  formData: FormData,
+): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
+  if (orderIds.length === 0) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: eligible } = await supabase
+    .from("orders")
+    .select("id")
+    .in("id", orderIds)
+    .eq("store_id", storeId)
+    .eq("status", "preparing");
+
+  const eligibleIds = (eligible ?? []).map((row) => row.id);
+  const skippedCount = orderIds.length - eligibleIds.length;
+  let updatedCount = 0;
+
+  if (eligibleIds.length > 0) {
+    // TODO(Kargo Entegrasyonu — Basit Kargo): Burada seçili siparişler
+    // Basit Kargo API'sine gönderilip gerçek takip no/barkod alınacak.
+    // Şimdilik sadece durum 'shipped' yapılıyor, carrier/tracking_number
+    // boş kalıyor (admin sipariş detayından manuel girilebilir — Faz 2.5).
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({ status: "shipped" })
+      .in("id", eligibleIds)
+      .eq("store_id", storeId)
+      .select("id");
+
+    if (error) {
+      console.error("[orders] bulk prepare-for-shipment failed:", error.message);
+    } else {
+      updatedCount = updated?.length ?? 0;
+      await logAuditEvent({
+        userId: user.id,
+        customerId,
+        action: "order.status_update",
+        entityType: "order",
+        entityId: null,
+        metadata: { bulk: true, bulkAction: "prepareForShipment", orderIds: eligibleIds, skippedCount },
+      });
+    }
+  }
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
+  const separator = returnPath.includes("?") ? "&" : "?";
+  redirect(`${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}`);
 }
