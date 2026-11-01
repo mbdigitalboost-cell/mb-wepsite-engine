@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireStoreAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
+import { getProductOrderCount } from "@/lib/commerce/product-order-history";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
@@ -42,7 +43,7 @@ export default async function EditProductPage({
 }) {
   const { customerId, storeId, productId } = await params;
   const { tab } = await searchParams;
-  await requireStoreAccess(storeId);
+  const { isAdmin } = await requireStoreAccess(storeId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase
@@ -53,11 +54,16 @@ export default async function EditProductPage({
     .maybeSingle();
   if (!store) notFound();
 
-  const [{ data: product }, { data: categories }, { data: brands }, modelsByBrand] = await Promise.all([
+  const [{ data: product }, { data: categories }, { data: brands }, modelsByBrand, orderCount] = await Promise.all([
     supabase.from("products").select("*").eq("id", productId).eq("store_id", storeId).maybeSingle(),
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     getBrandModelsSuggestionMap(storeId),
+    // Admin Panel İşlevsellik devir metni, Kısım A — koşullu kalıcı silme
+    // için gerçek sipariş sayısı. isAdmin değilse hiç kullanılmıyor (buton
+    // aşağıda zaten render edilmiyor) ama her ihtimalde tek sorgu, maliyeti
+    // ihmal edilebilir.
+    getProductOrderCount(storeId, productId),
   ]);
 
   if (!product) notFound();
@@ -97,7 +103,16 @@ export default async function EditProductPage({
         <form action={duplicateAction}>
           <DuplicateProductButton action={duplicateAction} />
         </form>
-        <DeleteProductButton productName={product.name} action={deleteAction} />
+        {/*
+          Admin Panel İşlevsellik devir metni, Kısım A — kalıcı silme
+          store_admin+ (deleteProductAction zaten requireStoreAdminAccess
+          ile koruyordu, ama bu sayfa isAdmin'i ÖNCEDEN hiç kullanmıyordu:
+          buton HER görüntüleyen için render ediliyordu, store_editor
+          tıkladığında action sessizce notFound() atıyordu — kullanıcının
+          "kalıcı sil olmuyor" şikayetinin GERÇEK kök nedeni buydu. Artık
+          sadece isAdmin için render ediliyor.
+        */}
+        {isAdmin ? <DeleteProductButton productName={product.name} orderCount={orderCount} action={deleteAction} /> : null}
       </div>
 
       <div className="mt-6">

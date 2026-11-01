@@ -9,6 +9,8 @@ import { storeProductsTag } from "@/lib/commerce/cache-tags";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { toFriendlyError } from "@/lib/commerce/product-errors";
 import { ensureBrandModelsExist } from "@/lib/commerce/brand-models";
+import { getProductOrderCount } from "@/lib/commerce/product-order-history";
+import { removeProductImageObject } from "@/lib/commerce/upload-product-image";
 import type { ProductFormState } from "./form-state";
 
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
@@ -271,11 +273,46 @@ export async function toggleProductActiveAction(
  * explicit window.confirm() before submitting, the first confirm dialog
  * in this codebase (every other permanent delete here is a single "Sil"
  * click, safe because nothing else cascades from it).
+ *
+ * Admin Panel İşlevsellik devir metni, Kısım A — koşullu kalıcı silme.
+ * `order_items.product_id -> products(id)` FK'si `ON DELETE SET NULL`
+ * (information_schema ile doğrulandı) — yani DB bu silmeyi asla
+ * ENGELLEMEZ, sadece sipariş satırlarının product_id'sini null'a çeker.
+ * "Sipariş geçmişi olan ürün silinemez" bu yüzden bir DB kısıtı değil,
+ * burada uygulanan bir İŞ KURALI: UI (delete-product-button.tsx) zaten
+ * orderCount>0 ise butonu hiç submit edilemez yapıyor, ama bu action
+ * client state'e güvenmeden AYNI kontrolü kendi tarafında TEKRAR yapıyor
+ * (defense in depth — devtools'tan disabled kaldırılsa bile silme
+ * gerçekleşmez).
+ *
+ * Gerçek Storage dosyaları (product_images.storage_path) ÖNCE silinir —
+ * cascade sadece DB satırlarını temizler, Storage'daki gerçek dosyaları
+ * DEĞİL; bu adım atlanırsa orphan dosya kalır (images/actions.ts'in
+ * deleteProductImageAction'ındaki AYNI "Storage önce, DB sonra" sırası).
  */
 export async function deleteProductAction(customerId: string, storeId: string, productId: string): Promise<void> {
   const { user } = await requireStoreAdminAccess(storeId);
 
+  const orderCount = await getProductOrderCount(storeId, productId);
+  if (orderCount > 0) {
+    console.error(
+      `[products] refused to permanently delete product ${productId}: ${orderCount} order_items row(s) reference it`,
+    );
+    return;
+  }
+
   const supabase = await createSupabaseServerClient();
+
+  const { data: images } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", productId)
+    .eq("store_id", storeId);
+
+  if (images && images.length > 0) {
+    await Promise.all(images.map((image) => removeProductImageObject(image.storage_path)));
+  }
+
   const { error } = await supabase.from("products").delete().eq("id", productId).eq("store_id", storeId);
   if (error) {
     console.error("[products] failed to delete product:", error.message);
@@ -288,6 +325,7 @@ export async function deleteProductAction(customerId: string, storeId: string, p
     action: "product.delete",
     entityType: "product",
     entityId: productId,
+    metadata: { imagesRemoved: images?.length ?? 0 },
   });
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);

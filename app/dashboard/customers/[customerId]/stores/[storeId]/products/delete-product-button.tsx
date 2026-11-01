@@ -4,6 +4,8 @@ import { useRef } from "react";
 
 interface DeleteProductButtonProps {
   productName: string;
+  /** order_items satır sayısı (lib/commerce/product-order-history.ts, canlı sorgudan) — 0'dan büyükse buton tıklanamaz hale gelir. */
+  orderCount: number;
   action: () => Promise<void>;
 }
 
@@ -17,9 +19,33 @@ interface DeleteProductButtonProps {
  * misclick here takes a much larger amount of data with it, which is
  * worth one extra client-side confirmation step before the server action
  * (deleteProductAction, store_admin+ only) ever runs.
+ *
+ * Admin Panel İşlevsellik devir metni, Kısım A — koşullu silme. Bu
+ * bileşen artık `orderCount`'u sorup kendi kararını veriyor: sıfırsa
+ * yukarıdaki eski akış değişmeden çalışır; sıfırdan büyükse buton hiç
+ * submit edilemez (disabled, form bile render edilmiyor) ve yanında bir
+ * ⓘ ikonu gerçek sayıyı açıklıyor — kullanıcı artık "tıkladım ama hiçbir
+ * şey olmadı" durumuna hiç düşmüyor, çünkü düşemeyeceğini önceden görüyor.
  */
-export function DeleteProductButton({ productName, action }: DeleteProductButtonProps) {
+export function DeleteProductButton({ productName, orderCount, action }: DeleteProductButtonProps) {
   const formRef = useRef<HTMLFormElement>(null);
+
+  if (orderCount > 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-foreground/40">
+        <button type="button" disabled aria-disabled="true" className="cursor-not-allowed rounded px-2 py-1">
+          Kalıcı Olarak Sil
+        </button>
+        <span
+          title={`Bu ürün ${orderCount} siparişte geçtiği için kalıcı silinemez, sipariş geçmişi korunuyor.`}
+          aria-label={`Bu ürün ${orderCount} siparişte geçtiği için kalıcı silinemez, sipariş geçmişi korunuyor.`}
+          className="cursor-help text-foreground/50"
+        >
+          ⓘ
+        </span>
+      </span>
+    );
+  }
 
   return (
     <form
