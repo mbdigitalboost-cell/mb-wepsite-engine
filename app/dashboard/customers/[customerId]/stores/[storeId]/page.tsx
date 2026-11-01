@@ -11,21 +11,6 @@ import { LOW_STOCK_THRESHOLD } from "@/lib/commerce/inventory";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_BADGE_VARIANT } from "@/lib/commerce/order-status-labels";
 import type { OrderStatus } from "@/lib/supabase/types";
 
-// FAZ 2.6 — "orders" removed from here: it now has its own top-level
-// "Siparişler" entry point above this grid (see the JSX below), not a
-// card inside the "Mağazayı Düzenle" submodule grid anymore.
-const SUBMODULES = [
-  { key: "profile", label: "Store Profile", description: "Kimlik, iletişim, sosyal medya" },
-  { key: "settings", label: "Store Settings", description: "Para birimi, KDV, bakım modu" },
-  { key: "branding", label: "Branding", description: "Renkler, tipografi, buton stili" },
-  { key: "navigation", label: "Navigation", description: "Ana / Footer / Kategori menüleri" },
-  { key: "homepage", label: "Homepage Builder", description: "Ana sayfa bölümleri" },
-  { key: "products", label: "Products", description: "Ürün kataloğu" },
-  { key: "categories", label: "Categories", description: "Ürün kategorileri" },
-  { key: "brands", label: "Brands", description: "Markalar" },
-  { key: "subscribers", label: "Aboneler", description: "Müşteri listesi, indirimler, e-posta/WhatsApp" },
-] as const;
-
 /** Module-level helper, NOT inlined into the component body — react-hooks/purity flags a direct `Date.now()` call inside a component/hook's own render path as an impure-during-render call, even in an async Server Component that only ever runs once per request. Hoisting the impure call into its own plain function (never itself a component/hook) satisfies the rule without any behavior change. */
 function getThirtyDaysAgoMs(): number {
   return Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -287,32 +272,16 @@ export default async function StoreDetailPage({
       </div>
 
       {/*
-        FAZ 2.6'dan kalan "Mağazayı Düzenle" disclosure — artık yukarıdaki
-        istatistik kartlarıyla aynı grid'de değil, kendi başına bir blok
-        (zero client JS, aynı <details> deseni). Kısım D (nav cilası)
-        bu linklerin çoğunu sol menüye taşıyacak, ama o ayrı/daha dikkatli
-        test edilecek bir commit — bu blok o güne kadar yerinde kalıyor.
+        Admin Panel İşlevsellik devir metni, Kısım D — FAZ 2.6'dan kalan
+        "Mağazayı Düzenle" <details> açılır paneli KALDIRILDI: artık
+        components/navigation/dashboard-nav.tsx bir mağaza bağlamındayken
+        AYNI hedeflere (Ürünler/Kategoriler/Markalar/Profil/Ayarlar/
+        Navigasyon/Ana Sayfa/Branding/Aboneler) GENEL/KATALOG/MAĞAZA
+        bölümlü, HER SAYFADA sabit görünen bir sol menü üzerinden
+        gidiyor — bir açılır panele her girişte tekrar tıklamaya gerek
+        kalmadı. Kısım B'nin kendi yorumu bu kaldırmayı önceden işaret
+        etmişti ("Kısım D bu linkleri sol menüye taşıyacak").
       */}
-      <details className="mt-6 rounded-lg border-2 border-black/10 p-6">
-        <summary className="cursor-pointer list-none">
-          <p className="text-sm font-medium text-foreground/60">Mağazayı Düzenle</p>
-          <p className="mt-1 text-sm text-foreground">Products, Branding, Navigation ve diğer ayarlar</p>
-        </summary>
-
-        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {SUBMODULES.map((submodule) => (
-            <li key={submodule.key}>
-              <Link
-                href={`/dashboard/customers/${customerId}/stores/${storeId}/${submodule.key}`}
-                className="block rounded-lg border border-black/10 px-4 py-3 text-sm hover:bg-brand-accent/5"
-              >
-                <p className="font-medium text-foreground">{submodule.label}</p>
-                <p className="mt-0.5 text-xs text-foreground/50">{submodule.description}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </details>
 
       {isAdmin ? (
         <div className="mt-8 border-t border-black/10 pt-6">
