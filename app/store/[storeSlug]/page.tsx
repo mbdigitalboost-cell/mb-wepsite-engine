@@ -149,63 +149,71 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         heading rather than zero.
       */}
       {/*
-        Site Tasarımı v3 devir metni, Kısım A — "şu anki ortalanmış/düz
-        hero yerine asimetrik iki sütunlu düzen". Sol: başlık+CTA'lar
-        (koyu düz zemin). Sağ: gerçek hero fotoğrafı + ince turuncu
-        duoton overlay + köşede küçük bir rozet kart. İstatistik şeridi
-        ("500+ Üretilen Kılıf" gibi) BİLEREK EKLENMEDİ — hiçbir gerçek/
-        teyitli sayı bu oturumda doğrulanamadı, uydurma bir rakam
-        yayınlanmadı (devir metninin kendi "UYDURMA sayı YAYINA
-        ÇIKMASIN" kuralı). Köşedeki rozet metni ("Isıl Şekillendirilmiş
-        Kydex") YENİ bir iddia DEĞİL — WhyKydexSection'ın kendi 3. kartında
-        ("Isıl şekillendirilmiş Kydex yapı sayesinde ürün formunu korur")
-        zaten onaylı/kullanılan AYNI gerçek, sadece burada tekrarlanıyor.
+        Anasayfa Hero Düzeltmesi devir metni — Kısım A'nın (190a2ef) iki
+        sütunlu hero'su kullanıcı geri bildirimiyle GERİ ALINDI: "hero
+        olmamış, eskisi daha güzeldi". Bu, Faz 7.3 devam #2'nin (commit
+        81df1b9) tam genişlik arka plan fotoğraflı + soldan sağa koyulaşan
+        gradyan + metnin fotoğrafın ÜZERİNE bindirildiği kompozisyonuna
+        BİREBİR aynı desenle dönüş (yükseklik dahil: h-[560px]/
+        sm:h-[640px]/lg:h-[720px], aynı gradient/scrim değerleri). Sadece
+        kompozisyon değişti — başlık/alt metin/buton metinleri ve stilleri
+        (Site Tasarımı v3 devir metninde onaylanan) HİÇ DOKUNULMADI.
+        İstatistik şeridi hâlâ BİLEREK EKLENMEDİ (uydurma sayı yasağı,
+        değişmedi). Köşe rozeti ("Isıl Şekillendirilmiş Kydex") kullanıcı
+        özellikle istemedi ama rahatsız da etmedi dediği için korundu —
+        WhyKydexSection'ın kendi 3. kartındaki AYNI onaylı gerçek.
       */}
-      <section className="relative isolate overflow-hidden bg-[#0A0A0A]">
-        <div className="grid lg:grid-cols-2">
-          <div className="relative z-10 flex flex-col justify-center px-6 py-14 sm:px-10 sm:py-20 lg:py-28">
-            <h1 className={`${storefrontDisplayClasses} max-w-lg text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl`}>
-              SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
-            </h1>
-            <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
-              Kydex&apos;in hassasiyeti. Sahaya hazır performans.
-            </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link
-                href={`/store/${storeSlug}/silahini-sec`}
-                className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
+      <section className="relative isolate overflow-hidden bg-neutral-950">
+        <div className="relative h-[560px] w-full sm:h-[640px] lg:h-[720px]">
+          <Image
+            src="/images/hero/kydex-sarjor-kilifi-hero.jpg"
+            alt="Taktikalp46 Kydex şarjör kılıfı, taktik kemer üzerinde"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[65%_25%] sm:object-[75%_30%]"
+          />
+          {/* Faz 7.3 devam #2 ile AYNI desen — soldan sağa koyulaşan gradyan, okunabilirlik için */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.65) 45%, rgba(10,10,10,0.2) 100%)",
+            }}
+          />
+          {/* Dar ekranda yatay gradient metnin arkasını yeterince koyultmuyor — ek, tam kaplayan bir scrim */}
+          <div aria-hidden="true" className="absolute inset-0 bg-black/35 sm:hidden" />
+
+          <div className="relative flex h-full items-end sm:items-center">
+            <Container className="pb-10 sm:pb-0">
+              <h1
+                className={`${storefrontDisplayClasses} max-w-2xl text-3xl font-bold uppercase leading-tight text-white sm:text-5xl lg:text-6xl`}
               >
-                Silahını Seç
-              </Link>
-              <Link
-                href={`/store/${storeSlug}/kategoriler`}
-                className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
-              >
-                Tüm Kategoriler
-              </Link>
-            </div>
+                SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
+              </h1>
+              <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
+                Kydex&apos;in hassasiyeti. Sahaya hazır performans.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Link
+                  href={`/store/${storeSlug}/silahini-sec`}
+                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
+                >
+                  Silahını Seç
+                </Link>
+                <Link
+                  href={`/store/${storeSlug}/kategoriler`}
+                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
+                >
+                  Tüm Kategoriler
+                </Link>
+              </div>
+            </Container>
           </div>
 
-          <div className="relative h-[320px] sm:h-[420px] lg:h-[640px]">
-            <Image
-              src="/images/hero/kydex-sarjor-kilifi-hero.jpg"
-              alt="Taktikalp46 Kydex şarjör kılıfı, taktik kemer üzerinde"
-              fill
-              priority
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover object-[65%_25%] sm:object-[75%_30%]"
-            />
-            {/* İnce turuncu duoton overlay — fotoğrafın kendisi/ürünü DEĞİŞTİRMİYOR, sadece üzerine marka rengiyle uyumlu bir ton katıyor. */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(160deg, rgba(217,95,0,.28) 0%, rgba(10,10,10,.65) 75%)", mixBlendMode: "multiply" }}
-            />
-            <div aria-hidden="true" className="absolute inset-0 bg-black/20" />
-
-            <div className="absolute bottom-5 right-5 max-w-[200px] rounded-[14px] border border-[#292929] bg-[#171717]/90 px-4 py-3 backdrop-blur-sm">
-              <p className={`${storefrontDisplayClasses} text-xs font-semibold text-[#F5F5F5]`}>Isıl Şekillendirilmiş Kydex</p>
-            </div>
+          <div className="absolute bottom-5 right-5 hidden max-w-[200px] rounded-[14px] border border-white/15 bg-black/50 px-4 py-3 backdrop-blur-sm sm:block">
+            <p className={`${storefrontDisplayClasses} text-xs font-semibold text-white`}>Isıl Şekillendirilmiş Kydex</p>
           </div>
         </div>
       </section>
