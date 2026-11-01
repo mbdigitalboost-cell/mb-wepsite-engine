@@ -180,19 +180,29 @@ export async function updateShippingInfoAction(
 }
 
 /**
- * Siparişler: Toplu Durum Değiştirme devir metni — genel "Durumu Değiştir"
- * toplu aksiyonu. store_editor+ (updateOrderStatusAction ile AYNI tier —
- * aynı RLS policy'yi paylaşıyor, migration 0029'un kendi notuna göre).
- * Seçilen TÜM siparişlere KOŞULSUZ hedef durum uygulanır (devir metninin
- * kendi "Seçilen TÜM siparişlere bu durum uygulanır" kuralı) — aşağıdaki
- * bulkAdvanceOrderStatusAction'ın AKSİNE burada "sadece uygun başlangıç
- * durumundakiler" filtresi YOK, bilerek: bu, admin'in "hepsini X yap"
- * dediği genel araç, akış-farkında olan değil.
+ * "Uygula Butonu Çalışmıyor Gibi Görünüyor" ACİL devir metni — gerçek kök
+ * neden BU fonksiyon değil, page.tsx'teki buton(lar)ın hiç pending/disabled
+ * durumu olmamasıydı (bkz. order-bulk-submit-button.tsx'in kendi yorumu) —
+ * ama BU fonksiyon da sessizdi: ne bir redirect+özet ne de zaten hedef
+ * durumda olanları atlama vardı, kullanıcının gerçek testinde (#1/2/5/6/7/8
+ * zaten completed'ken yine de UPDATE'lenmiş) bu ikisi birleşince "hiçbir
+ * şey olmuyor" hissini pekiştirdi. İkisi de düzeltildi:
  *
- * products/actions.ts'teki bulkUpdateProductsAction'ın aynı "tek sorgu,
- * N ayrı istek değil" deseni (.in(orderIds)).
+ *   1) bulkAdvanceOrderStatusAction'ın AYNI "sadece uygun olanlara uygula,
+ *      diğerlerini atla + özetle" deseni — burada "uygun" = zaten
+ *      targetStatus'ta OLMAYAN (ters yönde bir filtre, ama aynı fikir).
+ *   2) Artık redirect+`?bulkUpdated=N&bulkSkipped=M` ile page.tsx'e geri
+ *      dönüyor — "Uygula" butonu da artık quickAction'larla AYNI görünür
+ *      geri bildirimi veriyor.
+ *
+ * store_editor+ (updateOrderStatusAction ile AYNI tier).
  */
-export async function bulkUpdateOrdersAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
+export async function bulkUpdateOrdersAction(
+  customerId: string,
+  storeId: string,
+  returnPath: string,
+  formData: FormData,
+): Promise<void> {
   const { user } = await requireStoreEditorAccess(storeId);
 
   const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
@@ -200,28 +210,46 @@ export async function bulkUpdateOrdersAction(customerId: string, storeId: string
   if (orderIds.length === 0 || !isOrderStatus(targetStatus)) return;
 
   const supabase = await createSupabaseServerClient();
-  const { data: updated, error } = await supabase
+
+  // Zaten hedef durumda olanlar atlanır — gereksiz UPDATE + "hiçbir şey
+  // değişmedi ama yine de bir şey oldu" karışıklığını önler.
+  const { data: eligible } = await supabase
     .from("orders")
-    .update({ status: targetStatus })
+    .select("id")
     .in("id", orderIds)
     .eq("store_id", storeId)
-    .select("id");
+    .neq("status", targetStatus);
 
-  if (error) {
-    console.error("[orders] bulk status update failed:", error.message);
-    return;
+  const eligibleIds = (eligible ?? []).map((row) => row.id);
+  const skippedCount = orderIds.length - eligibleIds.length;
+  let updatedCount = 0;
+
+  if (eligibleIds.length > 0) {
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({ status: targetStatus })
+      .in("id", eligibleIds)
+      .eq("store_id", storeId)
+      .select("id");
+
+    if (error) {
+      console.error("[orders] bulk status update failed:", error.message);
+    } else {
+      updatedCount = updated?.length ?? 0;
+      await logAuditEvent({
+        userId: user.id,
+        customerId,
+        action: "order.status_update",
+        entityType: "order",
+        entityId: null,
+        metadata: { bulk: true, orderIds: eligibleIds, status: targetStatus, skippedCount },
+      });
+    }
   }
 
-  await logAuditEvent({
-    userId: user.id,
-    customerId,
-    action: "order.status_update",
-    entityType: "order",
-    entityId: null,
-    metadata: { bulk: true, orderIds: updated?.map((row) => row.id) ?? [], status: targetStatus },
-  });
-
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
+  const separator = returnPath.includes("?") ? "&" : "?";
+  redirect(`${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}`);
 }
 
 /**

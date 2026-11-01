@@ -14,6 +14,7 @@ import {
 } from "@/lib/commerce/order-status-labels";
 import { bulkUpdateOrdersAction, bulkAdvanceOrderStatusAction, bulkPrepareForShipmentAction } from "./actions";
 import { SelectAllCheckbox } from "./select-all-checkbox";
+import { OrderBulkSubmitButton } from "./order-bulk-submit-button";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 
 interface OrderRow {
@@ -184,7 +185,7 @@ export default async function StoreOrdersPage({
       {sp.bulkUpdated !== undefined || sp.bulkSkipped !== undefined ? (
         <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
           {sp.bulkUpdated} sipariş güncellendi
-          {Number(sp.bulkSkipped ?? 0) > 0 ? `, ${sp.bulkSkipped} sipariş zaten bu adımda değildi, atlandı.` : "."}
+          {Number(sp.bulkSkipped ?? 0) > 0 ? `, ${sp.bulkSkipped} sipariş değişmeden kaldı.` : "."}
         </p>
       ) : null}
 
@@ -276,7 +277,7 @@ export default async function StoreOrdersPage({
          * Next.js'in "<form> içinde birden fazla <button formAction>"
          * deseni, hiçbir gizli input/JS state gerekmeden.
          */
-        <form action={bulkUpdateOrdersAction.bind(null, customerId, storeId)}>
+        <form action={bulkUpdateOrdersAction.bind(null, customerId, storeId, returnPath)}>
           <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
             <SelectAllCheckbox />
             <span>Tümünü seç</span>
@@ -294,20 +295,14 @@ export default async function StoreOrdersPage({
                 </option>
               ))}
             </select>
-            <button
-              type="submit"
-              className="h-8 rounded-md border border-black/15 px-3 text-xs text-foreground/80 hover:border-black/30"
-            >
-              Uygula
-            </button>
+            <OrderBulkSubmitButton label="Uygula" pendingLabel="Uygulanıyor…" variant="outline" />
             {quickAction ? (
-              <button
-                type="submit"
+              <OrderBulkSubmitButton
+                label={quickAction.label}
+                pendingLabel="Uygulanıyor…"
+                variant="primary"
                 formAction={quickAction.action}
-                className="h-8 rounded-md bg-brand-accent px-3 text-xs font-medium text-white hover:opacity-90"
-              >
-                {quickAction.label}
-              </button>
+              />
             ) : null}
           </div>
 
