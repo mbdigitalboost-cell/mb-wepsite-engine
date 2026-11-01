@@ -106,8 +106,13 @@ export default async function StoreBrandsPage({
               const logoAction = uploadBrandLogoAction.bind(null, customerId, storeId, brand.id);
               const addModelAction = addBrandModelAction.bind(null, customerId, storeId, brand.id);
               const deleteModelAction = deleteBrandModelAction.bind(null, customerId, storeId, brand.id);
-              const moveModelAction = (modelId: string, direction: "up" | "down") =>
-                moveBrandModelAction(customerId, storeId, brand.id, modelId, direction);
+              // ACİL DÜZELTME — bu İKİSİ de SADECE .bind() zinciri, yeni bir
+              // closure ile SARILMIYOR (bkz. actions.ts'in moveBrandModelAction
+              // üzerindeki güncellenmiş yorumu — bir closure RSC'nin Flight
+              // serileştiricisi tarafından server action olarak tanınmıyor,
+              // canlıda BrandModelsPanel'i (use client) kıran gerçek hata buydu).
+              const moveModelUpAction = moveBrandModelAction.bind(null, customerId, storeId, brand.id, "up");
+              const moveModelDownAction = moveBrandModelAction.bind(null, customerId, storeId, brand.id, "down");
               const brandModels = modelsByBrand[brand.id] ?? [];
               const productCount = productCountByBrand.get(brand.id) ?? 0;
 
@@ -163,8 +168,8 @@ export default async function StoreBrandsPage({
                             models={brandModels}
                             addAction={addModelAction}
                             deleteAction={deleteModelAction}
-                            moveUpAction={(modelId) => moveModelAction(modelId, "up")}
-                            moveDownAction={(modelId) => moveModelAction(modelId, "down")}
+                            moveUpAction={moveModelUpAction}
+                            moveDownAction={moveModelDownAction}
                           />
                         </div>
                       </div>

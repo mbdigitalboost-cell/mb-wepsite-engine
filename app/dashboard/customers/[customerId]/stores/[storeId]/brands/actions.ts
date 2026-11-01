@@ -310,13 +310,26 @@ export async function deleteBrandModelAction(
  * (sürükle-bırak YAZILMADI, iki seçenekten daha basit/az riskli olanı).
  * store_editor+ (RLS: brand_models_update_editor_tier). Komşu modelle
  * sort_order'ı TAKAS eder — yeni bir "boşluk aç" mantığı gerektirmez.
+ *
+ * ACİL DÜZELTME — `direction` BİLEREK `modelId`'den ÖNCE geliyor (çağrı
+ * sezgisel sırayla ters duruyor olabilir, ama bu kasıtlı): brands/page.tsx
+ * iki yöne ("up"/"down") AYRI, SADECE `.bind()` ile oluşturulmuş birer
+ * fonksiyon üretmek zorunda — bu server action'ı SARAN yeni bir closure
+ * (`(modelId) => moveBrandModelAction(..., modelId, direction)` gibi)
+ * React Server Components'in Flight serileştiricisi tarafından artık bir
+ * server action referansı olarak TANINMIYOR ("Functions cannot be passed
+ * directly to Client Components..." — canlıda BrandModelsPanel'i (use
+ * client) kıran gerçek hata buydu). `.bind(null, customerId, storeId,
+ * brandId, "up")` gibi SIRALI bind'ler ancak SABİTLENEN parametreler
+ * baştan başlayıp ARAYA boşluk bırakmadan ilerlerse çalışır — bu yüzden
+ * tek değişken olan `modelId` en SONA alındı, `direction` öne.
  */
 export async function moveBrandModelAction(
   customerId: string,
   storeId: string,
   brandId: string,
-  modelId: string,
   direction: "up" | "down",
+  modelId: string,
 ): Promise<void> {
   await requireStoreEditorAccess(storeId);
 
