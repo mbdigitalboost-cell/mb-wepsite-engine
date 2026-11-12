@@ -15,6 +15,12 @@ import {
 import { bulkUpdateOrdersAction, bulkAdvanceOrderStatusAction, bulkPrepareForShipmentAction } from "./actions";
 import { SelectAllCheckbox } from "./select-all-checkbox";
 import { OrderBulkSubmitButton } from "./order-bulk-submit-button";
+import {
+  BASIT_KARGO_STRATEGY_HANDLERS,
+  BasitKargoConfigError,
+  getHandlers,
+  type BasitKargoHandler,
+} from "@/lib/integrations/basit-kargo";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 
 interface OrderRow {
@@ -37,6 +43,29 @@ interface OrdersSearchParams {
   /** Yalnızca toplu durum değiştirme action'larının redirect'inden gelir — buildQuery tarafından ASLA sayfalar arasında taşınmaz, tek seferlik bir banner (Faz 17/Kısım C'nin bulkDeleted/bulkSkipped banner'ıyla AYNI desen). */
   bulkUpdated?: string;
   bulkSkipped?: string;
+  /** Faz 20 — bulkPrepareForShipmentAction'ın (Basit Kargo) redirect'i; aynı tek seferlik banner deseni, buildQuery taşımaz. */
+  shipmentCreated?: string;
+  shipmentSkipped?: string;
+  shipmentErrors?: string;
+}
+
+/**
+ * Faz 20 — "Kargoya Hazırla" firma dropdown'u için Basit Kargo'dan canlı
+ * firma listesi. Token tanımlı değilse ya da API hata verirse sayfa
+ * ÇÖKMEZ: liste boş kalır, sadece ECONOMIC/FAST stratejileri + küçük bir
+ * uyarı metni gösterilir (asıl net hata, butona basılınca action'dan
+ * banner olarak gelir).
+ */
+async function loadShipmentHandlers(): Promise<{ handlers: BasitKargoHandler[]; warning: string | null }> {
+  try {
+    return { handlers: await getHandlers(), warning: null };
+  } catch (error) {
+    if (error instanceof BasitKargoConfigError) {
+      return { handlers: [], warning: "Kargo API anahtarı tanımlı değil — firma listesi alınamadı." };
+    }
+    const message = error instanceof Error ? error.message : "bilinmeyen hata";
+    return { handlers: [], warning: `Kargo firması listesi alınamadı: ${message}` };
+  }
 }
 
 const PAGE_SIZE = 20;
@@ -158,6 +187,10 @@ export default async function StoreOrdersPage({
     };
   }
 
+  // Faz 20 — sadece "Hazırlanıyor" sekmesinde (Kargoya Hazırla görünürken)
+  // Basit Kargo'ya gidilir; diğer sekmelerde hiçbir dış istek yapılmaz.
+  const shipmentPicker = sp.status === "preparing" ? await loadShipmentHandlers() : null;
+
   return (
     <div>
       <Link
@@ -187,6 +220,35 @@ export default async function StoreOrdersPage({
           {sp.bulkUpdated} sipariş güncellendi
           {Number(sp.bulkSkipped ?? 0) > 0 ? `, ${sp.bulkSkipped} sipariş değişmeden kaldı.` : "."}
         </p>
+      ) : null}
+
+      {/*
+        Faz 20 — Basit Kargo sonucu. Başarı sayısı + atlananlar + Basit
+        Kargo'nun siparişe özel hata mesajları (AYNEN, sessizce yutulmadan).
+        Durum 'shipped'e ilerlemediği için siparişler hâlâ bu sekmede
+        görünür; artık takip numaraları var, kargocu teslim alınca webhook
+        ilerletir.
+      */}
+      {sp.shipmentCreated !== undefined ? (
+        <div
+          className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+            sp.shipmentErrors ? "border-red-300 bg-red-50/60 text-red-900" : "border-green-300 bg-green-50/60 text-green-900"
+          }`}
+        >
+          <p>
+            {sp.shipmentCreated} sipariş için kargo kodu üretildi
+            {Number(sp.shipmentSkipped ?? 0) > 0
+              ? `, ${sp.shipmentSkipped} sipariş atlandı (hazırlanıyor durumunda değil ya da zaten kargo kodu var).`
+              : "."}
+          </p>
+          {sp.shipmentErrors ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {sp.shipmentErrors.split(" | ").map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4">
@@ -296,6 +358,47 @@ export default async function StoreOrdersPage({
               ))}
             </select>
             <OrderBulkSubmitButton label="Uygula" pendingLabel="Uygulanıyor…" variant="outline" />
+            {shipmentPicker ? (
+              /*
+                Faz 20 — Kargoya Hazırla'nın iki ek alanı, AYNI formun içinde
+                (orderIds ile birlikte submit olur): firma/strateji seçimi
+                (GET /handlers'tan canlı + ECONOMIC/FAST) ve parti geneli
+                tek bir desi/kg değeri (varsayılan 1 — devir metni "Açık
+                karar #1": yanlış ağırlık gönderip fark faturası gelmesin
+                diye admin'den soruluyor).
+              */
+              <>
+                <select
+                  name="handlerCode"
+                  defaultValue="ECONOMIC"
+                  aria-label="Kargo firması"
+                  className="h-8 w-auto rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground transition-colors focus-visible:border-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20"
+                >
+                  {BASIT_KARGO_STRATEGY_HANDLERS.map((handler) => (
+                    <option key={handler.code} value={handler.code}>
+                      {handler.name}
+                    </option>
+                  ))}
+                  {shipmentPicker.handlers.map((handler) => (
+                    <option key={handler.code} value={handler.code}>
+                      {handler.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1">
+                  <span>Desi/kg</span>
+                  <input
+                    name="desiKg"
+                    type="number"
+                    min={0.1}
+                    max={500}
+                    step={0.1}
+                    defaultValue={1}
+                    className="h-8 w-16 rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground focus-visible:border-brand-accent focus-visible:outline-none"
+                  />
+                </label>
+              </>
+            ) : null}
             {quickAction ? (
               <OrderBulkSubmitButton
                 label={quickAction.label}
@@ -304,6 +407,7 @@ export default async function StoreOrdersPage({
                 formAction={quickAction.action}
               />
             ) : null}
+            {shipmentPicker?.warning ? <span className="basis-full text-[11px] text-amber-700">{shipmentPicker.warning}</span> : null}
           </div>
 
           <ul className="mt-2 divide-y divide-black/10 rounded-lg border border-black/10">
