@@ -1,44 +1,35 @@
-import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { serverEnv } from "@/lib/config/env";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
+import { logAuditEvent } from "@/lib/auth/audit-log";
+import { findStoreByShippingWebhookSecret, touchShippingWebhook } from "@/lib/integrations/store-shipping-integration";
 import type { OrderStatus } from "@/lib/supabase/types";
 
 /**
- * Faz 20 — Basit Kargo "Durum Değişikliği" webhook'u. Basit Kargo
- * panelinde (Ayarlar → Webhook) bu route'un tam URL'i tanımlanır
- * (kullanıcının kendi yapacağı adım); kargo ana durumu değiştiğinde
- * Basit Kargo buraya POST atar:
+ * Basit Kargo "Durum Değişikliği" webhook'u (Faz 20'de yazıldı, Faz 21'de
+ * mağaza bazlı secret'a geçti). Basit Kargo panelinde (Ayarlar → Webhook)
+ * admin sayfasının gösterdiği TAM URL (…/api/webhooks/basit-kargo?secret=…)
+ * tanımlanır; kargo ana durumu değiştiğinde Basit Kargo buraya POST atar:
  *   { id, orderNumber, orderId, barcode, status, handler:{name,code},
  *     handlerShipmentCode }
  *
- * Eşleme: sipariş `tracking_number = barcode` ile bulunur (Kargoya Hazırla
- * barkodu oraya yazıyor — bkz. orders/actions.ts bulkPrepareForShipmentAction).
+ * GÜVENLİK (Faz 21): secret ZORUNLU — `?secret=` query param'ı veya
+ * `x-webhook-secret` başlığı. store_shipping_integrations.webhook_secret
+ * (UNIQUE) üzerinden mağaza çözülür; eşleşme yoksa 401. Güncelleme
+ * YALNIZCA o mağazanın siparişleriyle sınırlı (.eq store_id). Basit Kargo
+ * dokümanında imza/HMAC başlığı yok, bu yüzden secret-URL tek yöntem.
+ *
+ * Eşleme: önce `tracking_number = barcode` (Kargoya Hazırla barkodu oraya
+ * yazar), yoksa `shipping_provider_order_id = id` (otomatik gönderilmiş,
+ * henüz barkodsuz sipariş için de durum olayı gelebilir).
  *   SHIPPED, OUT_FOR_DELIVERY → shipped
  *   DELIVERED                 → completed
- *   NEW, READY_TO_SHIP        → dokunma
+ *   NEW, READY_TO_SHIP        → durum değişmez
  *   NEEDS_SUPPORT, DELAYED, RETURNING, RETURNED, LOST → durum DEĞİŞMEZ,
- *     `note`'a "[Kargo uyarısı: X]" satırı eklenir (yeni kolon/migration
- *     yerine devir metninin "basit tut" seçeneği).
- *
- * Güvenlik: Basit Kargo dokümanında imzalama/secret başlığı YOK. Bu yüzden
- * (a) opsiyonel paylaşımlı sır: BASIT_KARGO_WEBHOOK_SECRET tanımlıysa
- *     `x-webhook-secret` başlığı VEYA `?secret=` query param'ı eşleşmek
- *     zorunda (panel sadece URL alıyorsa query param yolu kullanılır);
- *     tanımlı değilse bu katman atlanır;
- * (b) barkod bizim DB'mizde yoksa istek sessizce yok sayılır (200,
- *     ignored:true — 4xx döndürüp tekrar denemeleri tetiklememek için);
- * (c) idempotent: durum sadece İLERİ yönde değişir (completed → shipped
- *     gibi geri alma yok, cancelled hiç dokunulmaz), uyarı satırı aynı
- *     durum için en fazla bir kez eklenir — aynı webhook tekrar gelse
- *     ikinci bir etki yaratmaz;
- * (d) pre-auth rate limit (lib/security/rate-limit.ts'in mevcut deseni).
- *
- * Oturum yok → service-role admin client (barkod Basit Kargo tarafından
- * global benzersiz üretildiği için çapraz-kiracı araması güvenli; yazma
- * yine bulunan satırın kendi store_id'siyle sınırlı).
+ *     `note`'a "[Kargo uyarısı: X]" satırı (idempotent, durum başına bir kez)
+ * Durum sadece İLERİ yönde değişir, cancelled'a dokunulmaz — aynı webhook
+ * tekrar gelirse ikinci bir etki yaratmaz.
  */
 
 export const dynamic = "force-dynamic";
@@ -54,7 +45,6 @@ const STATUS_MAP: Record<string, OrderStatus> = {
 
 const ALERT_STATUSES = new Set(["NEEDS_SUPPORT", "DELAYED", "RETURNING", "RETURNED", "LOST"]);
 
-/** Yalnızca ileri yönde geçiş — webhook sırası karışık gelse bile (DELIVERED'dan sonra gecikmiş bir SHIPPED) durum geri sarılmaz. */
 const STATUS_RANK: Record<OrderStatus, number> = {
   pending: 0,
   confirmed: 1,
@@ -64,29 +54,36 @@ const STATUS_RANK: Record<OrderStatus, number> = {
   cancelled: -1,
 };
 
-function safeEqual(a: string, b: string): boolean {
-  const hashA = crypto.createHash("sha256").update(a).digest();
-  const hashB = crypto.createHash("sha256").update(b).digest();
-  return crypto.timingSafeEqual(hashA, hashB);
-}
-
 interface WebhookPayload {
-  barcode: string;
+  providerOrderId: string | null;
+  barcode: string | null;
   status: string;
   handlerName: string | null;
+  handlerShipmentCode: string | null;
+}
+
+function readString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed && trimmed.length <= maxLength ? trimmed : null;
 }
 
 function parsePayload(body: unknown): WebhookPayload | null {
   if (!body || typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
-  const barcode = typeof record.barcode === "string" ? record.barcode.trim() : "";
-  const status = typeof record.status === "string" ? record.status.trim().toUpperCase() : "";
-  if (!barcode || !status || barcode.length > 100 || status.length > 40) return null;
+  const status = readString(record.status, 40)?.toUpperCase() ?? null;
+  const barcode = readString(record.barcode, 100);
+  const providerOrderId = readString(record.id, 100);
+  if (!status || (!barcode && !providerOrderId)) return null;
 
   const handler = record.handler && typeof record.handler === "object" ? (record.handler as Record<string, unknown>) : null;
-  const handlerName = handler && typeof handler.name === "string" ? handler.name : null;
-
-  return { barcode, status, handlerName };
+  return {
+    providerOrderId,
+    barcode,
+    status,
+    handlerName: handler ? readString(handler.name, 100) : null,
+    handlerShipmentCode: readString(record.handlerShipmentCode, 100),
+  };
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -99,12 +96,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const secret = serverEnv.basitKargoWebhookSecret;
-  if (secret) {
-    const provided = request.headers.get(SECRET_HEADER) ?? new URL(request.url).searchParams.get("secret");
-    if (!provided || !safeEqual(provided, secret)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const provided = request.headers.get(SECRET_HEADER) ?? new URL(request.url).searchParams.get("secret") ?? "";
+  const store = await findStoreByShippingWebhookSecret(provided);
+  if (!store) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: unknown;
@@ -119,24 +114,55 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const admin = createSupabaseAdminClient();
-  const { data: order, error: lookupError } = await admin
-    .from("orders")
-    .select("id, store_id, order_number, status, note, carrier")
-    .eq("tracking_number", payload.barcode)
-    .limit(1)
-    .maybeSingle();
+  await touchShippingWebhook(store.storeId);
 
-  if (lookupError) {
-    console.error("[basit-kargo webhook] order lookup failed:", lookupError.message);
-    return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+  const admin = createSupabaseAdminClient();
+  const selectColumns = "id, store_id, order_number, status, note, carrier, tracking_number, shipping_provider_order_id";
+
+  let order: {
+    id: string;
+    store_id: string;
+    order_number: number;
+    status: string;
+    note: string | null;
+    carrier: string | null;
+    tracking_number: string | null;
+    shipping_provider_order_id: string | null;
+  } | null = null;
+
+  if (payload.barcode) {
+    const { data } = await admin
+      .from("orders")
+      .select(selectColumns)
+      .eq("store_id", store.storeId)
+      .eq("tracking_number", payload.barcode)
+      .limit(1)
+      .maybeSingle();
+    order = data;
   }
+  if (!order && payload.providerOrderId) {
+    const { data } = await admin
+      .from("orders")
+      .select(selectColumns)
+      .eq("store_id", store.storeId)
+      .eq("shipping_provider_order_id", payload.providerOrderId)
+      .limit(1)
+      .maybeSingle();
+    order = data;
+  }
+
   if (!order) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
   const currentStatus = order.status as OrderStatus;
-  const update: { status?: OrderStatus; note?: string; carrier?: string } = {};
+  const update: {
+    status?: OrderStatus;
+    note?: string;
+    carrier?: string;
+    tracking_number?: string;
+    shipping_provider_order_id?: string;
+  } = {};
 
   const mappedStatus = STATUS_MAP[payload.status];
   if (mappedStatus && currentStatus !== "cancelled" && STATUS_RANK[mappedStatus] > STATUS_RANK[currentStatus]) {
@@ -151,25 +177,34 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  if (payload.handlerName && payload.handlerName !== order.carrier) {
-    update.carrier = payload.handlerName;
-  }
+  if (payload.handlerName && payload.handlerName !== order.carrier) update.carrier = payload.handlerName;
+  if (payload.barcode && !order.tracking_number) update.tracking_number = payload.barcode;
+  if (payload.providerOrderId && !order.shipping_provider_order_id) update.shipping_provider_order_id = payload.providerOrderId;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ ok: true, updated: false });
   }
 
-  const { error: updateError } = await admin.from("orders").update(update).eq("id", order.id).eq("store_id", order.store_id);
+  const { error: updateError } = await admin.from("orders").update(update).eq("id", order.id).eq("store_id", store.storeId);
   if (updateError) {
     console.error("[basit-kargo webhook] order update failed:", updateError.message);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 
-  const { data: store } = await admin.from("stores").select("customer_id").eq("id", order.store_id).maybeSingle();
-  if (store?.customer_id) {
-    const ordersPath = `/dashboard/customers/${store.customer_id}/stores/${order.store_id}/orders`;
+  const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.storeId).maybeSingle();
+  if (storeRow?.customer_id) {
+    const ordersPath = `/dashboard/customers/${storeRow.customer_id}/stores/${store.storeId}/orders`;
     revalidatePath(ordersPath);
     revalidatePath(`${ordersPath}/${order.id}`);
+
+    await logAuditEvent({
+      userId: null,
+      customerId: storeRow.customer_id,
+      action: "order.shipment_webhook",
+      entityType: "order",
+      entityId: order.id,
+      metadata: { providerStatus: payload.status, applied: Object.keys(update) },
+    });
   }
 
   return NextResponse.json({ ok: true, updated: true, orderNumber: order.order_number, applied: Object.keys(update) });

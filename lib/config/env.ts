@@ -78,29 +78,10 @@ export const serverEnv = {
   get metaWhatsappPhoneNumberId() {
     return readServerEnv("META_WHATSAPP_PHONE_NUMBER_ID");
   },
-  /**
-   * Faz 20 — Basit Kargo (basitkargo.com) API token'ı. Henüz hiçbir
-   * deployment'ta TANIMLI DEĞİL: kullanıcı kendi Basit Kargo panelinden
-   * alıp Vercel env'e KENDİSİ girecek (standing kural: provider API
-   * anahtarları hiçbir zaman Claude tarafından girilmiyor/görülmüyor).
-   * Yokken panel çökmez — lib/integrations/basit-kargo.ts anlamlı bir
-   * BasitKargoConfigError fırlatır, action bunu admin'e banner olarak
-   * gösterir.
-   */
-  get basitKargoApiToken() {
-    return readServerEnv("BASIT_KARGO_API_TOKEN");
-  },
-  /**
-   * Faz 20 — webhook paylaşımlı sırrı (OPSİYONEL). Basit Kargo
-   * dokümantasyonunda imzalama/secret başlığı belgelenmemiş; panel
-   * sadece bir URL alıyorsa kullanıcı URL'e `?secret=...` ekleyebilir ve
-   * aynı değeri buraya koyar — tanımlıysa webhook route'u eşleşme ister,
-   * tanımlı değilse yalnızca "barkod bizim DB'de var mı" doğrulamasına
-   * güvenir (bkz. app/api/webhooks/basit-kargo/route.ts).
-   */
-  get basitKargoWebhookSecret() {
-    return readServerEnv("BASIT_KARGO_WEBHOOK_SECRET");
-  },
+  // Faz 21: BASIT_KARGO_API_TOKEN / BASIT_KARGO_WEBHOOK_SECRET env
+  // getter'ları KALDIRILDI — panel çok kiracılı, token artık mağaza
+  // bazlı DB kaydında (store_shipping_integrations, migration 0039),
+  // bkz. lib/integrations/store-shipping-integration.ts.
 };
 
 /**

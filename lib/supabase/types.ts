@@ -71,6 +71,9 @@ export type StoreButtonStyle = "rounded" | "square" | "pill";
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "shipped" | "completed" | "cancelled";
 /** FAZ 2.5, migration 0029_orders.sql — independent of OrderStatus, see that enum's own comment. */
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
+
+/** Faz 21 — orders.shipping_sync_status (migration 0039 CHECK constraint ile aynı üç değer). */
+export type ShippingSyncStatus = "not_sent" | "sent" | "failed";
 /** "Aboneler" — migration 0036_customer_discounts.sql. 'auto' requires store_customer_id NOT NULL (DB CHECK) — see that migration's own security-decision comment. */
 export type CustomerDiscountType = "code" | "auto";
 export type CustomerDiscountValueType = "percentage" | "fixed";
@@ -1242,6 +1245,67 @@ export type Database = {
         ];
       };
       /**
+       * Faz 21, migration 0039_store_shipping_integrations.sql. RLS açık,
+       * SIFIR policy, anon/authenticated'tan tüm yetkiler REVOKE — SADECE
+       * service-role (lib/integrations/store-shipping-integration.ts)
+       * okur/yazar. api_token/webhook_secret client'a asla dönmez.
+       */
+      store_shipping_integrations: {
+        Row: {
+          store_id: string;
+          provider: string;
+          api_token: string | null;
+          webhook_secret: string;
+          default_desi: number;
+          auto_push_on_confirm: boolean;
+          is_active: boolean;
+          last_test_at: string | null;
+          last_test_ok: boolean | null;
+          last_test_message: string | null;
+          last_webhook_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          provider?: string;
+          api_token?: string | null;
+          webhook_secret: string;
+          default_desi?: number;
+          auto_push_on_confirm?: boolean;
+          is_active?: boolean;
+          last_test_at?: string | null;
+          last_test_ok?: boolean | null;
+          last_test_message?: string | null;
+          last_webhook_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          provider?: string;
+          api_token?: string | null;
+          webhook_secret?: string;
+          default_desi?: number;
+          auto_push_on_confirm?: boolean;
+          is_active?: boolean;
+          last_test_at?: string | null;
+          last_test_ok?: boolean | null;
+          last_test_message?: string | null;
+          last_webhook_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_shipping_integrations_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /**
        * FAZ 2, migration 0029_orders.sql. No anon RLS policy at all (any
        * operation) — written EXCLUSIVELY via createSupabaseAdminClient()
        * from app/store/[storeSlug]/sepet/actions.ts. store_editor+ can
@@ -1278,6 +1342,9 @@ export type Database = {
           discount_amount: number;
           discount_code: string | null;
           applied_discount_id: string | null;
+          shipping_provider_order_id: string | null;
+          shipping_sync_status: ShippingSyncStatus;
+          shipping_sync_error: string | null;
         };
         Insert: {
           id?: string;
@@ -1305,6 +1372,9 @@ export type Database = {
           discount_amount?: number;
           discount_code?: string | null;
           applied_discount_id?: string | null;
+          shipping_provider_order_id?: string | null;
+          shipping_sync_status?: ShippingSyncStatus;
+          shipping_sync_error?: string | null;
         };
         Update: {
           id?: string;
@@ -1332,6 +1402,9 @@ export type Database = {
           discount_amount?: number;
           discount_code?: string | null;
           applied_discount_id?: string | null;
+          shipping_provider_order_id?: string | null;
+          shipping_sync_status?: ShippingSyncStatus;
+          shipping_sync_error?: string | null;
         };
         Relationships: [
           {

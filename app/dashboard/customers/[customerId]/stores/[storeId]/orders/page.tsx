@@ -12,16 +12,17 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_BADGE_VARIANT,
 } from "@/lib/commerce/order-status-labels";
-import { bulkUpdateOrdersAction, bulkAdvanceOrderStatusAction, bulkPrepareForShipmentAction } from "./actions";
+import {
+  bulkUpdateOrdersAction,
+  bulkAdvanceOrderStatusAction,
+  bulkPrepareForShipmentAction,
+  retryShipmentPushAction,
+} from "./actions";
 import { SelectAllCheckbox } from "./select-all-checkbox";
 import { OrderBulkSubmitButton } from "./order-bulk-submit-button";
-import {
-  BASIT_KARGO_STRATEGY_HANDLERS,
-  BasitKargoConfigError,
-  getHandlers,
-  type BasitKargoHandler,
-} from "@/lib/integrations/basit-kargo";
-import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
+import { BASIT_KARGO_STRATEGY_HANDLERS, getHandlers, type BasitKargoHandler } from "@/lib/integrations/basit-kargo";
+import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
+import type { OrderStatus, PaymentStatus, ShippingSyncStatus } from "@/lib/supabase/types";
 
 interface OrderRow {
   id: string;
@@ -32,6 +33,9 @@ interface OrderRow {
   customer_phone: string;
   subtotal: number;
   created_at: string;
+  tracking_number: string | null;
+  shipping_sync_status: ShippingSyncStatus;
+  shipping_sync_error: string | null;
 }
 
 interface OrdersSearchParams {
@@ -49,22 +53,31 @@ interface OrdersSearchParams {
   shipmentErrors?: string;
 }
 
+interface ShipmentPicker {
+  handlers: BasitKargoHandler[];
+  defaultDesi: number;
+  /** Token yok / pasif — picker yine render edilir ama admin Kargo sayfasına yönlendirilir. */
+  notConfigured: boolean;
+  warning: string | null;
+}
+
 /**
  * Faz 20 — "Kargoya Hazırla" firma dropdown'u için Basit Kargo'dan canlı
- * firma listesi. Token tanımlı değilse ya da API hata verirse sayfa
- * ÇÖKMEZ: liste boş kalır, sadece ECONOMIC/FAST stratejileri + küçük bir
- * uyarı metni gösterilir (asıl net hata, butona basılınca action'dan
- * banner olarak gelir).
+ * firma listesi; Faz 21 — token artık mağaza kaydından (store_shipping_
+ * integrations), desi varsayılanı da oradan. Token yoksa ya da API hata
+ * verirse sayfa ÇÖKMEZ: liste boş kalır, ECONOMIC/FAST + küçük bir uyarı
+ * (asıl net hata, butona basılınca action'dan banner olarak gelir).
  */
-async function loadShipmentHandlers(): Promise<{ handlers: BasitKargoHandler[]; warning: string | null }> {
+async function loadShipmentHandlers(storeId: string): Promise<ShipmentPicker> {
+  const integration = await getShippingIntegrationSecrets(storeId);
+  if (!integration?.apiToken || !integration.isActive) {
+    return { handlers: [], defaultDesi: integration?.defaultDesi ?? 1, notConfigured: true, warning: null };
+  }
   try {
-    return { handlers: await getHandlers(), warning: null };
+    return { handlers: await getHandlers(integration.apiToken), defaultDesi: integration.defaultDesi, notConfigured: false, warning: null };
   } catch (error) {
-    if (error instanceof BasitKargoConfigError) {
-      return { handlers: [], warning: "Kargo API anahtarı tanımlı değil — firma listesi alınamadı." };
-    }
     const message = error instanceof Error ? error.message : "bilinmeyen hata";
-    return { handlers: [], warning: `Kargo firması listesi alınamadı: ${message}` };
+    return { handlers: [], defaultDesi: integration.defaultDesi, notConfigured: false, warning: `Kargo firması listesi alınamadı: ${message}` };
   }
 }
 
@@ -128,9 +141,10 @@ export default async function StoreOrdersPage({
 
   let query = supabase
     .from("orders")
-    .select("id, order_number, status, payment_status, customer_name, customer_phone, subtotal, created_at", {
-      count: "exact",
-    })
+    .select(
+      "id, order_number, status, payment_status, customer_name, customer_phone, subtotal, created_at, tracking_number, shipping_sync_status, shipping_sync_error",
+      { count: "exact" },
+    )
     .eq("store_id", storeId);
 
   if (sp.status && (ORDER_STATUSES as string[]).includes(sp.status)) {
@@ -189,7 +203,8 @@ export default async function StoreOrdersPage({
 
   // Faz 20 — sadece "Hazırlanıyor" sekmesinde (Kargoya Hazırla görünürken)
   // Basit Kargo'ya gidilir; diğer sekmelerde hiçbir dış istek yapılmaz.
-  const shipmentPicker = sp.status === "preparing" ? await loadShipmentHandlers() : null;
+  const shipmentPicker = sp.status === "preparing" ? await loadShipmentHandlers(storeId) : null;
+  const shippingSettingsPath = `/dashboard/customers/${customerId}/stores/${storeId}/shipping`;
 
   return (
     <div>
@@ -236,9 +251,9 @@ export default async function StoreOrdersPage({
           }`}
         >
           <p>
-            {sp.shipmentCreated} sipariş için kargo kodu üretildi
+            {sp.shipmentCreated} sipariş Basit Kargo&apos;ya iletildi
             {Number(sp.shipmentSkipped ?? 0) > 0
-              ? `, ${sp.shipmentSkipped} sipariş atlandı (hazırlanıyor durumunda değil ya da zaten kargo kodu var).`
+              ? `, ${sp.shipmentSkipped} sipariş atlandı (uygun durumda değil ya da zaten Basit Kargo'da).`
               : "."}
           </p>
           {sp.shipmentErrors ? (
@@ -393,7 +408,7 @@ export default async function StoreOrdersPage({
                     min={0.1}
                     max={500}
                     step={0.1}
-                    defaultValue={1}
+                    defaultValue={shipmentPicker.defaultDesi}
                     className="h-8 w-16 rounded-md border border-black/15 bg-transparent px-2 text-xs text-foreground focus-visible:border-brand-accent focus-visible:outline-none"
                   />
                 </label>
@@ -406,6 +421,15 @@ export default async function StoreOrdersPage({
                 variant="primary"
                 formAction={quickAction.action}
               />
+            ) : null}
+            {shipmentPicker?.notConfigured ? (
+              <span className="basis-full text-[11px] text-amber-700">
+                Kargo entegrasyonu bağlı değil —{" "}
+                <Link href={shippingSettingsPath} className="underline underline-offset-2">
+                  Kargo Entegrasyonu
+                </Link>{" "}
+                sayfasından Basit Kargo API anahtarını girin.
+              </span>
             ) : null}
             {shipmentPicker?.warning ? <span className="basis-full text-[11px] text-amber-700">{shipmentPicker.warning}</span> : null}
           </div>
@@ -429,15 +453,40 @@ export default async function StoreOrdersPage({
                     <span className="text-foreground/70">{order.customer_name}</span>{" "}
                     <span className="text-xs text-foreground/50">{order.customer_phone}</span>
                   </span>
-                  <span className="flex items-center gap-3 text-xs text-foreground/50">
+                  <span className="flex flex-wrap items-center gap-3 text-xs text-foreground/50">
                     {formatPrice(Number(order.subtotal))}
                     <span>{new Date(order.created_at).toLocaleDateString("tr-TR")}</span>
+                    {/* Faz 21 — Basit Kargo senkron durumu: failed → kırmızı rozet (+ sağda Tekrar Gönder), barkod varsa takip no, barkodsuz sent → "Basit Kargo'da". */}
+                    {order.shipping_sync_status === "failed" ? (
+                      <Badge variant="danger" title={order.shipping_sync_error ?? undefined}>
+                        Kargoya gönderilemedi
+                      </Badge>
+                    ) : order.tracking_number ? (
+                      <span className="font-mono text-[11px] text-foreground/60">{order.tracking_number}</span>
+                    ) : order.shipping_sync_status === "sent" ? (
+                      <span className="text-[11px] text-foreground/50">Basit Kargo&apos;da</span>
+                    ) : null}
                     <Badge variant={PAYMENT_STATUS_BADGE_VARIANT[order.payment_status]}>
                       {PAYMENT_STATUS_LABELS[order.payment_status]}
                     </Badge>
                     <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
                   </span>
                 </Link>
+                {order.shipping_sync_status === "failed" && order.status !== "cancelled" && order.status !== "completed" ? (
+                  /*
+                    Faz 21 — "Tekrar Gönder": aynı toplu formun içinde ayrı bir
+                    formAction (Link'in DIŞINDA — link içinde buton olmaz).
+                    Sunucu bileşeninde satır başına bir kez bind edilir; action
+                    formData'yı yok sayar, sadece bu orderId'yi gönderir.
+                  */
+                  <button
+                    type="submit"
+                    formAction={retryShipmentPushAction.bind(null, customerId, storeId, order.id, returnPath)}
+                    className="shrink-0 rounded-md border border-red-300 px-2 py-1 text-[11px] text-red-700 hover:bg-red-50"
+                  >
+                    Tekrar Gönder
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

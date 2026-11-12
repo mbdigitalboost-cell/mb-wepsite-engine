@@ -6,8 +6,38 @@ import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { isOrderStatus, isPaymentStatus } from "@/lib/commerce/order-status-labels";
-import { createShipment, isBasitKargoConfigured, type ShippableOrder } from "@/lib/integrations/basit-kargo";
+import { createShipment, generateBarcode, type ShippableOrder } from "@/lib/integrations/basit-kargo";
+import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
+import { cancelShippingProviderOrders, pushOrdersToShippingProvider } from "@/lib/integrations/shipping-push";
 import type { OrderStatus } from "@/lib/supabase/types";
+
+/**
+ * Faz 21 — durum geçişinin kargo yan etkisi. Siparişin durumu ZATEN
+ * güncellendikten sonra çağrılır; hiçbir hata durum değişikliğini geri
+ * almaz (shipping-push.ts kendi içinde failed/hata yazar). confirmed →
+ * Basit Kargo'ya barkodsuz gönderim (auto_push_on_confirm açıksa),
+ * cancelled → barkodu olmayan Basit Kargo kaydını sil.
+ */
+async function syncShippingAfterStatusChange(params: {
+  customerId: string;
+  storeId: string;
+  actorUserId: string;
+  orderIds: string[];
+  status: OrderStatus;
+}): Promise<void> {
+  const { customerId, storeId, actorUserId, orderIds, status } = params;
+  if (orderIds.length === 0) return;
+  try {
+    if (status === "confirmed") {
+      await pushOrdersToShippingProvider({ storeId, customerId, actorUserId, orderIds });
+    } else if (status === "cancelled") {
+      await cancelShippingProviderOrders({ storeId, customerId, actorUserId, orderIds });
+    }
+  } catch (error) {
+    // Yan etki asıl işlemi asla düşürmez — sipariş durumu zaten değişti.
+    console.error("[orders] shipping sync after status change failed:", error instanceof Error ? error.message : error);
+  }
+}
 
 /**
  * store_editor+ (RLS: orders_update_editor_tier) — same tier as
@@ -45,6 +75,8 @@ export async function updateOrderStatusAction(
     entityId: orderId,
     metadata: { status },
   });
+
+  await syncShippingAfterStatusChange({ customerId, storeId, actorUserId: user.id, orderIds: [orderId], status });
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders/${orderId}`);
@@ -245,6 +277,7 @@ export async function bulkUpdateOrdersAction(
         entityId: null,
         metadata: { bulk: true, orderIds: eligibleIds, status: targetStatus, skippedCount },
       });
+      await syncShippingAfterStatusChange({ customerId, storeId, actorUserId: user.id, orderIds: eligibleIds, status: targetStatus });
     }
   }
 
@@ -311,6 +344,7 @@ export async function bulkAdvanceOrderStatusAction(
         entityId: null,
         metadata: { bulk: true, fromStatus, toStatus, orderIds: eligibleIds, skippedCount },
       });
+      await syncShippingAfterStatusChange({ customerId, storeId, actorUserId: user.id, orderIds: eligibleIds, status: toStatus });
     }
   }
 
@@ -337,26 +371,31 @@ function buildShipmentRedirect(
 }
 
 /**
- * Kargoya Hazırla — Faz 20: Faz 18'de bırakılan yer tutucunun GERÇEK
- * Basit Kargo implementasyonu. Fonksiyon imzası ve çağrıldığı yer
- * (page.tsx'teki "Kargoya Hazırla" butonu) Faz 18'deki gibi SABİT —
- * sadece gövde doldu; ek olarak aynı formdan `handlerCode` (firma /
- * ECONOMIC / FAST) ve `desiKg` okunuyor.
+ * Kargoya Hazırla — Faz 20'de gerçek Basit Kargo implementasyonu, Faz
+ * 21'de mağaza bazlı token + "önce shipping_provider_order_id'ye bak"
+ * kuralı. Fonksiyon imzası ve çağrıldığı yer (page.tsx'teki "Kargoya
+ * Hazırla" butonu) SABİT; formdan `handlerCode` ve `desiKg` okunuyor.
  *
- * Akış, seçili her uygun sipariş için:
- *  - uygun = status 'preparing' VE tracking_number boş (zaten kargo kodu
- *    olan bir sipariş için ikinci bir kargo açılmaz — skip edilir);
- *  - createShipment() → barkod; başarıda carrier/tracking_number/
- *    shipped_at yazılır. Durum BİLEREK 'shipped'e İLERLETİLMİYOR:
- *    "barkod üretildi" ≠ "kargocu teslim aldı" — gerçek ilerleme Basit
- *    Kargo webhook'undan gelir (app/api/webhooks/basit-kargo/route.ts);
+ * Akış, seçili her uygun sipariş için (uygun = status 'preparing' VE
+ * tracking_number boş — zaten kargo kodu olan sipariş için ikinci bir
+ * kargo açılmaz, skip edilir):
+ *  - shipping_provider_order_id DOLUYSA (onaylanınca otomatik gönderildi):
+ *    POST /v2/order/{id}/barcode — sadece barkod üretir, Basit Kargo'da
+ *    ikinci bir sipariş AÇILMAZ (Idempotency-Key `${orderId}:barcode`);
+ *  - BOŞSA (otomatik gönderim kapalıydı / başarısızdı / eski sipariş):
+ *    POST /v2/order/barcode — oluştur + barkod tek çağrı
+ *    (Idempotency-Key `${orderId}:ship`);
+ *  - başarıda carrier/tracking_number/shipped_at + shipping_provider_order_id
+ *    + shipping_sync_status='sent' yazılır. Durum BİLEREK 'shipped'e
+ *    İLERLETİLMİYOR: "barkod üretildi" ≠ "kargocu teslim aldı" — gerçek
+ *    ilerleme Basit Kargo webhook'undan gelir;
  *  - Basit Kargo'nun döndürdüğü hata, siparişe özel ("#14: ...") olarak
  *    admin'e AYNEN gösterilir, sessizce yutulmaz;
  *  - sonuç Faz 18'in aynı redirect+banner deseniyle geri döner:
  *    ?shipmentCreated=N&shipmentSkipped=M&shipmentErrors=...
  *
- * Token (BASIT_KARGO_API_TOKEN) yoksa hiçbir API çağrısı yapılmadan tek
- * bir net mesajla döner — panel çökmez.
+ * Token mağaza kaydında yoksa (ya da entegrasyon pasifse) hiçbir API
+ * çağrısı yapılmadan tek bir net mesajla döner — panel çökmez.
  */
 export async function bulkPrepareForShipmentAction(
   customerId: string,
@@ -369,12 +408,16 @@ export async function bulkPrepareForShipmentAction(
   const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
   if (orderIds.length === 0) return;
 
-  if (!isBasitKargoConfigured()) {
+  const integration = await getShippingIntegrationSecrets(storeId);
+  if (!integration?.apiToken) {
     redirect(
       buildShipmentRedirect(returnPath, 0, 0, [
-        "Kargo API anahtarı henüz tanımlanmamış — ortam değişkenleri ayarlarından BASIT_KARGO_API_TOKEN ekleyin.",
+        "Kargo entegrasyonu kurulmadı — Mağaza → Kargo sayfasından Basit Kargo API anahtarını girin.",
       ]),
     );
+  }
+  if (!integration.isActive) {
+    redirect(buildShipmentRedirect(returnPath, 0, 0, ["Kargo entegrasyonu pasif — Mağaza → Kargo sayfasından aktif edin."]));
   }
 
   const handlerCode = String(formData.get("handlerCode") ?? "").trim().toUpperCase();
@@ -382,21 +425,22 @@ export async function bulkPrepareForShipmentAction(
     redirect(buildShipmentRedirect(returnPath, 0, 0, ["Kargo firması seçilmedi."]));
   }
 
-  const desiKgRaw = Number(formData.get("desiKg") ?? 1);
-  const desiKg = Number.isFinite(desiKgRaw) && desiKgRaw > 0 ? Math.min(desiKgRaw, 500) : 1;
+  const desiKgRaw = Number(formData.get("desiKg") ?? integration.defaultDesi);
+  const desiKg = Number.isFinite(desiKgRaw) && desiKgRaw > 0 ? Math.min(desiKgRaw, 500) : integration.defaultDesi;
 
   const supabase = await createSupabaseServerClient();
   const { data: eligible } = await supabase
     .from("orders")
     .select(
-      "id, order_number, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, payment_method, payment_status",
+      "id, order_number, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, payment_method, payment_status, shipping_provider_order_id",
     )
     .in("id", orderIds)
     .eq("store_id", storeId)
     .eq("status", "preparing")
     .is("tracking_number", null);
 
-  const eligibleOrders = (eligible ?? []) as ShippableOrder[];
+  type PreparableOrder = ShippableOrder & { shipping_provider_order_id: string | null };
+  const eligibleOrders = (eligible ?? []) as PreparableOrder[];
   const skippedCount = orderIds.length - eligibleOrders.length;
   const createdOrderIds: string[] = [];
   const errors: string[] = [];
@@ -405,7 +449,9 @@ export async function bulkPrepareForShipmentAction(
   // hata mesajları sipariş sırasıyla eşleşsin.
   for (const order of eligibleOrders) {
     try {
-      const shipment = await createShipment({ order, handlerCode, desiKg });
+      const shipment = order.shipping_provider_order_id
+        ? await generateBarcode(integration.apiToken, order, order.shipping_provider_order_id, handlerCode)
+        : await createShipment(integration.apiToken, { order, handlerCode, desiKg });
 
       const { error: updateError } = await supabase
         .from("orders")
@@ -413,6 +459,9 @@ export async function bulkPrepareForShipmentAction(
           carrier: shipment.handlerName ?? handlerCode,
           tracking_number: shipment.barcode,
           shipped_at: new Date().toISOString(),
+          shipping_provider_order_id: shipment.basitKargoOrderId ?? order.shipping_provider_order_id,
+          shipping_sync_status: "sent",
+          shipping_sync_error: null,
         })
         .eq("id", order.id)
         .eq("store_id", storeId);
@@ -428,6 +477,11 @@ export async function bulkPrepareForShipmentAction(
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
       errors.push(`#${order.order_number}: ${message}`);
+      await supabase
+        .from("orders")
+        .update({ shipping_sync_status: "failed", shipping_sync_error: message.slice(0, 500) })
+        .eq("id", order.id)
+        .eq("store_id", storeId);
     }
   }
 
@@ -435,7 +489,7 @@ export async function bulkPrepareForShipmentAction(
     await logAuditEvent({
       userId: user.id,
       customerId,
-      action: "order.shipment_create",
+      action: "order.shipment_prepare",
       entityType: "order",
       entityId: null,
       metadata: {
@@ -451,4 +505,33 @@ export async function bulkPrepareForShipmentAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   redirect(buildShipmentRedirect(returnPath, createdOrderIds.length, skippedCount, errors));
+}
+
+/**
+ * Faz 21 — "Tekrar Gönder": otomatik gönderimi başarısız olmuş
+ * (shipping_sync_status='failed') ya da hiç gönderilmemiş bir onaylı/
+ * hazırlanan siparişi Basit Kargo'ya elle (barkodsuz) düşürür.
+ * force=true: auto_push_on_confirm kapalı olsa da gönderir — admin açıkça
+ * istedi. Sonuç aynı ?shipmentCreated banner'ıyla döner.
+ */
+export async function retryShipmentPushAction(
+  customerId: string,
+  storeId: string,
+  orderId: string,
+  returnPath: string,
+): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+
+  const result = await pushOrdersToShippingProvider({ storeId, customerId, actorUserId: user.id, orderIds: [orderId], force: true });
+
+  const errors: string[] = [];
+  if (result.skippedReason === "not_configured") {
+    errors.push("Kargo entegrasyonu kurulmadı ya da pasif — Mağaza → Kargo sayfasını kontrol edin.");
+  }
+  for (const failure of result.failed) errors.push(`#${failure.orderNumber}: ${failure.message}`);
+  const skipped = result.skippedReason ? 0 : result.pushed.length + result.failed.length === 0 ? 1 : 0;
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders/${orderId}`);
+  redirect(buildShipmentRedirect(returnPath, result.pushed.length, skipped, errors));
 }

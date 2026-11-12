@@ -1,32 +1,27 @@
 import "server-only";
 
-import { serverEnv } from "@/lib/config/env";
-
 /**
- * Faz 20 — Basit Kargo (basitkargo.com) API istemcisi. Resmî doküman
- * (https://basitkargo.com/api) bu turda yeniden okundu; devir metninin
- * özetinden sapan iki nokta doğrudan dokümana göre uygulandı:
+ * Basit Kargo (basitkargo.com) API istemcisi — Faz 20'de yazıldı, Faz 21'de
+ * token MAĞAZA BAZLI oldu: her fonksiyon token'ı parametre olarak alır
+ * (store_shipping_integrations.api_token, service-role ile okunur — bkz.
+ * lib/integrations/store-shipping-integration.ts). Env fallback'i YOK:
+ * panel çok kiracılı, tek bir env token'ı başka bir mağazanın siparişinde
+ * kullanılabilirdi.
  *
- *  1. `POST /v2/order/barcode` gövdesinde ödeme bilgisi için belgelenen
- *     alanlar `orderPaymentType` (COLLECT_ON_DELIVERY/CREDIT_CARD/
- *     BANK_TRANSFER/OTHER) ve `orderPaymentStatus` (PAID/PENDING/UNPAID).
- *     `collect` (kapıda tahsil edilecek tutar) örnek gövdede var;
- *     `collectOnDeliveryType` (CASH/CREDIT_CARD) yalnızca `POST /v2/order`
- *     örneğinde geçiyor — aynı sipariş modeli olduğu için kapıda ödemede
- *     ikisi birden gönderiliyor (alan tanınmazsa görmezden gelinmesi
- *     beklenir; tahsilat TİPİNİN eksik gitmesinden daha güvenli).
- *  2. `Idempotency-Key`: doküman "sipariş oluşmadan hata olursa anahtar
- *     serbest kalır, tekrar eden istek 200 + Idempotency-Replayed döner,
- *     24 saat saklanır" diyor. Bu yüzden rastgele UUID DEĞİL, siparişin
- *     KENDİ uuid'si anahtar olarak kullanılıyor: aynı siparişe ikinci bir
- *     "Kargoya Hazırla" tıklaması ikinci bir kargo + ikinci ücret kesintisi
- *     yaratmaz, aynı barkodu geri alır; başarısız bir deneme (bakiye yok
- *     vb.) anahtarı serbest bıraktığı için düzeltme sonrası tekrar
- *     denemek de çalışır.
+ * Resmî doküman (https://basitkargo.com/api) Faz 21'de yeniden okundu;
+ * kullanılan uçlar ve belgelenen alanlar:
+ *  - GET  /handlers                      → [{ name, code, logo }]
+ *  - POST /v2/order                      → barkodsuz sipariş; yanıt { id, barcode, type, status, validationFailed, createdTime }
+ *  - POST /v2/order/{id}/barcode         → var olan siparişe barkod; gövde { handlerCode } (zorunlu); yanıt shipmentInfo{handler{name,code},handlerShipmentCode}
+ *  - POST /v2/order/barcode              → oluştur + barkod tek çağrı
+ *  - DELETE /order/{id}                  → sipariş sil (/v2 öneki YOK, dokümandaki gibi)
+ *  - GET  /label/svg/{id}                → etiket SVG
  *
- * Token (`BASIT_KARGO_API_TOKEN`) henüz tanımlı değil — her fonksiyon
- * token yoksa BasitKargoConfigError fırlatır, çağıran action bunu admin'e
- * net bir mesaj olarak gösterir; panel çökmez.
+ * Idempotency-Key SADECE üç POST ucunda destekleniyor; doküman "aynı
+ * anahtar farklı uç/gövdeyle → 422" dediği için her uç için siparişe bağlı
+ * AYRI anahtar: `${orderId}:push` / `${orderId}:ship` / `${orderId}:barcode`.
+ * Doküman: sipariş oluşmadan hata olursa anahtar serbest kalır (tekrar
+ * deneme çalışır), 24 saat saklanır (çift tıklama ikinci sipariş yaratmaz).
  */
 
 const BASE_URL = "https://basitkargo.com/api";
@@ -36,7 +31,7 @@ const HANDLERS_CACHE_SECONDS = 3600;
 
 export class BasitKargoConfigError extends Error {
   constructor() {
-    super("Kargo API anahtarı henüz tanımlanmamış — ortam değişkenleri ayarlarından BASIT_KARGO_API_TOKEN ekleyin.");
+    super("Kargo entegrasyonu kurulmadı — Mağaza → Kargo Entegrasyonu sayfasından Basit Kargo API anahtarını girin.");
     this.name = "BasitKargoConfigError";
   }
 }
@@ -59,28 +54,17 @@ export interface BasitKargoHandler {
 /**
  * Dokümandaki iki özel `handlerCode` değeri — firma listesinden değil,
  * stratejiden seçim: Basit Kargo her sipariş için en ucuz/en hızlı
- * firmayı kendisi hesaplar. Admin dropdown'unda GET /handlers'ın dinamik
- * listesinin üstünde gösterilir.
+ * firmayı kendisi hesaplar.
  */
 export const BASIT_KARGO_STRATEGY_HANDLERS: readonly BasitKargoHandler[] = [
   { code: "ECONOMIC", name: "En Ucuz Firma (otomatik)" },
   { code: "FAST", name: "En Hızlı Firma (otomatik)" },
 ];
 
-export function isBasitKargoConfigured(): boolean {
-  return Boolean(serverEnv.basitKargoApiToken);
-}
-
-function requireToken(): string {
-  const token = serverEnv.basitKargoApiToken;
-  if (!token) throw new BasitKargoConfigError();
-  return token;
-}
-
 async function readErrorMessage(response: Response): Promise<string> {
   // Doküman genel bir hata şeması belgelemiyor — `message`/`error` alanı
   // varsa onu, yoksa ham gövdeyi, o da yoksa HTTP durumunu admin'e AYNEN
-  // gösteriyoruz (devir metni: "hata sessizce yutulmasın").
+  // gösteriyoruz (sessizce yutulmaz).
   const text = await response.text().catch(() => "");
   if (text) {
     try {
@@ -92,15 +76,18 @@ async function readErrorMessage(response: Response): Promise<string> {
     }
     return text.slice(0, 300);
   }
+  if (response.status === 401) return "Basit Kargo API anahtarı reddedildi (401) — anahtarı kontrol edin.";
   if (response.status === 429) return "İstek limiti aşıldı (429), biraz sonra tekrar deneyin.";
   return `Basit Kargo HTTP ${response.status}`;
 }
 
 async function basitKargoFetch(
+  token: string,
   path: string,
   init: RequestInit & { next?: { revalidate: number } } = {},
 ): Promise<Response> {
-  const token = requireToken();
+  if (!token) throw new BasitKargoConfigError();
+
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {
@@ -118,8 +105,11 @@ async function basitKargoFetch(
 }
 
 /** GET /handlers — hesaba açık firmalar (koda sabit liste YAZILMADI). 1 saat önbellek. */
-export async function getHandlers(): Promise<BasitKargoHandler[]> {
-  const response = await basitKargoFetch("/handlers", { method: "GET", next: { revalidate: HANDLERS_CACHE_SECONDS } });
+export async function getHandlers(token: string): Promise<BasitKargoHandler[]> {
+  const response = await basitKargoFetch(token, "/handlers", {
+    method: "GET",
+    next: { revalidate: HANDLERS_CACHE_SECONDS },
+  });
   const data = (await response.json()) as unknown;
   if (!Array.isArray(data)) return [];
   return data
@@ -148,14 +138,7 @@ export interface ShippableOrder {
   payment_status: string;
 }
 
-export interface CreateShipmentInput {
-  order: ShippableOrder;
-  handlerCode: string;
-  /** Parti geneli tek değer (bkz. devir metni "Açık karar #1") — hem kg hem desi olarak gönderilir. */
-  desiKg: number;
-}
-
-export interface CreateShipmentResult {
+export interface ShipmentResult {
   basitKargoOrderId: string;
   barcode: string;
   handlerName: string | null;
@@ -171,15 +154,14 @@ const COD_PAYMENT_METHODS: Record<string, "CASH" | "CREDIT_CARD"> = {
  * Türkiye'de kargo faturası max(ağırlık, desi) üzerinden kesilir; desi =
  * (en×boy×yükseklik)/3000. Tek bir "desi/kg" değerini dürüstçe temsil
  * etmek için ağırlık = değer kg, boyutlar ise hacmi değer×3000 cm³ olan
- * bir küp (kenar = ∛(değer×3000)) — böylece hesaplanan desi de aynı
- * değere çıkar.
+ * bir küp — böylece hesaplanan desi de aynı değere çıkar.
  */
 function packageFromDesiKg(desiKg: number) {
   const side = Math.max(1, Math.round(Math.cbrt(desiKg * 3000) * 10) / 10);
   return { height: side, width: side, depth: side, weight: desiKg };
 }
 
-/** "0555...", "555...", "+90 555..." → "05XXXXXXXXX" (son 10 hane, başına 0). 10 haneden kısaysa rakamları olduğu gibi gönder. */
+/** "0555...", "555...", "+90 555..." → "05XXXXXXXXX" (son 10 hane, başına 0). */
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.length < 10) return digits;
@@ -191,15 +173,15 @@ function roundMoney(value: number): number {
 }
 
 /**
- * POST /v2/order/barcode — sipariş oluşturur VE anında barkod üretir.
+ * Ortak sipariş gövdesi (POST /v2/order ve POST /v2/order/barcode aynı
+ * modeli alır; ikincisi ek olarak handlerCode ister).
  *
- * Kapıda ödeme ayrımı (devir metninin en kritik maddesi — yanlış
- * ayarlanırsa müşteriden fazla/eksik tahsilat): `collect` SADECE
+ * Kapıda ödeme ayrımı (en kritik kural — yanlış ayarlanırsa müşteriden
+ * fazla/eksik tahsilat): `collect` + `collectOnDeliveryType` SADECE
  * `payment_status='unpaid'` VE `payment_method` Kapıda Nakit/Kapıda Kart
- * ise gönderilir. Zaten `paid` olan siparişte (online/havale ya da admin'in
- * elle "ödendi" işaretlediği) `collect` HİÇ gönderilmez.
+ * ise gönderilir. Zaten `paid` olan siparişte `collect` HİÇ gönderilmez.
  */
-export async function createShipment({ order, handlerCode, desiKg }: CreateShipmentInput): Promise<CreateShipmentResult> {
+function buildOrderBody(order: ShippableOrder, desiKg: number): Record<string, unknown> {
   const total = roundMoney(Number(order.subtotal) - Number(order.discount_amount ?? 0));
   const codType = order.payment_method ? COD_PAYMENT_METHODS[order.payment_method] : undefined;
   const isCashOnDelivery = order.payment_status === "unpaid" && Boolean(codType);
@@ -214,12 +196,12 @@ export async function createShipment({ order, handlerCode, desiKg }: CreateShipm
 
   const body: Record<string, unknown> = {
     type: "OUTGOING",
-    handlerCode,
     orderTotal: total,
     orderPaymentType,
     orderPaymentStatus: order.payment_status === "paid" ? "PAID" : "UNPAID",
     content: {
       name: `Sipariş #${order.order_number}`,
+      // Webhook payload'ındaki `orderNumber` bu değerle geri gelir (doküman).
       code: `#${order.order_number}`,
       packages: [packageFromDesiKg(desiKg)],
     },
@@ -238,43 +220,92 @@ export async function createShipment({ order, handlerCode, desiKg }: CreateShipm
     body.collectOnDeliveryType = codType;
   }
 
-  const response = await basitKargoFetch("/v2/order/barcode", {
-    method: "POST",
-    headers: { "Idempotency-Key": order.id },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  return body;
+}
 
-  const data = (await response.json()) as {
+function parseShipmentResponse(data: unknown, status: number): ShipmentResult {
+  const record = (data ?? {}) as {
     id?: unknown;
     barcode?: unknown;
     shipmentInfo?: { handler?: { name?: unknown }; handlerShipmentCode?: unknown };
   };
-
-  if (typeof data.id !== "string" || typeof data.barcode !== "string" || !data.barcode) {
-    throw new BasitKargoApiError(response.status, "Basit Kargo yanıtında barkod yok — sipariş oluşmamış olabilir.");
+  if (typeof record.id !== "string" || typeof record.barcode !== "string" || !record.barcode) {
+    throw new BasitKargoApiError(status, "Basit Kargo yanıtında barkod yok — kargo kodu üretilmemiş olabilir.");
   }
-
-  const handlerName = data.shipmentInfo?.handler?.name;
-  const handlerShipmentCode = data.shipmentInfo?.handlerShipmentCode;
-
+  const handlerName = record.shipmentInfo?.handler?.name;
+  const handlerShipmentCode = record.shipmentInfo?.handlerShipmentCode;
   return {
-    basitKargoOrderId: data.id,
-    barcode: data.barcode,
+    basitKargoOrderId: record.id,
+    barcode: record.barcode,
     handlerName: typeof handlerName === "string" ? handlerName : null,
     handlerShipmentCode: typeof handlerShipmentCode === "string" ? handlerShipmentCode : null,
   };
 }
 
 /**
- * GET /label/svg/{id} — etiket SVG'si. Bu fazda UI'a BAĞLANMADI (devir
- * metninde opsiyonel): Basit Kargo sipariş id'si için `orders`'ta kolon
- * yok (sadece barkod `tracking_number`'da), id gerekirse
- * `GET /v2/order/barcode/{barcode}` ile çözülmeli — ayrı küçük takip
- * maddesi. Fonksiyon, o gün için hazır.
+ * Faz 21 — POST /v2/order: BARKODSUZ sipariş oluşturur (onaylanınca
+ * otomatik gönderim). Firma/barkod sonra "Kargoya Hazırla" ile
+ * (generateBarcode). Yanıttan sadece Basit Kargo sipariş id'si kullanılır.
  */
-export async function getLabelSvg(basitKargoOrderId: string): Promise<string> {
-  const response = await basitKargoFetch(`/label/svg/${encodeURIComponent(basitKargoOrderId)}`, {
+export async function createOrder(token: string, order: ShippableOrder, desiKg: number): Promise<{ basitKargoOrderId: string }> {
+  const response = await basitKargoFetch(token, "/v2/order", {
+    method: "POST",
+    headers: { "Idempotency-Key": `${order.id}:push` },
+    body: JSON.stringify(buildOrderBody(order, desiKg)),
+    cache: "no-store",
+  });
+  const data = (await response.json()) as { id?: unknown };
+  if (typeof data.id !== "string" || !data.id) {
+    throw new BasitKargoApiError(response.status, "Basit Kargo yanıtında sipariş id'si yok.");
+  }
+  return { basitKargoOrderId: data.id };
+}
+
+/**
+ * Faz 21 — POST /v2/order/{id}/barcode: Basit Kargo'da ZATEN var olan
+ * (otomatik gönderilmiş) sipariş için barkod üretir. Doküman: gövde
+ * yalnızca { handlerCode } (zorunlu).
+ */
+export async function generateBarcode(
+  token: string,
+  order: Pick<ShippableOrder, "id">,
+  basitKargoOrderId: string,
+  handlerCode: string,
+): Promise<ShipmentResult> {
+  const response = await basitKargoFetch(token, `/v2/order/${encodeURIComponent(basitKargoOrderId)}/barcode`, {
+    method: "POST",
+    headers: { "Idempotency-Key": `${order.id}:barcode` },
+    body: JSON.stringify({ handlerCode }),
+    cache: "no-store",
+  });
+  return parseShipmentResponse(await response.json(), response.status);
+}
+
+/** POST /v2/order/barcode — oluştur + barkod tek çağrı (Basit Kargo'da henüz kaydı olmayan sipariş için). */
+export async function createShipment(
+  token: string,
+  { order, handlerCode, desiKg }: { order: ShippableOrder; handlerCode: string; desiKg: number },
+): Promise<ShipmentResult> {
+  const response = await basitKargoFetch(token, "/v2/order/barcode", {
+    method: "POST",
+    headers: { "Idempotency-Key": `${order.id}:ship` },
+    body: JSON.stringify({ handlerCode, ...buildOrderBody(order, desiKg) }),
+    cache: "no-store",
+  });
+  return parseShipmentResponse(await response.json(), response.status);
+}
+
+/** DELETE /order/{id} — "Sipariş Sil" (dokümanda /v2 öneki YOK). Barkodu olmayan, iptal edilen siparişler için. */
+export async function cancelOrder(token: string, basitKargoOrderId: string): Promise<void> {
+  await basitKargoFetch(token, `/order/${encodeURIComponent(basitKargoOrderId)}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+}
+
+/** GET /label/svg/{id} — etiket SVG'si (sipariş detayındaki "Etiketi İndir"). */
+export async function getLabelSvg(token: string, basitKargoOrderId: string): Promise<string> {
+  const response = await basitKargoFetch(token, `/label/svg/${encodeURIComponent(basitKargoOrderId)}`, {
     method: "GET",
     cache: "no-store",
   });

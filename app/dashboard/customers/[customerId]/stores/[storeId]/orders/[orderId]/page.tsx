@@ -4,7 +4,12 @@ import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils/format-price";
-import { updateOrderStatusAction, updateOrderPaymentStatusAction, updateShippingInfoAction } from "../actions";
+import {
+  updateOrderStatusAction,
+  updateOrderPaymentStatusAction,
+  updateShippingInfoAction,
+  retryShipmentPushAction,
+} from "../actions";
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
@@ -129,6 +134,13 @@ export default async function StoreOrderDetailPage({
   const updatePaymentStatus = updateOrderPaymentStatusAction.bind(null, customerId, storeId, orderId);
   const updateShippingInfo = updateShippingInfoAction.bind(null, customerId, storeId, orderId);
   const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/orders`;
+  const detailPath = `${basePath}/${orderId}`;
+  // Faz 21 — "Tekrar Gönder" bu sayfaya geri döner; banner'ı liste sayfası
+  // gösterdiği için redirect'i listeye değil detaya alıyoruz, mesaj
+  // shipping_sync_status/error alanlarından zaten okunur.
+  const retryShipmentPush = retryShipmentPushAction.bind(null, customerId, storeId, orderId, detailPath);
+  const canRetryShipmentPush =
+    (status === "confirmed" || status === "preparing") && !order.shipping_provider_order_id;
 
   return (
     // key={orderId} is the actual fix — see this file's own top-of-file
@@ -329,6 +341,77 @@ export default async function StoreOrderDetailPage({
         {order.paid_at ? (
           <p className="mt-3 text-xs text-foreground/50">Ödeme tarihi: {new Date(order.paid_at).toLocaleString("tr-TR")}</p>
         ) : null}
+      </section>
+
+      {/*
+        Faz 21 — Basit Kargo senkronu. Üç hâl: not_sent (henüz gönderilmedi /
+        entegrasyon yok), sent (Basit Kargo'da; barkod varsa takip no +
+        "Etiketi İndir"), failed (hata metni + "Tekrar Gönder"). Bu bölüm
+        hiçbir dış istek yapmaz — sadece siparişin kendi kolonlarını okur,
+        token yokken de sorunsuz render olur.
+      */}
+      <section className="mt-6 rounded-lg border border-black/10 p-4">
+        <h2 className="text-sm font-semibold tracking-tight">Kargo (Basit Kargo)</h2>
+        <dl className="mt-3 space-y-1.5 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-foreground/50">Senkron</dt>
+            <dd>
+              {order.shipping_sync_status === "sent" ? (
+                <Badge variant="success">Basit Kargo&apos;da</Badge>
+              ) : order.shipping_sync_status === "failed" ? (
+                <Badge variant="danger">Kargoya gönderilemedi</Badge>
+              ) : (
+                <Badge variant="outline">Gönderilmedi</Badge>
+              )}
+            </dd>
+          </div>
+          {order.shipping_provider_order_id ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-foreground/50">Basit Kargo sipariş no</dt>
+              <dd className="font-mono text-xs text-foreground">{order.shipping_provider_order_id}</dd>
+            </div>
+          ) : null}
+          {order.tracking_number ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-foreground/50">Takip numarası</dt>
+              <dd className="font-mono text-xs text-foreground">
+                {order.carrier ? `${order.carrier} · ` : ""}
+                {order.tracking_number}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+        {order.shipping_sync_error ? (
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50/60 px-3 py-2 text-xs text-red-800">{order.shipping_sync_error}</p>
+        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {canRetryShipmentPush ? (
+            <form action={retryShipmentPush}>
+              <button
+                type="submit"
+                className="rounded-md border border-black/15 px-4 py-1.5 text-sm text-foreground/80 hover:border-black/30"
+              >
+                {order.shipping_sync_status === "failed" ? "Tekrar Gönder" : "Basit Kargo'ya Gönder"}
+              </button>
+            </form>
+          ) : null}
+          {order.shipping_provider_order_id && order.tracking_number ? (
+            <a
+              href={`${detailPath}/label`}
+              target="_blank"
+              rel="noopener"
+              className="rounded-md border border-black/15 px-4 py-1.5 text-sm text-foreground/80 hover:border-black/30"
+            >
+              Etiketi İndir (SVG)
+            </a>
+          ) : null}
+          {!order.shipping_provider_order_id && status !== "confirmed" && status !== "preparing" ? (
+            <p className="text-xs text-foreground/50">
+              Otomatik gönderim sipariş &quot;Onaylandı&quot; durumuna geçince çalışır; barkod &quot;Hazırlanıyor&quot; sekmesindeki
+              &quot;Kargoya Hazırla&quot; ile üretilir.
+            </p>
+          ) : null}
+        </div>
       </section>
     </div>
   );
