@@ -4,6 +4,24 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { cancelOrder, createOrder, type ShippableOrder } from "@/lib/integrations/basit-kargo";
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
+import { summarizeOrderItems } from "@/lib/commerce/order-item-summary";
+
+/** Faz 25 — sipariş id → "Ürün (Renk) ×N, …" özeti (tek sorgu). Basit Kargo içerik adı için. */
+export async function loadOrderContentSummaries(storeId: string, orderIds: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (orderIds.length === 0) return result;
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("order_items")
+    .select("order_id, product_name, variant_label, quantity, created_at")
+    .in("order_id", orderIds)
+    .eq("store_id", storeId)
+    .order("created_at", { ascending: true });
+  const byOrder = new Map<string, { product_name: string; variant_label: string | null; quantity: number }[]>();
+  for (const row of data ?? []) byOrder.set(row.order_id, [...(byOrder.get(row.order_id) ?? []), row]);
+  for (const [orderId, items] of byOrder) result.set(orderId, summarizeOrderItems(items));
+  return result;
+}
 
 /**
  * Faz 21 — "Siparişler onaylanınca otomatik Basit Kargo'ya düşsün"
@@ -72,7 +90,9 @@ export async function pushOrdersToShippingProvider(params: {
     .in("status", [...PUSHABLE_STATUSES])
     .is("shipping_provider_order_id", null);
 
+  const summaries = await loadOrderContentSummaries(storeId, (orders ?? []).map((o) => o.id));
   for (const order of (orders ?? []) as ShippableOrder[]) {
+    order.content_summary = summaries.get(order.id) ?? null;
     try {
       const { basitKargoOrderId } = await createOrder(integration.apiToken, order, integration.defaultDesi);
       const { error } = await admin

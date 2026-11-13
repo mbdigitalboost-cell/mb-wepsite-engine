@@ -251,7 +251,10 @@ export async function updateProductImageAction(
   const { error } = await supabase
     .from("product_images")
     .update({
-      variant_id: parsed.data.variantId || null,
+      // Faz 25 — düzenleme formu variantId alanı göndermez; alan YOKSA
+      // mevcut renk bağı korunur (önceden her alt-metin düzenlemesi bağı
+      // sessizce NULL'a çekerdi). Bağlama/kaldırma Varyantlar sekmesinden.
+      ...(formData.has("variantId") ? { variant_id: parsed.data.variantId || null } : {}),
       storage_path: parsed.data.storagePath,
       alt_text: parsed.data.altText || null,
       sort_order: parsed.data.sortOrder,

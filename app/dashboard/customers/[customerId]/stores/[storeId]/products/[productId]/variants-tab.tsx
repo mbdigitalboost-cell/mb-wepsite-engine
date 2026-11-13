@@ -19,6 +19,7 @@ import { ProductVariantForm } from "./variants/variant-form";
 import { VariantOptionAssignmentForm } from "./variants/variant-option-assignment-form";
 import { DeleteOptionGroupButton } from "./variants/delete-option-group-button";
 import { DeleteVariantButton } from "./variants/delete-variant-button";
+import { VariantColorPanel } from "./variants/variant-color-panel";
 
 interface OptionGroupRow {
   id: string;
@@ -122,6 +123,9 @@ export async function VariantsTab({
 
   return (
     <div>
+      {/* Faz 25 — renk → varyant → görsel bağlama paneli (seçenek grubu yoksa hiç render edilmez). */}
+      <VariantColorPanel customerId={customerId} storeId={storeId} productId={productId} />
+
       <p className="text-sm text-foreground/60">
         Seçenek grupları (Renk, Beden gibi) ve bu gruplardan oluşan satılabilir varyantlar. store_editor+ ekleyip
         düzenleyebilir; kalıcı silme store_admin+&apos;e ayrılmış.

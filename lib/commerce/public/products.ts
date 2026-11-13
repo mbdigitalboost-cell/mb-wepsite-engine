@@ -77,6 +77,13 @@ export interface PublicProductVariant {
   price: number | null;
   compareAtPrice: number | null;
   inStock: boolean;
+  /**
+   * Faz 25 — ham stok adedi (ürün sayfasındaki "Stokta N adet var" satırı
+   * için; devir metni açıkça istedi). Anon'un product_variants.stock kolon
+   * yetkisi zaten vardı (column_privileges ile doğrulandı) — yeni bir
+   * sızıntı yüzeyi açılmıyor, sadece bu sayfada kullanılıyor.
+   */
+  stock: number;
   /** option_value ids this variant is composed of — always >= 1 (see getPublicProductVariants's own filtering). */
   optionValueIds: string[];
 }
@@ -317,6 +324,37 @@ export async function getPublicProductBySlug(storeId: string, productSlug: strin
 }
 
 /**
+ * Faz 25 — YALNIZCA ürün detay sayfası için envanter/teknik bilgi.
+ * PublicProduct'ın dar alan sözleşmesi (liste/kart kullanımında sku/stock
+ * yok) DEĞİŞMEDİ; bu ayrı okuma sadece /urun/[slug] sayfasındaki "Stokta N
+ * adet var" satırı ve "Teknik Bilgi" paneli (stok kodu, barkod) için.
+ * anon'un bu kolonlara SELECT yetkisi zaten var (column_privileges ile
+ * doğrulandı); RLS (products_select_public_active) görünürlüğü yine kapıda.
+ */
+export interface PublicProductInventory {
+  stock: number;
+  trackInventory: boolean;
+  sku: string | null;
+  barcode: string | null;
+}
+
+export async function getPublicProductInventory(storeId: string, productId: string): Promise<PublicProductInventory | null> {
+  const client = createSupabasePublicClient();
+  const { data, error } = await client
+    .from("products")
+    .select("stock, track_inventory, sku, barcode")
+    .eq("store_id", storeId)
+    .eq("id", productId)
+    .maybeSingle();
+  if (error) {
+    console.error("[commerce/public] getPublicProductInventory failed:", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return { stock: data.stock, trackInventory: data.track_inventory, sku: data.sku, barcode: data.barcode };
+}
+
+/**
  * Reads image rows through the ANON client first (so `product_images`'s
  * own `product_images_select_public_active` RLS — migration 0019, parent
  * product must be `is_active`, store must be publicly visible — is the
@@ -497,6 +535,7 @@ export async function getPublicProductVariants(storeId: string, productId: strin
       price: v.price === null ? null : Number(v.price),
       compareAtPrice: v.compare_at_price === null ? null : Number(v.compare_at_price),
       inStock: v.stock > 0,
+      stock: v.stock,
       optionValueIds: optionValueIdsByVariant.get(v.id) ?? [],
     }))
     .filter((v) => v.optionValueIds.length > 0);

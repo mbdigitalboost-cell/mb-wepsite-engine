@@ -31,6 +31,8 @@ interface ProductImageFormProps {
   showIsPrimary?: boolean;
   action: (prevState: ProductImageFormState, formData: FormData) => Promise<ProductImageFormState>;
   submitLabel: string;
+  /** Faz 25 — yalnız "create": yüklenen görsel doğrudan bu varyanta (renge) bağlanır (createProductImageAction zaten variantId okuyor). */
+  variantId?: string;
 }
 
 /**
@@ -58,6 +60,7 @@ export function ProductImageForm({
   showIsPrimary = false,
   action,
   submitLabel,
+  variantId,
 }: ProductImageFormProps) {
   const [state, formAction, pending] = useActionState(action, initialProductImageFormState);
   const formId = useId();
@@ -94,6 +97,7 @@ export function ProductImageForm({
 
   return (
     <form ref={formRef} action={formAction} className="max-w-md space-y-4">
+      {mode === "create" && variantId ? <input type="hidden" name="variantId" value={variantId} /> : null}
       {mode === "create" ? (
         <div>
           <label htmlFor={`${formId}-file`} className="mb-1.5 block text-sm font-medium text-foreground">

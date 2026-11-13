@@ -24,6 +24,7 @@ import { BASIT_KARGO_STRATEGY_HANDLERS, getHandlers, type BasitKargoHandler } fr
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
 import type { OrderStatus, PaymentStatus, ShippingSyncStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
+import { summarizeOrderItems, type OrderItemSummaryRow } from "@/lib/commerce/order-item-summary";
 
 interface OrderRow {
   id: string;
@@ -176,6 +177,19 @@ export default async function StoreOrdersPage({
 
   const rows = (orders ?? []) as OrderRow[];
   const totalCount = count ?? 0;
+
+  // Faz 25 — her satırda ürün + renk özeti (sayfadaki siparişler için TEK sorgu).
+  const { data: itemRows } =
+    rows.length > 0
+      ? await supabase
+          .from("order_items")
+          .select("order_id, product_name, variant_label, quantity, created_at")
+          .in("order_id", rows.map((r) => r.id))
+          .eq("store_id", storeId)
+          .order("created_at", { ascending: true })
+      : { data: [] as (OrderItemSummaryRow & { order_id: string })[] };
+  const itemsByOrder = new Map<string, OrderItemSummaryRow[]>();
+  for (const item of itemRows ?? []) itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) ?? []), item]);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const basePath = `/dashboard/customers/${customerId}/stores/${storeId}/orders`;
 
@@ -475,6 +489,9 @@ export default async function StoreOrdersPage({
                   <span>
                     <span className="font-medium text-foreground">#{order.order_number}</span>{" "}
                     <span className="text-foreground/70">{order.customer_name}</span>{" "}
+                    {itemsByOrder.has(order.id) ? (
+                      <span className="block text-xs text-foreground/60">{summarizeOrderItems(itemsByOrder.get(order.id) ?? [], 140)}</span>
+                    ) : null}
                     <span className="text-xs text-foreground/50">{order.customer_phone}</span>
                   </span>
                   <span className="flex flex-wrap items-center gap-3 text-xs text-foreground/50">

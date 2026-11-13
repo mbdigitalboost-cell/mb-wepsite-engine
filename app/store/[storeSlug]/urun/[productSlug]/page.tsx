@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import {
@@ -9,6 +9,7 @@ import {
   getPublicProductOptions,
   getPublicProductVariants,
   getPublicProductAddons,
+  getPublicProductInventory,
   getPublicProducts,
   getPublicBestSellingProducts,
   type PublicProduct,
@@ -17,8 +18,43 @@ import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { Container } from "@/components/ui/container";
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
 import { ProductImageCardGrid } from "@/components/commerce/public/product-image-card-grid";
-import { ProductConfigurator } from "./product-configurator";
-import { ProductInfoAccordion } from "./product-info-accordion";
+import { ProductDetailClient } from "./product-detail-client";
+
+/** "Kendi Üretimimiz" iddiası yalnızca bunu doğrulanmış olarak kullanan mağazada (duyuru şeridiyle aynı ifade). */
+const OWN_PRODUCTION_STORE_SLUGS = new Set(["taktikalp46"]);
+
+/**
+ * Faz 25 — açıklamayı paragraflara ve özellik kartlarına ayırır. Ayrı bir
+ * "özellikler" alanı şemada YOK; açıklamada "-", "•", "*", "✓" ya da "1."
+ * ile başlayan satırlar özellik kartı olur, gerisi paragraf. Hiç madde
+ * yoksa ızgara çıkmaz.
+ */
+function splitDescription(description: string | null): { paragraphs: string[]; features: string[] } {
+  if (!description) return { paragraphs: [], features: [] };
+  const paragraphs: string[] = [];
+  const features: string[] = [];
+  let buffer: string[] = [];
+  const flush = () => {
+    if (buffer.length > 0) paragraphs.push(buffer.join(" "));
+    buffer = [];
+  };
+  for (const raw of description.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) {
+      flush();
+      continue;
+    }
+    const bullet = line.match(/^(?:[-•*✓✔]|\d+[.)])\s+(.*)$/u);
+    if (bullet) {
+      flush();
+      features.push(bullet[1]);
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return { paragraphs, features };
+}
 
 /**
  * Faz 12 devamı (Part A) — "Çok Satanlar"/"Benzer Ürünler" kartları için her
@@ -85,15 +121,25 @@ export default async function StoreProductPage({
   const product = await getPublicProductBySlug(store.id, productSlug);
   if (!product) notFound();
 
-  const [images, optionGroups, variants, addons, categories] = await Promise.all([
+  // Faz 25 — TÜM görseller (her varyantınki dahil) burada, sunucuda imzalanır;
+  // galeri seçimi client'ta yapılır ama client asla imza üretmez.
+  const [images, optionGroups, variants, addons, categories, inventory] = await Promise.all([
     getPublicProductImages(store.id, product.id),
     getPublicProductOptions(store.id, product.id),
     getPublicProductVariants(store.id, product.id),
     getPublicProductAddons(store.id, product.id),
     getPublicCategories(store.id),
+    getPublicProductInventory(store.id, product.id),
   ]);
-  const primaryImage = images.find((image) => image.isPrimary) ?? images[0] ?? null;
   const category = categories.find((c) => c.id === product.categoryId) ?? null;
+  const { paragraphs, features } = splitDescription(product.description);
+  const models = product.models ?? [];
+  const technicalRows = [
+    product.brand ? { label: "Marka", value: product.brand.name } : null,
+    models.length > 0 ? { label: "Uyumlu modeller", value: models.join(", ") } : null,
+    inventory?.sku ? { label: "Stok kodu", value: inventory.sku } : null,
+    inventory?.barcode ? { label: "Barkod", value: inventory.barcode } : null,
+  ].filter((row): row is { label: string; value: string } => row !== null);
 
   // "Çok Satanlar" / "Benzer Ürünler" — görüntülenen üründen HARİÇ, her
   // ikisi de gerçek veriden (sahte/placeholder ürün YOK). Katalog bugün
@@ -111,7 +157,7 @@ export default async function StoreProductPage({
   ]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-[#0A0A0A] pb-24 lg:pb-0">
       <Container className="py-10">
         <nav aria-label="Breadcrumb" className={`${storefrontMonoClasses} flex flex-wrap items-center gap-1.5 text-xs text-[#6B6B6B]`}>
           <Link href={`/store/${storeSlug}`} className="hover:text-[#F5F5F5] hover:underline">
@@ -129,104 +175,62 @@ export default async function StoreProductPage({
           <span className="text-[#A3A3A3]">{product.name}</span>
         </nav>
 
-        <div className="mt-6 grid gap-8 lg:grid-cols-2">
-          <div>
-            {primaryImage?.url ? (
-              <div className="relative aspect-square w-full overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717]">
-                {/* unoptimized — signed URL, short-lived and not on next.config.ts's remotePatterns allowlist (which only covers the public object path shape), same reasoning as the admin ImagePreview in images/page.tsx. */}
-                <Image
-                  src={primaryImage.url}
-                  alt={primaryImage.altText ?? product.name}
-                  fill
-                  unoptimized
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <div className="flex aspect-square w-full items-center justify-center rounded-[14px] border border-dashed border-[#292929] bg-[#171717] text-sm text-[#A3A3A3]">
-                Görsel yok
-              </div>
-            )}
+        <ProductDetailClient
+          productId={product.id}
+          productSlug={product.slug}
+          productName={product.name}
+          brandName={product.brand?.name ?? null}
+          shortDescription={product.shortDescription}
+          productPrice={product.price}
+          productCompareAtPrice={product.compareAtPrice}
+          images={images}
+          optionGroups={optionGroups}
+          variants={variants}
+          addons={addons}
+          inventory={inventory}
+          models={models}
+          showOwnProductionBadge={OWN_PRODUCTION_STORE_SLUGS.has(storeSlug)}
+        />
 
-            {images.length > 1 ? (
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {images.map((image) => (
-                  <li
-                    key={image.id}
-                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#292929] bg-[#171717]"
-                  >
-                    {image.url ? (
-                      <Image
-                        src={image.url}
-                        alt={image.altText ?? product.name}
-                        fill
-                        unoptimized
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
+        {/* Faz 25 — açıklama + özellik kartları (sol), Teknik Bilgi (sağ). Yalnız gerçek alanlar; puan/yorum/teslim süresi YOK. */}
+        {paragraphs.length > 0 || features.length > 0 || technicalRows.length > 0 ? (
+          <div className="mt-14 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+            <section>
+              <h2 className={`${storefrontDisplayClasses} text-xl font-bold text-[#F5F5F5]`}>Ürün Açıklaması</h2>
+              {paragraphs.map((paragraph, index) => (
+                <p key={index} className="mt-3 text-sm leading-relaxed text-[#A3A3A3]">
+                  {paragraph}
+                </p>
+              ))}
+              {features.length > 0 ? (
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3 rounded-[12px] border border-[#292929] bg-[#171717] p-4 text-sm text-[#F5F5F5]">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D95F00]/15 text-[#D95F00]">
+                        <Check size={13} strokeWidth={3} aria-hidden="true" />
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+
+            {technicalRows.length > 0 ? (
+              <aside className="h-fit rounded-[14px] border border-[#292929] bg-[#171717] p-5">
+                <h2 className={`${storefrontDisplayClasses} text-base font-bold text-[#F5F5F5]`}>Teknik Bilgi</h2>
+                <dl className="mt-3 divide-y divide-[#292929] text-sm">
+                  {technicalRows.map((row) => (
+                    <div key={row.label} className="flex justify-between gap-4 py-2.5">
+                      <dt className="text-[#A3A3A3]">{row.label}</dt>
+                      <dd className={`${storefrontMonoClasses} text-right text-[#F5F5F5]`}>{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </aside>
             ) : null}
           </div>
-
-          <div>
-            {/* STEP 33 display-only — product.brand already resolved by getPublicProductBySlug/attachBrandsToProducts, no extra query here. No link/filter, plain label. */}
-            {product.brand ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-[#A3A3A3]">{product.brand.name}</p>
-            ) : null}
-            <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>{product.name}</h1>
-
-            {product.shortDescription ? (
-              <p className="mt-4 text-sm text-[#A3A3A3]">{product.shortDescription}</p>
-            ) : null}
-
-            {/*
-              FAZ 1 (mağaza sepeti/configurator) — the single price display
-              for this page now lives inside ProductConfigurator itself (it
-              starts at product.price/compareAtPrice and updates live as
-              option/addon selections change) — the static price block that
-              used to sit here was removed rather than kept alongside it, to
-              avoid ever showing two numbers that could disagree.
-            */}
-            <ProductConfigurator
-              productId={product.id}
-              productSlug={product.slug}
-              productName={product.name}
-              productPrice={product.price}
-              productCompareAtPrice={product.compareAtPrice}
-              imageUrl={primaryImage?.url ?? null}
-              optionGroups={optionGroups}
-              variants={variants}
-              addons={addons}
-            />
-
-            {/*
-              Devir metni v2 — kanvasın (UrunDetay.dc.html) 3 satırlı
-              accordion'u: "Ürün Detayları" (artık product.description,
-              önceden burada loose bir paragraf olarak duruyordu — GERÇEK
-              veri, sadece yeri değişti), "Kargo & İade" (zaten başka
-              yerde onaylı/kullanılan 2 gerçek ifade — kanvastaki
-              "2–4 iş günü kargo" gibi teyitsiz bir süre YAZILMADI),
-              "Yorumlar" (platformda hiç değerlendirme sistemi yok —
-              kanvastaki "(24)" sayısı UYDURULMADI, nötr/dürüst bir boş
-              durum mesajı var). "Ürün Detayları" gerçek description YOKSA
-              hiç eklenmiyor (boş bir accordion satırı göstermek yerine).
-            */}
-            <ProductInfoAccordion
-              items={[
-                ...(product.description ? [{ label: "Ürün Detayları", content: product.description }] : []),
-                {
-                  label: "Kargo & İade",
-                  content: "2.000 TL üzeri siparişlerde kargo ücretsizdir. Kolay iade imkanı sunulur.",
-                },
-                { label: "Yorumlar", content: "Henüz değerlendirme yok." },
-              ]}
-            />
-          </div>
-        </div>
+        ) : null}
 
         {/* Ürün bilgisinin ALTINA, StorefrontCtaBand'in ÜSTÜNE — bant sayfanın kapanışı olarak en altta kalıyor. */}
         <ProductImageCardGrid storeSlug={storeSlug} heading="Çok Satanlar" products={bestSellersWithImages} />

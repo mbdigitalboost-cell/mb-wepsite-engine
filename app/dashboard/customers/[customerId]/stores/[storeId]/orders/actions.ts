@@ -8,7 +8,7 @@ import { logAuditEvent } from "@/lib/auth/audit-log";
 import { isOrderStatus, isPaymentStatus } from "@/lib/commerce/order-status-labels";
 import { createShipment, generateBarcode, type ShippableOrder } from "@/lib/integrations/basit-kargo";
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
-import { cancelShippingProviderOrders, pushOrdersToShippingProvider } from "@/lib/integrations/shipping-push";
+import { cancelShippingProviderOrders, loadOrderContentSummaries, pushOrdersToShippingProvider } from "@/lib/integrations/shipping-push";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 
@@ -469,6 +469,8 @@ export async function bulkPrepareForShipmentAction(
 
   type PreparableOrder = ShippableOrder & { shipping_provider_order_id: string | null };
   const eligibleOrders = (eligible ?? []) as PreparableOrder[];
+  const contentSummaries = await loadOrderContentSummaries(storeId, eligibleOrders.map((o) => o.id));
+  for (const order of eligibleOrders) order.content_summary = contentSummaries.get(order.id) ?? null;
   const skippedCount = orderIds.length - eligibleOrders.length;
   const createdOrderIds: string[] = [];
   const errors: string[] = [];

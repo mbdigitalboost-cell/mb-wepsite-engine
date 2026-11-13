@@ -136,6 +136,8 @@ export interface ShippableOrder {
   discount_amount: number;
   payment_method: string | null;
   payment_status: string;
+  /** Faz 25 — ürün + renk özeti ("Kılıf (Coyote (Çöl)) ×1"); varsa içerik adına eklenir. */
+  content_summary?: string | null;
 }
 
 export interface ShipmentResult {
@@ -200,7 +202,8 @@ function buildOrderBody(order: ShippableOrder, desiKg: number): Record<string, u
     orderPaymentType,
     orderPaymentStatus: order.payment_status === "paid" ? "PAID" : "UNPAID",
     content: {
-      name: `Sipariş #${order.order_number}`,
+      // Faz 25 — kargo etiketinde/panelinde ürün adının yanında renk görünsün.
+      name: order.content_summary ? `#${order.order_number} ${order.content_summary}`.slice(0, 200) : `Sipariş #${order.order_number}`,
       // Webhook payload'ındaki `orderNumber` bu değerle geri gelir (doküman).
       code: `#${order.order_number}`,
       packages: [packageFromDesiKg(desiKg)],

@@ -11,6 +11,7 @@ import {
 } from "@/lib/commerce/public/products";
 import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/public/products";
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
+import { formatVariantLabel } from "@/lib/commerce/variant-label";
 import { resolveApplicableDiscount } from "@/lib/commerce/discounts";
 import { CARD_PAYMENT_METHOD, checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
@@ -151,6 +152,16 @@ export async function createOrderAction(
     }
     const { product, optionGroups, variants, addons } = data;
 
+    // Faz 25 — varyantı OLAN üründe varyantsız satır kabul edilmez: aksi
+    // hâlde sipariş "hangi renk?" bilgisi olmadan yazılıyordu (Canik'in 10
+    // satırının tamamında variant_id/variant_label NULL'dı). Seçenek grubu
+    // olup HİÇ varyantı olmayan (henüz admin'de oluşturulmamış) ürün eski
+    // davranışla satılmaya devam eder — canlı mağaza kırılmasın diye.
+    if (!line.variantId && optionGroups.length > 0 && variants.length > 0) {
+      lineErrors.push(`${product.name}: lütfen ${optionGroups.map((g) => g.name.toLocaleLowerCase("tr")).join(" / ")} seçin.`);
+      continue;
+    }
+
     let matchedVariant: PublicProductVariant | null = null;
     if (line.variantId) {
       matchedVariant = variants.find((v) => v.id === line.variantId) ?? null;
@@ -199,16 +210,15 @@ export async function createOrderAction(
       selectedAddonIds: line.addonIds,
     });
 
+    // Faz 25 — okunabilir etiket ("Coyote (Çöl)"), SUNUCUDA taze option
+    // değerlerinden türetilir (client'ın gönderdiği etikete güvenilmez).
     const variantLabel =
       matchedVariant && optionGroups.length > 0
-        ? optionGroups
-            .map((g) => {
-              const valueId = selectedOptionValueIdByGroup[g.id];
-              const value = g.values.find((v) => v.id === valueId);
-              return value ? `${g.name}: ${value.value}` : null;
-            })
-            .filter((label): label is string => label !== null)
-            .join(", ") || null
+        ? formatVariantLabel(
+            optionGroups
+              .map((g) => g.values.find((v) => v.id === selectedOptionValueIdByGroup[g.id])?.value ?? null)
+              .filter((value): value is string => value !== null),
+          )
         : null;
 
     resolvedLines.push({
