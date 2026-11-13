@@ -455,7 +455,7 @@ export function ProductDetailClient({
         <div className="mx-auto flex max-w-xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className={`${storefrontMonoClasses} text-base font-bold text-[#F5F5F5]`}>{formatPrice(lineTotal)}</p>
-            <p className="truncate text-xs text-[#A3A3A3]">{selectionLabel ?? (blockingMessage || productName)}</p>
+            <p className="truncate text-xs text-[#A3A3A3]">{selectionLabel ?? productName}</p>
           </div>
           <button
             type="button"

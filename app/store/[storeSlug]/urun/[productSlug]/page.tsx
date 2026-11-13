@@ -25,34 +25,34 @@ const OWN_PRODUCTION_STORE_SLUGS = new Set(["taktikalp46"]);
 
 /**
  * Faz 25 — açıklamayı paragraflara ve özellik kartlarına ayırır. Ayrı bir
- * "özellikler" alanı şemada YOK; açıklamada "-", "•", "*", "✓" ya da "1."
- * ile başlayan satırlar özellik kartı olur, gerisi paragraf. Hiç madde
- * yoksa ızgara çıkmaz.
+ * "özellikler" alanı şemada YOK. Boş satırla ayrılmış her blok:
+ *  - satırları "-", "•", "*", "✓" ya da "1." ile başlıyorsa → özellik kartları;
+ *  - 2+ satırdan oluşup hiçbir satırı nokta/ünlem/soru ile bitmiyorsa (admin'in
+ *    alt alta yazdığı kısa liste, ör. "Dayanıklı kydex malzeme") → özellik kartları;
+ *  - ":" ile biten tek satırlık başlık ("Öne Çıkan Özellikler:") özellik
+ *    ızgarası zaten başlık taşıdığı için atlanır;
+ *  - geri kalanı paragraf. Hiç madde yoksa ızgara çıkmaz.
  */
 function splitDescription(description: string | null): { paragraphs: string[]; features: string[] } {
   if (!description) return { paragraphs: [], features: [] };
   const paragraphs: string[] = [];
   const features: string[] = [];
-  let buffer: string[] = [];
-  const flush = () => {
-    if (buffer.length > 0) paragraphs.push(buffer.join(" "));
-    buffer = [];
-  };
-  for (const raw of description.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) {
-      flush();
+  const blocks = description
+    .split(/\r?\n\s*\r?\n/)
+    .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
+    .filter((lines) => lines.length > 0);
+  const bulletPattern = /^(?:[-•*✓✔]|\d+[.)])\s+(.*)$/u;
+  for (const lines of blocks) {
+    if (lines.every((line) => bulletPattern.test(line))) {
+      for (const line of lines) features.push(line.match(bulletPattern)?.[1] ?? line);
+    } else if (lines.length >= 2 && lines.every((line) => !/[.!?]$/.test(line))) {
+      features.push(...lines);
+    } else if (lines.length === 1 && lines[0].endsWith(":")) {
       continue;
-    }
-    const bullet = line.match(/^(?:[-•*✓✔]|\d+[.)])\s+(.*)$/u);
-    if (bullet) {
-      flush();
-      features.push(bullet[1]);
     } else {
-      buffer.push(line);
+      paragraphs.push(lines.join(" "));
     }
   }
-  flush();
   return { paragraphs, features };
 }
 
@@ -203,7 +203,10 @@ export default async function StoreProductPage({
                 </p>
               ))}
               {features.length > 0 ? (
-                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                <h3 className={`${storefrontDisplayClasses} mt-6 text-sm font-semibold text-[#F5F5F5]`}>Öne Çıkan Özellikler</h3>
+              ) : null}
+              {features.length > 0 ? (
+                <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                   {features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3 rounded-[12px] border border-[#292929] bg-[#171717] p-4 text-sm text-[#F5F5F5]">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D95F00]/15 text-[#D95F00]">
