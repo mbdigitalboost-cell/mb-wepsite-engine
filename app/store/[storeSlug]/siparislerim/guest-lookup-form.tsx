@@ -64,7 +64,7 @@ export function GuestOrderLookupForm({ storeSlug }: { storeSlug: string }) {
         </button>
       </form>
 
-      {state.status === "success" && state.order ? <OrderStatusCard order={state.order} /> : null}
+      {state.status === "success" && state.order ? <OrderStatusCard order={state.order} storeSlug={storeSlug} /> : null}
     </div>
   );
 }

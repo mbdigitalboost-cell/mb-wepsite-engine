@@ -8,7 +8,7 @@ import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
 import { resolveCartProductImages } from "./actions";
-import { CheckoutForm, type InitialCustomer, type SavedAddress } from "./checkout-form";
+import { CheckoutForm, type CompletedOrderSummary, type InitialCustomer, type SavedAddress } from "./checkout-form";
 
 /**
  * FAZ 1 (mağaza sepeti/configurator) — item list renders purely from
@@ -38,10 +38,15 @@ export function CartList({
   storeSlug,
   initialCustomer,
   savedAddresses,
+  cardPaymentEnabled,
+  completedOrder,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
   savedAddresses: SavedAddress[];
+  /** Faz 22 — bkz. CheckoutForm'un aynı adlı prop'ları; burada sadece geçiriliyor. */
+  cardPaymentEnabled: boolean;
+  completedOrder: CompletedOrderSummary | null;
 }) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
 
@@ -211,7 +216,13 @@ export function CartList({
         </div>
       )}
 
-      <CheckoutForm storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+      <CheckoutForm
+        storeSlug={storeSlug}
+        initialCustomer={initialCustomer}
+        savedAddresses={savedAddresses}
+        cardPaymentEnabled={cardPaymentEnabled}
+        completedOrder={completedOrder}
+      />
     </div>
   );
 }

@@ -7,17 +7,38 @@ import { storefrontButtonClasses, storefrontButtonOutlineClasses } from "@/lib/u
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { useCart, type CartItem } from "@/components/commerce/public/cart/cart-context";
 import { formatPrice } from "@/lib/utils/format-price";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/validation/order";
+import {
+  CARD_PAYMENT_METHOD,
+  CHECKOUT_PAYMENT_METHODS,
+  PAYMENT_METHODS,
+  type CheckoutPaymentMethod,
+} from "@/lib/validation/order";
 import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
 import { createOrderAction } from "./actions";
 import { initialCheckoutFormState } from "./form-state";
 
 /** Tasarım kanvası (Odeme.dc.html) — ödeme yöntemi seçimi düz radio yerine ikon+başlık+açıklamalı seçilebilir kart. Gerçek value'lar lib/validation/order.ts'in PAYMENT_METHODS'ı ile BİREBİR (yeni bir ödeme yöntemi İCAT EDİLMEDİ, sadece 3 gerçek seçeneğin görsel sunumu). */
-const PAYMENT_METHOD_DETAILS: Record<PaymentMethod, { Icon: typeof Banknote; description: string }> = {
+const PAYMENT_METHOD_DETAILS: Record<CheckoutPaymentMethod, { Icon: typeof Banknote; description: string }> = {
   "Kapıda Nakit": { Icon: Banknote, description: "Teslimat anında nakit ödeme" },
   "Kapıda Kart": { Icon: CreditCard, description: "Teslimat anında kartla ödeme" },
   "Havale-EFT": { Icon: Landmark, description: "IBAN bilgisi sipariş sonrası gösterilir" },
+  // Faz 22 — iyzico Checkout Form; yalnızca mağazanın entegrasyonu aktifse listelenir (cardPaymentEnabled).
+  [CARD_PAYMENT_METHOD]: { Icon: CreditCard, description: "iyzico güvenli ödeme sayfası — kart bilgisi bu siteye girilmez" },
 };
+
+/**
+ * Faz 22 — kart ödemesi tamamlanıp (ya da odeme/[orderId] sayfasında başka
+ * yönteme geçilip) /sepet'e geri dönüldüğünde sepet/page.tsx'in SUNUCUDA
+ * doğrulayıp (sipariş uuid'si + mağaza + ödendi/yöntem değişti) prop olarak
+ * verdiği özet. useActionState'in kendi success state'iyle AYNI başarı
+ * ekranını besler — Faz 15'in "tek sabit JSX konumu" invaryantı korunur.
+ */
+export interface CompletedOrderSummary {
+  orderNumber: number;
+  discountAmount: number | null;
+  discountCode: string | null;
+  paidByCard: boolean;
+}
 
 function toWireCartLine(item: CartItem) {
   return {
@@ -119,14 +140,21 @@ export function CheckoutForm({
   storeSlug,
   initialCustomer,
   savedAddresses,
+  cardPaymentEnabled,
+  completedOrder,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
   savedAddresses: SavedAddress[];
+  /** Faz 22 — mağazanın iyzico entegrasyonu aktif mi (sunucu karar verir, sepet/page.tsx). */
+  cardPaymentEnabled: boolean;
+  /** Faz 22 — kart ödemesi/yöntem değişikliği sonrası geri dönüşte sunucunun doğruladığı sipariş. */
+  completedOrder: CompletedOrderSummary | null;
 }) {
   const { items, clear } = useCart();
   const [state, formAction, isPending] = useActionState(createOrderAction.bind(null, storeSlug), initialCheckoutFormState);
   const clearedForOrderNumber = useRef<number | null>(null);
+  const redirectedTo = useRef<string | null>(null);
 
   const [step, setStep] = useState<Step>(1);
 
@@ -160,8 +188,26 @@ export function CheckoutForm({
   );
   const [addressLine, setAddressLine] = useState(defaultAddress?.addressLine ?? initialCustomer?.addressLine ?? "");
   const [note, setNote] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>(PAYMENT_METHODS[0]);
   const [step1Error, setStep1Error] = useState<string | null>(null);
+
+  // Faz 22 — Fatura Bilgileri. Varsayılan: bireysel, fatura adresi =
+  // teslimat adresi. TCKN opsiyonel; kurumsalda ünvan/VKN/vergi dairesi
+  // zorunlu (lib/validation/order.ts server tarafında da aynı kuralı uygular).
+  const [billingType, setBillingType] = useState<"individual" | "corporate">("individual");
+  const [billingName, setBillingName] = useState("");
+  const [billingIdentityNumber, setBillingIdentityNumber] = useState("");
+  const [billingTaxOffice, setBillingTaxOffice] = useState("");
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [billingProvinceId, setBillingProvinceId] = useState("");
+  const [billingDistrictId, setBillingDistrictId] = useState("");
+  const [billingAddressLine, setBillingAddressLine] = useState("");
+  const billingProvince = useMemo(() => PROVINCES.find((p) => String(p.id) === billingProvinceId) ?? null, [billingProvinceId]);
+  const billingDistrict = useMemo(
+    () => billingProvince?.districts.find((d) => String(d.id) === billingDistrictId) ?? null,
+    [billingProvince, billingDistrictId],
+  );
+  const availablePaymentMethods: readonly CheckoutPaymentMethod[] = cardPaymentEnabled ? CHECKOUT_PAYMENT_METHODS : PAYMENT_METHODS;
 
   const selectedProvince = useMemo(() => PROVINCES.find((p) => String(p.id) === provinceId) ?? null, [provinceId]);
   const districts = useMemo(
@@ -174,18 +220,57 @@ export function CheckoutForm({
   );
 
   useEffect(() => {
+    // Faz 22 — kart: sipariş oluştu ama ÖDENMEDİ → sepet boşaltılmaz,
+    // mağaza içi ödeme sayfasına yönlendirilir (tam sayfa geçiş; ödeme
+    // sayfası iyzico'nun iframe'ini kendisi kurar).
+    if (state.status === "success" && state.paymentRedirectUrl) {
+      if (redirectedTo.current !== state.paymentRedirectUrl) {
+        redirectedTo.current = state.paymentRedirectUrl;
+        window.location.assign(state.paymentRedirectUrl);
+      }
+      return;
+    }
     if (state.status === "success" && state.orderNumber !== null && clearedForOrderNumber.current !== state.orderNumber) {
       clearedForOrderNumber.current = state.orderNumber;
       clear();
     }
-  }, [state.status, state.orderNumber, clear]);
+  }, [state.status, state.orderNumber, state.paymentRedirectUrl, clear]);
+
+  // Faz 22 — ödeme sayfasından geri dönüş: sunucu doğruladı (sepet/page.tsx),
+  // sepet ANCAK ŞİMDİ boşaltılır (ödeme doğrulanmadan asla).
+  useEffect(() => {
+    if (completedOrder && clearedForOrderNumber.current !== completedOrder.orderNumber) {
+      clearedForOrderNumber.current = completedOrder.orderNumber;
+      clear();
+    }
+  }, [completedOrder, clear]);
+
+  if (state.status === "success" && state.paymentRedirectUrl) {
+    return (
+      <div id="checkout-form" className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
+        <h2 className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5]`}>Ödeme sayfasına yönlendiriliyorsunuz…</h2>
+        <p className="mt-2 text-sm text-[#A3A3A3]">
+          Siparişiniz <span className={`${storefrontMonoClasses} text-[#F5F5F5]`}>#{state.orderNumber}</span> oluşturuldu; kart
+          ödemesi iyzico güvenli ödeme sayfasında alınacak.{" "}
+          <a href={state.paymentRedirectUrl} className="text-[#D95F00] underline-offset-2 hover:underline">
+            Yönlenmediyseniz tıklayın.
+          </a>
+        </p>
+      </div>
+    );
+  }
 
   // Checked BEFORE the empty-cart case below on purpose: clear() (in the
   // effect above) empties the cart the instant an order succeeds, so
   // items.length is already 0 by the time this renders — without this
   // ordering the confirmation would never be reachable, immediately
   // replaced by "cart is empty" on the very next render.
-  if (state.status === "success" && state.orderNumber !== null) {
+  const successSummary: CompletedOrderSummary | null =
+    state.status === "success" && state.orderNumber !== null && !state.paymentRedirectUrl
+      ? { orderNumber: state.orderNumber, discountAmount: state.discountAmount, discountCode: state.discountCode, paidByCard: false }
+      : completedOrder;
+
+  if (successSummary) {
     return (
       <div id="checkout-form" className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
         <h2 className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5]`}>Siparişiniz Alındı</h2>
@@ -204,8 +289,8 @@ export function CheckoutForm({
         <div className="mt-3 rounded-[14px] border border-[#D95F00]/40 bg-[#D95F00]/10 p-3">
           <p className={`${storefrontDisplayClasses} text-xs font-semibold text-[#D95F00]`}>Sipariş Kodunuz</p>
           <div className="mt-1.5 flex items-center justify-between gap-3">
-            <span className={`${storefrontMonoClasses} text-2xl font-bold text-[#F5F5F5]`}>#{state.orderNumber}</span>
-            <OrderCodeCopyButton orderNumber={state.orderNumber} />
+            <span className={`${storefrontMonoClasses} text-2xl font-bold text-[#F5F5F5]`}>#{successSummary.orderNumber}</span>
+            <OrderCodeCopyButton orderNumber={successSummary.orderNumber} />
           </div>
           <p className="mt-2 text-xs text-[#A3A3A3]">
             Bu kodu ve sipariş verirken girdiğiniz telefon numarasını &quot;Siparişlerim&quot; bölümünde sipariş
@@ -214,12 +299,13 @@ export function CheckoutForm({
         </div>
 
         {/* "Aboneler" indirim sistemi — server'ın (createOrderAction) gerçekten uyguladığı indirim, client'ın kendi tahmini değil. */}
-        {state.discountAmount && state.discountAmount > 0 ? (
+        {successSummary.discountAmount && successSummary.discountAmount > 0 ? (
           <p className="mt-3 text-sm text-emerald-400">
-            {state.discountCode ? `"${state.discountCode}" kodu ile ` : ""}
-            {formatPrice(state.discountAmount)} indirim uygulandı.
+            {successSummary.discountCode ? `"${successSummary.discountCode}" kodu ile ` : ""}
+            {formatPrice(successSummary.discountAmount)} indirim uygulandı.
           </p>
         ) : null}
+        {successSummary.paidByCard ? <p className="mt-3 text-sm text-emerald-400">Kart ödemeniz başarıyla alındı.</p> : null}
         <p className="mt-3 text-sm text-[#A3A3A3]">
           Siparişinizi onaylamak için sizi arayacağız. Sorularınız için mağazayla iletişime geçebilirsiniz.
         </p>
@@ -511,6 +597,10 @@ export function CheckoutForm({
             <input type="hidden" name="addressNeighborhood" value={addressNeighborhood} />
             <input type="hidden" name="addressLine" value={addressLine} />
             <input type="hidden" name="note" value={note} />
+            {/* Faz 22 — fatura adresi il/ilçe İSİM olarak gider (teslimat adresiyle aynı desen). */}
+            <input type="hidden" name="billingSameAsShipping" value={billingSameAsShipping ? "on" : "off"} />
+            <input type="hidden" name="billingAddressCity" value={billingSameAsShipping ? "" : (billingProvince?.name ?? "")} />
+            <input type="hidden" name="billingAddressDistrict" value={billingSameAsShipping ? "" : (billingDistrict?.name ?? "")} />
 
             {state.status === "error" && state.error ? (
               <p role="alert" className="text-sm text-red-400">
@@ -520,7 +610,13 @@ export function CheckoutForm({
 
             <div>
               <p className="mb-1.5 text-sm font-medium text-[#F5F5F5]">Ödeme Yöntemi</p>
-              <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme alt yapısı henüz eklenmedi.</p>
+              {cardPaymentEnabled ? (
+                <p className="mb-2 text-xs text-[#A3A3A3]">
+                  Kart ödemesi iyzico güvenli ödeme sayfasında alınır; diğer yöntemlerde ödeme teslimatta ya da havale ile yapılır.
+                </p>
+              ) : (
+                <p className="mb-2 text-xs text-[#A3A3A3]">Bilgi amaçlıdır — online ödeme bu mağazada henüz aktif değil.</p>
+              )}
               {/*
                 Tasarım kanvası (Odeme.dc.html) — düz radio listesi yerine
                 ikon+başlık+açıklamalı seçilebilir kart. Gerçek <input
@@ -530,7 +626,7 @@ export function CheckoutForm({
                 olan turuncu border + hafif turuncu zemin alıyor.
               */}
               <div className="space-y-2.5">
-                {PAYMENT_METHODS.map((method) => {
+                {availablePaymentMethods.map((method) => {
                   const { Icon, description } = PAYMENT_METHOD_DETAILS[method];
                   const isSelected = paymentMethod === method;
                   return (
@@ -557,6 +653,155 @@ export function CheckoutForm({
                   );
                 })}
               </div>
+            </div>
+
+            {/*
+              Faz 22 — Fatura Bilgileri (tüm ödeme yöntemlerinde). Faz 23
+              (BirFatura) bu alanları orders.billing_* üzerinden okur. TCKN
+              kişisel veri: sadece siparişe yazılır, müşteri tarafında
+              "Siparişlerim"de gösterilmez.
+            */}
+            <div className="space-y-3 rounded-[14px] border border-[#292929] p-4">
+              <p className="text-sm font-medium text-[#F5F5F5]">Fatura Bilgileri</p>
+              <div className="flex flex-wrap gap-4 text-sm text-[#F5F5F5]">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="billingType"
+                    value="individual"
+                    checked={billingType === "individual"}
+                    onChange={() => setBillingType("individual")}
+                    className={storefrontRadioClasses}
+                  />
+                  Bireysel
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="billingType"
+                    value="corporate"
+                    checked={billingType === "corporate"}
+                    onChange={() => setBillingType("corporate")}
+                    className={storefrontRadioClasses}
+                  />
+                  Kurumsal
+                </label>
+              </div>
+
+              {billingType === "individual" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="billingName" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      Fatura Adı Soyadı <span className="font-normal">(boşsa teslimat adı)</span>
+                    </label>
+                    <input
+                      id="billingName"
+                      name="billingName"
+                      type="text"
+                      value={billingName}
+                      onChange={(e) => setBillingName(e.target.value)}
+                      placeholder={customerName}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="billingIdentityNumber" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      TC Kimlik No <span className="font-normal">(opsiyonel)</span>
+                    </label>
+                    <input
+                      id="billingIdentityNumber"
+                      name="billingIdentityNumber"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={11}
+                      autoComplete="off"
+                      value={billingIdentityNumber}
+                      onChange={(e) => setBillingIdentityNumber(e.target.value.replace(/\D/g, ""))}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label htmlFor="billingName" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      Firma Ünvanı
+                    </label>
+                    <input
+                      id="billingName"
+                      name="billingName"
+                      type="text"
+                      value={billingName}
+                      onChange={(e) => setBillingName(e.target.value)}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="billingIdentityNumber" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      Vergi Numarası
+                    </label>
+                    <input
+                      id="billingIdentityNumber"
+                      name="billingIdentityNumber"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      autoComplete="off"
+                      value={billingIdentityNumber}
+                      onChange={(e) => setBillingIdentityNumber(e.target.value.replace(/\D/g, ""))}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="billingTaxOffice" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      Vergi Dairesi
+                    </label>
+                    <input
+                      id="billingTaxOffice"
+                      name="billingTaxOffice"
+                      type="text"
+                      value={billingTaxOffice}
+                      onChange={(e) => setBillingTaxOffice(e.target.value)}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <label className="flex items-center gap-2 text-sm text-[#F5F5F5]">
+                <input
+                  type="checkbox"
+                  checked={billingSameAsShipping}
+                  onChange={(e) => setBillingSameAsShipping(e.target.checked)}
+                  className={storefrontRadioClasses}
+                />
+                Fatura adresim teslimat adresimle aynı
+              </label>
+
+              {!billingSameAsShipping ? (
+                <div className="space-y-3">
+                  <ProvinceDistrictSelect
+                    idPrefix="billing"
+                    provinceId={billingProvinceId}
+                    districtId={billingDistrictId}
+                    onProvinceIdChange={setBillingProvinceId}
+                    onDistrictIdChange={setBillingDistrictId}
+                  />
+                  <div>
+                    <label htmlFor="billingAddressLine" className="mb-1.5 block text-xs font-medium text-[#A3A3A3]">
+                      Fatura Adresi
+                    </label>
+                    <textarea
+                      id="billingAddressLine"
+                      name="billingAddressLine"
+                      value={billingAddressLine}
+                      onChange={(e) => setBillingAddressLine(e.target.value)}
+                      rows={2}
+                      className={storefrontInputClasses}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[14px] border border-[#292929] p-3">
@@ -613,7 +858,7 @@ export function CheckoutForm({
                 Geri
               </button>
               <button type="submit" disabled={isPending} className={storefrontButtonClasses}>
-                {isPending ? "Gönderiliyor..." : "Siparişi Onayla"}
+                {isPending ? "Gönderiliyor..." : paymentMethod === CARD_PAYMENT_METHOD ? "Ödemeye Geç" : "Siparişi Onayla"}
               </button>
             </div>
           </form>

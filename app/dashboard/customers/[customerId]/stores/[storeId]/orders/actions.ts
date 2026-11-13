@@ -10,6 +10,28 @@ import { createShipment, generateBarcode, type ShippableOrder } from "@/lib/inte
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
 import { cancelShippingProviderOrders, pushOrdersToShippingProvider } from "@/lib/integrations/shipping-push";
 import type { OrderStatus } from "@/lib/supabase/types";
+import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
+
+/**
+ * Faz 22 — "kart seçilmiş ama ödenmemiş sipariş onaylanıyor" uyarısı için
+ * sayım. Onay ENGELLENMEZ (devir metni), sadece banner'da sayı gösterilir
+ * (?cardUnpaidConfirmed=N). Sipariş detayında aynı durum kalıcı rozet.
+ */
+async function countCardUnpaidOrders(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  storeId: string,
+  orderIds: string[],
+): Promise<number> {
+  if (orderIds.length === 0) return 0;
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .in("id", orderIds)
+    .eq("store_id", storeId)
+    .eq("payment_method", CARD_PAYMENT_METHOD)
+    .eq("payment_status", "unpaid");
+  return count ?? 0;
+}
 
 /**
  * Faz 21 — durum geçişinin kargo yan etkisi. Siparişin durumu ZATEN
@@ -256,6 +278,7 @@ export async function bulkUpdateOrdersAction(
   const eligibleIds = (eligible ?? []).map((row) => row.id);
   const skippedCount = orderIds.length - eligibleIds.length;
   let updatedCount = 0;
+  const cardUnpaidConfirmed = targetStatus === "confirmed" ? await countCardUnpaidOrders(supabase, storeId, eligibleIds) : 0;
 
   if (eligibleIds.length > 0) {
     const { data: updated, error } = await supabase
@@ -283,7 +306,9 @@ export async function bulkUpdateOrdersAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   const separator = returnPath.includes("?") ? "&" : "?";
-  redirect(`${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}`);
+  redirect(
+    `${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}${cardUnpaidConfirmed > 0 ? `&cardUnpaidConfirmed=${cardUnpaidConfirmed}` : ""}`,
+  );
 }
 
 /**
@@ -323,6 +348,7 @@ export async function bulkAdvanceOrderStatusAction(
   const eligibleIds = (eligible ?? []).map((row) => row.id);
   const skippedCount = orderIds.length - eligibleIds.length;
   let updatedCount = 0;
+  const cardUnpaidConfirmed = toStatus === "confirmed" ? await countCardUnpaidOrders(supabase, storeId, eligibleIds) : 0;
 
   if (eligibleIds.length > 0) {
     const { data: updated, error } = await supabase
@@ -350,7 +376,9 @@ export async function bulkAdvanceOrderStatusAction(
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   const separator = returnPath.includes("?") ? "&" : "?";
-  redirect(`${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}`);
+  redirect(
+    `${returnPath}${separator}bulkUpdated=${updatedCount}&bulkSkipped=${skippedCount}${cardUnpaidConfirmed > 0 ? `&cardUnpaidConfirmed=${cardUnpaidConfirmed}` : ""}`,
+  );
 }
 
 const SHIPMENT_ERROR_QUERY_MAX_LENGTH = 1500;

@@ -23,6 +23,7 @@ import { OrderBulkSubmitButton } from "./order-bulk-submit-button";
 import { BASIT_KARGO_STRATEGY_HANDLERS, getHandlers, type BasitKargoHandler } from "@/lib/integrations/basit-kargo";
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
 import type { OrderStatus, PaymentStatus, ShippingSyncStatus } from "@/lib/supabase/types";
+import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 
 interface OrderRow {
   id: string;
@@ -36,6 +37,7 @@ interface OrderRow {
   tracking_number: string | null;
   shipping_sync_status: ShippingSyncStatus;
   shipping_sync_error: string | null;
+  payment_method: string | null;
 }
 
 interface OrdersSearchParams {
@@ -47,6 +49,10 @@ interface OrdersSearchParams {
   /** Yalnızca toplu durum değiştirme action'larının redirect'inden gelir — buildQuery tarafından ASLA sayfalar arasında taşınmaz, tek seferlik bir banner (Faz 17/Kısım C'nin bulkDeleted/bulkSkipped banner'ıyla AYNI desen). */
   bulkUpdated?: string;
   bulkSkipped?: string;
+  /** Faz 22 — onaylanan seçimde kart seçilmiş ama ödenmemiş sipariş sayısı (uyarı, engel değil). */
+  cardUnpaidConfirmed?: string;
+  /** Faz 22 — "card=pending": kart seçilmiş ama ödenmemiş siparişler (hızlı filtre, buildQuery TAŞIR). */
+  card?: string;
   /** Faz 20 — bulkPrepareForShipmentAction'ın (Basit Kargo) redirect'i; aynı tek seferlik banner deseni, buildQuery taşımaz. */
   shipmentCreated?: string;
   shipmentSkipped?: string;
@@ -90,12 +96,13 @@ function buildQuery(sp: OrdersSearchParams, overrides: Partial<OrdersSearchParam
   if (merged.paymentStatus) params.set("paymentStatus", merged.paymentStatus);
   if (merged.from) params.set("from", merged.from);
   if (merged.to) params.set("to", merged.to);
+  if (merged.card) params.set("card", merged.card);
   if (merged.page && merged.page !== "1") params.set("page", merged.page);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
 
-const hasAnyFilter = (sp: OrdersSearchParams) => Boolean(sp.status || sp.paymentStatus || sp.from || sp.to);
+const hasAnyFilter = (sp: OrdersSearchParams) => Boolean(sp.status || sp.paymentStatus || sp.from || sp.to || sp.card);
 
 /**
  * FAZ 2 (mağaza sepeti/sipariş), FAZ 2.5 ödeme/tarih filtresi + yeni-
@@ -142,7 +149,7 @@ export default async function StoreOrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, customer_name, customer_phone, subtotal, created_at, tracking_number, shipping_sync_status, shipping_sync_error",
+      "id, order_number, status, payment_status, customer_name, customer_phone, subtotal, created_at, tracking_number, shipping_sync_status, shipping_sync_error, payment_method",
       { count: "exact" },
     )
     .eq("store_id", storeId);
@@ -159,6 +166,8 @@ export default async function StoreOrdersPage({
   // day) by appending the day's final instant.
   if (sp.from) query = query.gte("created_at", sp.from);
   if (sp.to) query = query.lte("created_at", `${sp.to}T23:59:59.999`);
+  // Faz 22 — "Ödeme bekleyen kart siparişleri": kart seçilmiş, henüz ödenmemiş.
+  if (sp.card === "pending") query = query.eq("payment_method", CARD_PAYMENT_METHOD).eq("payment_status", "unpaid");
 
   const [{ data: orders, count }, { count: pendingCount }] = await Promise.all([
     query.order("created_at", { ascending: false }).range(offset, offset + PAGE_SIZE - 1),
@@ -234,6 +243,14 @@ export default async function StoreOrdersPage({
         <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
           {sp.bulkUpdated} sipariş güncellendi
           {Number(sp.bulkSkipped ?? 0) > 0 ? `, ${sp.bulkSkipped} sipariş değişmeden kaldı.` : "."}
+        </p>
+      ) : null}
+
+      {/* Faz 22 — kart seçilmiş ama ÖDENMEMİŞ sipariş onaylandı: uyarı, engel değil (otomatik kargo gönderimi de tetiklenmiştir). */}
+      {Number(sp.cardUnpaidConfirmed ?? 0) > 0 ? (
+        <p className="mt-2 rounded-lg border border-red-300 bg-red-50/60 px-4 py-3 text-sm text-red-900">
+          Dikkat: onaylanan siparişlerden {sp.cardUnpaidConfirmed} tanesi kart ile ödenecekti ama ödeme henüz alınmadı. Kargoya vermeden
+          önce ödemeyi kontrol edin.
         </p>
       ) : null}
 
@@ -338,6 +355,13 @@ export default async function StoreOrdersPage({
             Filtreleri temizle
           </Link>
         ) : null}
+        {/* Faz 22 — tek tıkla "kart seçilmiş, ödeme bekleyen" filtresi (diğer filtreler sıfırlanır). */}
+        <Link
+          href={`${basePath}?card=pending`}
+          className={`basis-full text-xs underline-offset-2 hover:underline ${sp.card === "pending" ? "font-medium text-red-700" : "text-foreground/60"}`}
+        >
+          Ödeme bekleyen kart siparişleri →
+        </Link>
       </form>
 
       {rows.length === 0 ? (
@@ -466,9 +490,13 @@ export default async function StoreOrdersPage({
                     ) : order.shipping_sync_status === "sent" ? (
                       <span className="text-[11px] text-foreground/50">Basit Kargo&apos;da</span>
                     ) : null}
-                    <Badge variant={PAYMENT_STATUS_BADGE_VARIANT[order.payment_status]}>
-                      {PAYMENT_STATUS_LABELS[order.payment_status]}
-                    </Badge>
+                    {order.payment_method === CARD_PAYMENT_METHOD && order.payment_status === "unpaid" && order.status !== "cancelled" ? (
+                      <Badge variant="danger">Kart · ödeme bekliyor</Badge>
+                    ) : (
+                      <Badge variant={PAYMENT_STATUS_BADGE_VARIANT[order.payment_status]}>
+                        {PAYMENT_STATUS_LABELS[order.payment_status]}
+                      </Badge>
+                    )}
                     <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
                   </span>
                 </Link>

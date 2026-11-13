@@ -12,7 +12,8 @@ import {
 import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/public/products";
 import { computeConfiguredPrice } from "@/lib/commerce/pricing";
 import { resolveApplicableDiscount } from "@/lib/commerce/discounts";
-import { checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
+import { CARD_PAYMENT_METHOD, checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
+import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -49,7 +50,7 @@ export async function createOrderAction(
 ): Promise<CheckoutFormState> {
   const store = await getStoreBySlug(storeSlug);
   if (!store) {
-    return { status: "error", error: "Mağaza bulunamadı.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: "Mağaza bulunamadı.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
 
   const parsedCustomer = checkoutFormSchema.safeParse({
@@ -63,20 +64,43 @@ export async function createOrderAction(
     note: formData.get("note") || undefined,
     paymentMethod: formData.get("paymentMethod"),
     discountCode: formData.get("discountCode") || undefined,
+    // Faz 22 — Fatura Bilgileri (tüm yöntemlerde). Checkbox "on"/yok.
+    billingType: formData.get("billingType") || "individual",
+    billingName: formData.get("billingName") || undefined,
+    billingIdentityNumber: formData.get("billingIdentityNumber") || undefined,
+    billingTaxOffice: formData.get("billingTaxOffice") || undefined,
+    billingSameAsShipping: formData.get("billingSameAsShipping") !== "off",
+    billingAddressCity: formData.get("billingAddressCity") || undefined,
+    billingAddressDistrict: formData.get("billingAddressDistrict") || undefined,
+    billingAddressLine: formData.get("billingAddressLine") || undefined,
   });
   if (!parsedCustomer.success) {
-    return { status: "error", error: parsedCustomer.error.issues[0]?.message ?? "Geçersiz form.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: parsedCustomer.error.issues[0]?.message ?? "Geçersiz form.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
+  }
+
+  // Faz 22 — kart yalnızca mağazanın iyzico entegrasyonu AKTİFSE kabul
+  // edilir; client "Kredi Kartı" gönderse bile burada son söz sunucunun.
+  const isCardPayment = parsedCustomer.data.paymentMethod === CARD_PAYMENT_METHOD;
+  if (isCardPayment && !(await isCardPaymentEnabled(store.id))) {
+    return {
+      status: "error",
+      error: "Kart ile ödeme şu an kullanılamıyor — lütfen başka bir ödeme yöntemi seçin.",
+      orderNumber: null,
+      discountAmount: null,
+      discountCode: null,
+      paymentRedirectUrl: null,
+    };
   }
 
   let rawLines: unknown;
   try {
     rawLines = JSON.parse(String(formData.get("cartItems") ?? "[]"));
   } catch {
-    return { status: "error", error: "Sepet verisi okunamadı, lütfen sayfayı yenileyip tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: "Sepet verisi okunamadı, lütfen sayfayı yenileyip tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
   const parsedLines = orderCartLinesSchema.safeParse(rawLines);
   if (!parsedLines.success) {
-    return { status: "error", error: parsedLines.error.issues[0]?.message ?? "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: parsedLines.error.issues[0]?.message ?? "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
 
   // Fetch each DISTINCT product's fresh data ONCE (never once per cart
@@ -200,10 +224,10 @@ export async function createOrderAction(
   }
 
   if (lineErrors.length > 0) {
-    return { status: "error", error: [...new Set(lineErrors)].join(" "), orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: [...new Set(lineErrors)].join(" "), orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
   if (resolvedLines.length === 0) {
-    return { status: "error", error: "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
 
   const subtotal = resolvedLines.reduce((sum, line) => sum + line.lineTotal, 0);
@@ -248,7 +272,7 @@ export async function createOrderAction(
     } else if (discountResolution.status === "usage_limit_reached") {
       discountError = "Bu kodun kullanım hakkı dolmuş.";
     }
-    return { status: "error", error: discountError, orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: discountError, orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
   const resolvedDiscount = discountResolution.status === "applied" ? discountResolution.discount : null;
 
@@ -270,13 +294,25 @@ export async function createOrderAction(
       discount_amount: resolvedDiscount?.amount ?? 0,
       discount_code: resolvedDiscount?.code ?? null,
       applied_discount_id: resolvedDiscount?.id ?? null,
+      // Faz 22 — kart: provider izi burada açılır, ödeme odeme/[orderId]
+      // sayfasında alınır; sipariş o ana kadar unpaid/pending kalır.
+      payment_provider: isCardPayment ? "iyzico" : null,
+      // Faz 22 — fatura bilgisi. TCKN/VKN SADECE buraya yazılır (audit metadata'sına değil).
+      billing_type: parsedCustomer.data.billingType,
+      billing_name: parsedCustomer.data.billingName || null,
+      billing_identity_number: (parsedCustomer.data.billingIdentityNumber || "").replace(/\s+/g, "") || null,
+      billing_tax_office: parsedCustomer.data.billingType === "corporate" ? parsedCustomer.data.billingTaxOffice || null : null,
+      billing_same_as_shipping: parsedCustomer.data.billingSameAsShipping,
+      billing_address_city: parsedCustomer.data.billingSameAsShipping ? null : parsedCustomer.data.billingAddressCity || null,
+      billing_address_district: parsedCustomer.data.billingSameAsShipping ? null : parsedCustomer.data.billingAddressDistrict || null,
+      billing_address_line: parsedCustomer.data.billingSameAsShipping ? null : parsedCustomer.data.billingAddressLine || null,
     })
     .select("id, order_number")
     .single();
 
   if (orderError || !order) {
     console.error("[store/sepet] failed to create order:", orderError?.message);
-    return { status: "error", error: "Siparişiniz oluşturulamadı, lütfen tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null };
+    return { status: "error", error: "Siparişiniz oluşturulamadı, lütfen tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
   }
 
   if (user) {
@@ -383,6 +419,8 @@ export async function createOrderAction(
       lineCount: resolvedLines.length,
       discountAmount: resolvedDiscount?.amount ?? 0,
       discountId: resolvedDiscount?.id ?? null,
+      paymentMethod: parsedCustomer.data.paymentMethod,
+      billingType: parsedCustomer.data.billingType,
     },
   });
 
@@ -400,6 +438,10 @@ export async function createOrderAction(
     orderNumber: order.order_number,
     discountAmount: resolvedDiscount?.amount ?? null,
     discountCode: resolvedDiscount?.code ?? null,
+    // Faz 22 — kart: client bu sayfaya yönlenir, sepet ödeme doğrulanana
+    // kadar BOŞALTILMAZ (checkout-form.tsx). Sipariş uuid'si tahmin
+    // edilemez; sayfa ayrıca mağaza eşleşmesini kontrol eder.
+    paymentRedirectUrl: isCardPayment ? `/store/${storeSlug}/odeme/${order.id}` : null,
   };
 }
 

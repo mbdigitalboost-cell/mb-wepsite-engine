@@ -74,6 +74,10 @@ export type PaymentStatus = "unpaid" | "paid" | "refunded";
 
 /** Faz 21 — orders.shipping_sync_status (migration 0039 CHECK constraint ile aynı üç değer). */
 export type ShippingSyncStatus = "not_sent" | "sent" | "failed";
+/** Faz 22 — store_payment_integrations.mode (migration 0040). */
+export type PaymentIntegrationMode = "sandbox" | "live";
+/** Faz 22 — orders.billing_type (migration 0040). */
+export type BillingType = "individual" | "corporate";
 /** "Aboneler" — migration 0036_customer_discounts.sql. 'auto' requires store_customer_id NOT NULL (DB CHECK) — see that migration's own security-decision comment. */
 export type CustomerDiscountType = "code" | "auto";
 export type CustomerDiscountValueType = "percentage" | "fixed";
@@ -1306,6 +1310,64 @@ export type Database = {
         ];
       };
       /**
+       * Faz 22, migration 0040 — magaza basina iyzico ayarlari. RLS acik,
+       * SIFIR policy, anon/authenticated REVOKE: yalnizca service-role
+       * (lib/integrations/store-payment-integration.ts). api_key/secret_key
+       * client'a asla donmez.
+       */
+      store_payment_integrations: {
+        Row: {
+          store_id: string;
+          provider: string;
+          api_key: string | null;
+          secret_key: string | null;
+          mode: PaymentIntegrationMode;
+          is_active: boolean;
+          last_test_at: string | null;
+          last_test_ok: boolean | null;
+          last_test_message: string | null;
+          last_webhook_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          provider?: string;
+          api_key?: string | null;
+          secret_key?: string | null;
+          mode?: PaymentIntegrationMode;
+          is_active?: boolean;
+          last_test_at?: string | null;
+          last_test_ok?: boolean | null;
+          last_test_message?: string | null;
+          last_webhook_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          provider?: string;
+          api_key?: string | null;
+          secret_key?: string | null;
+          mode?: PaymentIntegrationMode;
+          is_active?: boolean;
+          last_test_at?: string | null;
+          last_test_ok?: boolean | null;
+          last_test_message?: string | null;
+          last_webhook_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_payment_integrations_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /**
        * FAZ 2, migration 0029_orders.sql. No anon RLS policy at all (any
        * operation) — written EXCLUSIVELY via createSupabaseAdminClient()
        * from app/store/[storeSlug]/sepet/actions.ts. store_editor+ can
@@ -1345,6 +1407,18 @@ export type Database = {
           shipping_provider_order_id: string | null;
           shipping_sync_status: ShippingSyncStatus;
           shipping_sync_error: string | null;
+          payment_provider: string | null;
+          payment_provider_token: string | null;
+          payment_provider_payment_id: string | null;
+          payment_error: string | null;
+          billing_type: BillingType;
+          billing_name: string | null;
+          billing_identity_number: string | null;
+          billing_tax_office: string | null;
+          billing_same_as_shipping: boolean;
+          billing_address_city: string | null;
+          billing_address_district: string | null;
+          billing_address_line: string | null;
         };
         Insert: {
           id?: string;
@@ -1375,6 +1449,18 @@ export type Database = {
           shipping_provider_order_id?: string | null;
           shipping_sync_status?: ShippingSyncStatus;
           shipping_sync_error?: string | null;
+          payment_provider?: string | null;
+          payment_provider_token?: string | null;
+          payment_provider_payment_id?: string | null;
+          payment_error?: string | null;
+          billing_type?: BillingType;
+          billing_name?: string | null;
+          billing_identity_number?: string | null;
+          billing_tax_office?: string | null;
+          billing_same_as_shipping?: boolean;
+          billing_address_city?: string | null;
+          billing_address_district?: string | null;
+          billing_address_line?: string | null;
         };
         Update: {
           id?: string;
@@ -1405,6 +1491,18 @@ export type Database = {
           shipping_provider_order_id?: string | null;
           shipping_sync_status?: ShippingSyncStatus;
           shipping_sync_error?: string | null;
+          payment_provider?: string | null;
+          payment_provider_token?: string | null;
+          payment_provider_payment_id?: string | null;
+          payment_error?: string | null;
+          billing_type?: BillingType;
+          billing_name?: string | null;
+          billing_identity_number?: string | null;
+          billing_tax_office?: string | null;
+          billing_same_as_shipping?: boolean;
+          billing_address_city?: string | null;
+          billing_address_district?: string | null;
+          billing_address_line?: string | null;
         };
         Relationships: [
           {

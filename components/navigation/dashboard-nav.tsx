@@ -19,6 +19,7 @@ import {
   Palette,
   Mail,
   Truck,
+  CreditCard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -98,6 +99,7 @@ function buildStoreSections(customerId: string, storeId: string): NavSection[] {
         { href: `${base}/branding`, label: "Branding", icon: Palette },
         { href: `${base}/subscribers`, label: "Aboneler", icon: Mail },
         { href: `${base}/shipping`, label: "Kargo", icon: Truck, isNew: true },
+        { href: `${base}/payment`, label: "Ödeme", icon: CreditCard, isNew: true },
       ],
     },
   ];

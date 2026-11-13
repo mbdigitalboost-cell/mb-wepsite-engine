@@ -39,8 +39,11 @@ const PAYMENT_STATUS_TEXT_CLASSES: Record<PaymentStatus, string> = {
   refunded: "text-red-400",
 };
 
-export function OrderStatusCard({ order }: { order: PublicOrderWithItems }) {
+export function OrderStatusCard({ order, storeSlug }: { order: PublicOrderWithItems; storeSlug?: string }) {
   const total = order.subtotal - order.discountAmount;
+  // Faz 22 — kart seçilmiş ama ödenmemiş: müşteri aynı siparişin ödeme sayfasına dönebilir.
+  const cardPaymentPending =
+    storeSlug !== undefined && order.paymentMethod === "Kredi Kartı" && order.paymentStatus === "unpaid" && order.status === "pending";
   const addressSummary = [order.addressNeighborhood, order.addressDistrict, order.addressCity].filter(Boolean).join(", ");
   const hasShippingInfo = Boolean(order.carrier && order.trackingNumber);
 
@@ -59,6 +62,14 @@ export function OrderStatusCard({ order }: { order: PublicOrderWithItems }) {
       <p className={`mt-2 text-xs font-medium ${PAYMENT_STATUS_TEXT_CLASSES[order.paymentStatus]}`}>
         Ödeme: {PAYMENT_STATUS_LABELS[order.paymentStatus]}
         {order.paymentMethod ? ` · ${order.paymentMethod}` : ""}
+        {cardPaymentPending ? (
+          <>
+            {" · "}
+            <a href={`/store/${storeSlug}/odeme/${order.id}`} className="text-[#D95F00] underline-offset-2 hover:underline">
+              Ödemeyi tamamla →
+            </a>
+          </>
+        ) : null}
       </p>
 
       {order.items.length > 0 ? (

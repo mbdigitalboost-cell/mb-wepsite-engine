@@ -3,8 +3,46 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
+import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 import { CartList } from "./cart-list";
-import type { InitialCustomer, SavedAddress } from "./checkout-form";
+import type { CompletedOrderSummary, InitialCustomer, SavedAddress } from "./checkout-form";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Faz 22 — odeme/[orderId] sayfasından /sepet'e geri dönüş:
+ * ?siparis=<order uuid>&odeme=basarili (kart ödendi) ya da &odeme=yontem
+ * (müşteri başka yönteme geçti). Sipariş uuid'si tahmin edilemez; yine de
+ * SUNUCUDA doğrulanır: mağaza eşleşmeli ve iddia edilen durum DB'de
+ * gerçekten böyle olmalı (ödendi / yöntem artık kart değil). Aksi hâlde
+ * null → normal sepet görünümü, hiçbir başarı ekranı gösterilmez.
+ */
+async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme?: string }): Promise<CompletedOrderSummary | null> {
+  const orderId = sp.siparis;
+  if (!orderId || !UUID_PATTERN.test(orderId) || (sp.odeme !== "basarili" && sp.odeme !== "yontem")) return null;
+
+  const admin = createSupabaseAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("order_number, payment_status, payment_method, discount_amount, discount_code")
+    .eq("id", orderId)
+    .eq("store_id", storeId)
+    .maybeSingle();
+  if (!order) return null;
+
+  const paidByCard = order.payment_method === CARD_PAYMENT_METHOD && order.payment_status === "paid";
+  if (sp.odeme === "basarili" && !paidByCard) return null;
+  if (sp.odeme === "yontem" && order.payment_method === CARD_PAYMENT_METHOD) return null;
+
+  return {
+    orderNumber: order.order_number,
+    discountAmount: Number(order.discount_amount) > 0 ? Number(order.discount_amount) : null,
+    discountCode: order.discount_code,
+    paidByCard,
+  };
+}
 
 /**
  * FAZ 5.1 — pre-fills checkout step 1 for a signed-in customer. email
@@ -110,19 +148,36 @@ async function loadCheckoutPrefill(
  * Breadcrumb/CTA bandı BİLEREK eklenmedi — checkout bir dönüşüm akışı,
  * dikkat dağıtıcı ekstra bağlantılar istenmedi (görevin kendi talimatı).
  */
-export default async function StoreCartPage({ params }: { params: Promise<{ storeSlug: string }> }) {
+export default async function StoreCartPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ storeSlug: string }>;
+  searchParams: Promise<{ siparis?: string; odeme?: string }>;
+}) {
   const { storeSlug } = await params;
+  const sp = await searchParams;
 
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const { initialCustomer, savedAddresses } = await loadCheckoutPrefill(store.id);
+  const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder] = await Promise.all([
+    loadCheckoutPrefill(store.id),
+    isCardPaymentEnabled(store.id),
+    loadCompletedOrder(store.id, sp),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Container className="py-10">
         <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Sepetim</h1>
-        <CartList storeSlug={storeSlug} initialCustomer={initialCustomer} savedAddresses={savedAddresses} />
+        <CartList
+          storeSlug={storeSlug}
+          initialCustomer={initialCustomer}
+          savedAddresses={savedAddresses}
+          cardPaymentEnabled={cardPaymentEnabled}
+          completedOrder={completedOrder}
+        />
       </Container>
     </div>
   );

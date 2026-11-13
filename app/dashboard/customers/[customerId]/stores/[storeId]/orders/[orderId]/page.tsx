@@ -19,6 +19,7 @@ import {
   PAYMENT_STATUS_BADGE_VARIANT,
 } from "@/lib/commerce/order-status-labels";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
+import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 
 interface OrderItemRow {
   id: string;
@@ -129,6 +130,9 @@ export default async function StoreOrderDetailPage({
   // i.e. completed); updateShippingInfoAction re-checks this same
   // condition server-side, so a stale page can't bypass it.
   const canEditShipping = status === "shipped" || status === "completed";
+  // Faz 22 — kart seçilmiş ama ödenmemiş: onay ENGELLENMEZ, uyarı gösterilir.
+  const isCardOrder = order.payment_method === CARD_PAYMENT_METHOD;
+  const cardPaymentPending = isCardOrder && paymentStatus === "unpaid" && status !== "cancelled";
 
   const updateStatus = updateOrderStatusAction.bind(null, customerId, storeId, orderId);
   const updatePaymentStatus = updateOrderPaymentStatusAction.bind(null, customerId, storeId, orderId);
@@ -289,6 +293,13 @@ export default async function StoreOrderDetailPage({
 
       <section className="mt-6 rounded-lg border border-black/10 p-4">
         <h2 className="text-sm font-semibold tracking-tight">Durum ve Ödeme</h2>
+        {cardPaymentPending ? (
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50/60 px-3 py-2 text-xs text-red-800">
+            Bu sipariş <strong>kart ile ödenecek</strong> ama ödeme henüz alınmadı
+            {status !== "pending" ? " — sipariş yine de ilerletilmiş durumda" : ""}. Onaylamak kargo gönderimini tetikler; ödemeyi
+            bekleyin ya da müşteriyle görüşün.
+          </p>
+        ) : null}
         <div className="mt-3 flex flex-wrap gap-6">
           <form action={updateStatus} className="flex flex-wrap items-center gap-2">
             <label htmlFor="status" className="text-xs text-foreground/60">
@@ -341,6 +352,79 @@ export default async function StoreOrderDetailPage({
         {order.paid_at ? (
           <p className="mt-3 text-xs text-foreground/50">Ödeme tarihi: {new Date(order.paid_at).toLocaleString("tr-TR")}</p>
         ) : null}
+      </section>
+
+      {/* Faz 22 — kart ödemesi izi (iyzico). İade/iptal API'si kapsam dışı: not olarak gösterilir. */}
+      {isCardOrder || order.payment_provider ? (
+        <section className="mt-6 rounded-lg border border-black/10 p-4">
+          <h2 className="text-sm font-semibold tracking-tight">Online Ödeme (iyzico)</h2>
+          <dl className="mt-3 space-y-1.5 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-foreground/50">Durum</dt>
+              <dd>
+                {paymentStatus === "paid" ? (
+                  <Badge variant="success">Ödendi</Badge>
+                ) : paymentStatus === "refunded" ? (
+                  <Badge variant="outline">İade edildi</Badge>
+                ) : (
+                  <Badge variant="danger">Ödeme bekliyor</Badge>
+                )}
+              </dd>
+            </div>
+            {order.payment_provider_payment_id ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground/50">iyzico ödeme no</dt>
+                <dd className="font-mono text-xs text-foreground">{order.payment_provider_payment_id}</dd>
+              </div>
+            ) : null}
+            {order.paid_at ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground/50">Ödeme zamanı</dt>
+                <dd className="text-foreground">{new Date(order.paid_at).toLocaleString("tr-TR")}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {order.payment_error && paymentStatus === "unpaid" ? (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50/60 px-3 py-2 text-xs text-red-800">Son deneme: {order.payment_error}</p>
+          ) : null}
+          <p className="mt-3 text-xs text-foreground/50">
+            İade / iptal bu panelden yapılmaz: iyzico panelinde ödeme numarasıyla iade edin, sonra yukarıdan ödeme durumunu &quot;İade
+            Edildi&quot; yapın.
+          </p>
+        </section>
+      ) : null}
+
+      {/* Faz 22 — Fatura Bilgileri (Faz 23 BirFatura bunları okur). TCKN/VKN admin için gerekli, burada tam gösterilir; müşteri tarafında gösterilmez. */}
+      <section className="mt-6 rounded-lg border border-black/10 p-4">
+        <h2 className="text-sm font-semibold tracking-tight">Fatura Bilgileri</h2>
+        <dl className="mt-3 space-y-1.5 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-foreground/50">Tür</dt>
+            <dd className="text-foreground">{order.billing_type === "corporate" ? "Kurumsal" : "Bireysel"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-foreground/50">{order.billing_type === "corporate" ? "Ünvan" : "Ad Soyad"}</dt>
+            <dd className="text-foreground">{order.billing_name || order.customer_name}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-foreground/50">{order.billing_type === "corporate" ? "Vergi No" : "TC Kimlik No"}</dt>
+            <dd className="font-mono text-xs text-foreground">{order.billing_identity_number || "-"}</dd>
+          </div>
+          {order.billing_type === "corporate" ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-foreground/50">Vergi Dairesi</dt>
+              <dd className="text-foreground">{order.billing_tax_office || "-"}</dd>
+            </div>
+          ) : null}
+          <div className="flex justify-between gap-3">
+            <dt className="text-foreground/50">Fatura Adresi</dt>
+            <dd className="text-right text-foreground">
+              {order.billing_same_as_shipping || !order.billing_address_line
+                ? "Teslimat adresiyle aynı"
+                : `${order.billing_address_line}, ${order.billing_address_district ?? ""} / ${order.billing_address_city ?? ""}`}
+            </dd>
+          </div>
+        </dl>
       </section>
 
       {/*

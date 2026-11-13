@@ -5,6 +5,12 @@ export interface CheckoutFormState {
   /** "Aboneler" indirim sistemi — server-resolved, sadece status="success" iken dolu. */
   discountAmount: number | null;
   discountCode: string | null;
+  /**
+   * Faz 22 — kart ödemesi seçildiyse sipariş oluşturuldu ama HENÜZ ödenmedi:
+   * client bu adrese (mağaza içi /odeme/[orderId] sayfası) yönlendirir,
+   * sepeti BOŞALTMAZ. Diğer yöntemlerde null (eski davranış aynen).
+   */
+  paymentRedirectUrl: string | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {
@@ -13,4 +19,5 @@ export const initialCheckoutFormState: CheckoutFormState = {
   orderNumber: null,
   discountAmount: null,
   discountCode: null,
+  paymentRedirectUrl: null,
 };

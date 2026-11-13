@@ -12,6 +12,23 @@ export const PAYMENT_METHODS = ["Kapıda Nakit", "Kapıda Kart", "Havale-EFT"] a
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /**
+ * Faz 22 — iyzico Checkout Form ile online kart ödemesi. PAYMENT_METHODS'a
+ * BİLEREK eklenmedi: o liste "bilgi amaçlı, ödeme entegrasyonu yok" üç
+ * yöntem ve Basit Kargo'nun kapıda ödeme eşlemesi (lib/integrations/
+ * basit-kargo.ts) ile diğer yerlerde dolaşıyor. Kart yalnızca mağazanın
+ * iyzico entegrasyonu aktifse vitrinde görünür (createOrderAction server
+ * tarafında da kontrol eder — client'ın "aktif" iddiasına güvenilmez).
+ */
+export const CARD_PAYMENT_METHOD = "Kredi Kartı" as const;
+export const CHECKOUT_PAYMENT_METHODS = [...PAYMENT_METHODS, CARD_PAYMENT_METHOD] as const;
+export type CheckoutPaymentMethod = (typeof CHECKOUT_PAYMENT_METHODS)[number];
+
+export const BILLING_TYPES = ["individual", "corporate"] as const;
+
+const DIGITS_11 = /^\d{11}$/;
+const DIGITS_10 = /^\d{10}$/;
+
+/**
  * FAZ 2 (mağaza sepeti/sipariş), FAZ 2.6 il/ilçe/mahalle + ödeme yöntemi —
  * checkout customer info. Mirrors migrations 0029/0030_orders.sql's
  * `orders` table exactly. storeId/subtotal/status are NEVER fields here —
@@ -44,7 +61,22 @@ export const checkoutFormSchema = z.object({
   addressNeighborhood: z.string().trim().min(1, "Mahalle zorunlu.").max(150),
   addressLine: z.string().trim().min(1, "Adres zorunlu.").max(500),
   note: z.string().trim().max(1000).optional().or(z.literal("")),
-  paymentMethod: z.enum(PAYMENT_METHODS, { message: "Geçerli bir ödeme yöntemi seçin." }),
+  paymentMethod: z.enum(CHECKOUT_PAYMENT_METHODS, { message: "Geçerli bir ödeme yöntemi seçin." }),
+  /**
+   * Faz 22 — Fatura Bilgileri (tüm ödeme yöntemlerinde). Bireysel: ad soyad
+   * opsiyonel (boşsa müşteri adı), TCKN opsiyonel (11 hane). Kurumsal:
+   * ünvan + VKN (10 hane) + vergi dairesi zorunlu. Fatura adresi teslimatla
+   * aynı değilse il/ilçe/adres zorunlu. TCKN kişisel veri — sadece siparişe
+   * yazılır, log/audit'e asla (createOrderAction'ın audit metadata'sında yok).
+   */
+  billingType: z.enum(BILLING_TYPES).default("individual"),
+  billingName: z.string().trim().max(200).optional().or(z.literal("")),
+  billingIdentityNumber: z.string().trim().max(20).optional().or(z.literal("")),
+  billingTaxOffice: z.string().trim().max(100).optional().or(z.literal("")),
+  billingSameAsShipping: z.boolean().default(true),
+  billingAddressCity: z.string().trim().max(100).optional().or(z.literal("")),
+  billingAddressDistrict: z.string().trim().max(100).optional().or(z.literal("")),
+  billingAddressLine: z.string().trim().max(500).optional().or(z.literal("")),
   /**
    * "Aboneler" indirim sistemi — opsiyonel. Sadece ŞEKİL doğrulanıyor
    * (uzunluk), geçerlilik (var mı/aktif mi/süresi geçmiş mi/bu mağazaya mı
@@ -54,6 +86,26 @@ export const checkoutFormSchema = z.object({
    * güvenilmiyor.
    */
   discountCode: z.string().trim().max(50).optional().or(z.literal("")),
+}).superRefine((values, ctx) => {
+  const identity = (values.billingIdentityNumber ?? "").replace(/\s+/g, "");
+  if (values.billingType === "corporate") {
+    if (!values.billingName) {
+      ctx.addIssue({ code: "custom", path: ["billingName"], message: "Kurumsal faturada firma ünvanı zorunlu." });
+    }
+    if (!DIGITS_10.test(identity)) {
+      ctx.addIssue({ code: "custom", path: ["billingIdentityNumber"], message: "Vergi numarası 10 haneli olmalı." });
+    }
+    if (!values.billingTaxOffice) {
+      ctx.addIssue({ code: "custom", path: ["billingTaxOffice"], message: "Vergi dairesi zorunlu." });
+    }
+  } else if (identity && !DIGITS_11.test(identity)) {
+    ctx.addIssue({ code: "custom", path: ["billingIdentityNumber"], message: "TC kimlik numarası 11 haneli olmalı." });
+  }
+  if (!values.billingSameAsShipping) {
+    if (!values.billingAddressCity || !values.billingAddressDistrict || !values.billingAddressLine) {
+      ctx.addIssue({ code: "custom", path: ["billingAddressLine"], message: "Fatura adresi için il, ilçe ve adres zorunlu." });
+    }
+  }
 });
 
 export type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;

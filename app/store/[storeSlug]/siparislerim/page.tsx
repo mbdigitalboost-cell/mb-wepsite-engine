@@ -40,7 +40,7 @@ export default async function StoreOrdersLookupPage({ params }: { params: Promis
         <h1 className={`${spaceGrotesk.className} text-2xl font-bold tracking-tight text-[#F5F5F5]`}>Siparişlerim</h1>
 
         {user ? (
-          <OwnOrdersList storeId={store.id} userId={user.id} authenticatedClient={supabase} />
+          <OwnOrdersList storeId={store.id} storeSlug={storeSlug} userId={user.id} authenticatedClient={supabase} />
         ) : (
           <div className="mt-6">
             <GuestOrderLookupForm storeSlug={storeSlug} />
@@ -53,10 +53,12 @@ export default async function StoreOrdersLookupPage({ params }: { params: Promis
 
 async function OwnOrdersList({
   storeId,
+  storeSlug,
   userId,
   authenticatedClient,
 }: {
   storeId: string;
+  storeSlug: string;
   userId: string;
   authenticatedClient: Awaited<ReturnType<typeof createSupabaseStorefrontServerClient>>;
 }) {
@@ -69,7 +71,7 @@ async function OwnOrdersList({
   return (
     <div className="mt-6 space-y-4">
       {orders.map((order) => (
-        <OrderStatusCard key={order.id} order={order} />
+        <OrderStatusCard key={order.id} order={order} storeSlug={storeSlug} />
       ))}
     </div>
   );
