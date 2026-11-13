@@ -17,7 +17,24 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   "palaska-ve-kemer": "/images/categories/palaska-ve-kemer.jpg",
   "edc-ve-gunluk-tasima": "/images/categories/edc-ve-gunluk-tasima.jpg",
   "kampanyali-urunler": "/images/categories/kampanyali-urunler.jpg",
-  // Faz 24 — GEÇİCİ görsel (gerçek ürün fotoğrafı değil: marka renklerinde
-  // koyu zemin + soluk logo). Gerçek fotoğraf gelince aynı dosya adıyla değiştirilir.
+  // Faz 26 — tasarım setinden gerçek görsel (Faz 24'teki geçici koyu zemin değiştirildi).
   "bel-klipsleri-ve-tokalar": "/images/categories/bel-klipsleri-ve-tokalar.jpg",
+};
+
+/**
+ * Faz 26 — /kategoriler sayfasının geniş banner seti (≈3:1). Kategori adı,
+ * slogan, "Keşfet" ve logo GÖRSELİN İÇİNDE basılı; bu yüzden o sayfa kod
+ * yazısı göstermez, erişilebilir ad alt/aria-label'dan gelir. Burada
+ * olmayan bir kategori (ileride eklenen) 4:3 kart olarak gösterilir.
+ */
+export const CATEGORY_BANNER_IMAGES: Record<string, string> = {
+  "silah-kiliflari": "/images/categories/banner/silah-kiliflari.jpg",
+  "bicak-kiliflari": "/images/categories/banner/bicak-kiliflari.jpg",
+  "sarjor-kiliflari": "/images/categories/banner/sarjor-kiliflari.jpg",
+  giyim: "/images/categories/banner/giyim.jpg",
+  canta: "/images/categories/banner/canta.jpg",
+  "palaska-ve-kemer": "/images/categories/banner/palaska-ve-kemer.jpg",
+  "edc-ve-gunluk-tasima": "/images/categories/banner/edc-ve-gunluk-tasima.jpg",
+  "bel-klipsleri-ve-tokalar": "/images/categories/banner/bel-klipsleri-ve-tokalar.jpg",
+  "kampanyali-urunler": "/images/categories/banner/kampanyali-urunler.jpg",
 };

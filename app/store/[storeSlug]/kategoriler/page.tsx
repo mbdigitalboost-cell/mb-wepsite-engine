@@ -1,28 +1,26 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
+import { CATEGORY_BANNER_IMAGES } from "@/lib/commerce/public/category-fallback-images";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 import { CategoryImageCard } from "@/components/commerce/public/taktikalp46-homepage-sections";
 
 /**
- * FAZ 7.2 — "Tüm Kategoriler" sayfası. Üst kategoriler (parentId === null),
- * layout.tsx'in hamburger menüsüyle AYNI getPublicCategories + top-level
- * filtreleme. Alt kategoriler kategori sayfasının kendisinde gösteriliyor.
+ * FAZ 7.2 — "Tüm Kategoriler" sayfası (üst kategoriler). Faz 24 — v2 koyu tema.
  *
- * Faz 24 — v2 koyu temaya taşındı. Kök neden (kullanıcının "sağa sola
- * beyazlıklar" şikâyeti): bu sayfa Faz 14'te kapsam dışı bırakılmıştı;
- * zemin kök temanın beyazıydı (bg-background), kartlar border-black/10 +
- * bg-black/5 ile koyu fotoğrafların etrafında açık çerçeve bırakıyordu ve
- * sabit h-40/h-48 yükseklik geniş ekranda dar kartta yatay fotoğrafı sert
- * kırpıyordu. Artık:
- *  - zemin/başlık/metin, kategori sayfasıyla ([categorySlug]/page.tsx)
- *    birebir aynı v2 değerleri (#0A0A0A, font-store-display, #F5F5F5/#A3A3A3);
- *  - kartlar ana sayfanın "Kydex Koleksiyonu"/"Taktikal Ekipman" bölümleriyle
- *    AYNI bileşen (CategoryImageCard: #171717 zemin, #292929 kenarlık,
- *    gradient + etiket), en-boy oranı 4:3 (fotoğraf seti ~1.37:1) +
- *    object-cover object-center.
- * Fotoğraf dosyalarının kendisine dokunulmadı.
+ * Faz 26 — geniş banner satırları (masaüstü/tablet 2 sütun, telefon 1).
+ * Banner'larda kategori adı, slogan, "Keşfet" ve logo GÖRSELİN İÇİNDE basılı:
+ *  - kod tarafından ad YAZILMAZ (iki kere görünmesin);
+ *  - erişilebilirlik: tüm banner tek <a>, aria-label = kategori adı, <img alt> =
+ *    kategori adı; görseldeki "Keşfet" yalnız grafik, ayrı buton yok;
+ *  - en-boy 3:1 sabit, object-cover + object-left: kırpma gerekirse yazı
+ *    SOLDA olduğu için SAĞDAN kırpılır;
+ *  - yerel dosya → Next/Image optimizasyonu açık (unoptimized yok).
+ * Banner'ı olmayan (ileride eklenecek) kategori aynı ızgarada ana sayfadaki
+ * 4:3 kart tipiyle (kod yazısıyla) gösterilir — link kaybolmaz.
  */
 export default async function StoreAllCategoriesPage({ params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
@@ -41,17 +39,31 @@ export default async function StoreAllCategoriesPage({ params }: { params: Promi
         {topLevelCategories.length === 0 ? (
           <p className="mt-6 text-sm text-[#A3A3A3]">Henüz kategori eklenmemiş.</p>
         ) : (
-          <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {topLevelCategories.map((category) => (
-              <li key={category.id}>
-                <CategoryImageCard
-                  storeSlug={storeSlug}
-                  category={category}
-                  headingFont={storefrontDisplayClasses}
-                  aspect="aspect-[4/3]"
-                />
-              </li>
-            ))}
+          <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-5">
+            {topLevelCategories.map((category) => {
+              const banner = CATEGORY_BANNER_IMAGES[category.slug];
+              return (
+                <li key={category.id}>
+                  {banner ? (
+                    <Link
+                      href={`/store/${storeSlug}/kategori/${category.slug}`}
+                      aria-label={category.name}
+                      className="group relative block aspect-[3/1] overflow-hidden rounded-[16px] border border-[#292929] bg-[#171717] transition-colors hover:border-[#D95F00] focus-visible:border-[#D95F00] focus-visible:outline-none"
+                    >
+                      <Image
+                        src={banner}
+                        alt={category.name}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        className="object-cover object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    </Link>
+                  ) : (
+                    <CategoryImageCard storeSlug={storeSlug} category={category} headingFont={storefrontDisplayClasses} aspect="aspect-[3/1]" />
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Container>
