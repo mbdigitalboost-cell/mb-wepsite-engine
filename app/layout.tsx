@@ -27,6 +27,23 @@ export const metadata: Metadata = {
     template: "%s | MB Digital Boost",
   },
   description: "MB Digital Boost Website Engine",
+  /**
+   * Faz 24 — panel/Petra ikonları. Önceden app/favicon.ico, app/icon.png,
+   * app/apple-icon.png dosya konvansiyonuyla geliyordu; o konvansiyon kök
+   * favicon'u HER rotaya (mağaza dahil) zorla ekliyor ve segment metadata'sı
+   * onu ezemiyor — mağaza sekmesinde 16x16 eşitliğinde panel ikonu
+   * kazanabiliyordu. Aynı üç dosya BYTE-BYTE aynı (sha1 doğrulandı)
+   * public/'e taşındı ve burada aynı boyut/tiplerle bildiriliyor: panelin
+   * gördüğü ikon değişmiyor, app/store/[storeSlug]/layout.tsx'in `icons`
+   * alanı ise artık bunları EKLEMEK yerine DEĞİŞTİRİYOR.
+   */
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
