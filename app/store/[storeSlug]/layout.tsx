@@ -7,6 +7,8 @@ import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 import { StoreAnnouncementBar } from "@/components/commerce/public/store-announcement-bar";
+import { StoreFooter } from "@/components/commerce/public/store-footer";
+import { getStoreBrandFallback, resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
 
 /**
  * Site geneli tasarım sistemi — bu route ağacının TEK font yükleme noktası
@@ -59,7 +61,26 @@ export async function generateMetadata({
     // is exactly the required fallback, not an accidental omission, and
     // it's what keeps every OTHER store (and Petra, a completely separate
     // route tree) rendering its existing favicon unchanged.
-    icons: profile?.faviconUrl ? { icon: profile.faviconUrl, apple: profile.faviconUrl } : undefined,
+    //
+    // Faz 24 — DB'de favicon yoksa mağazaya özel repo yedeği
+    // (lib/commerce/public/store-brand-assets.ts). Yalnızca /store/** altını
+    // etkiler; kök app/favicon.ico (panel + Petra) DEĞİŞMEDİ.
+    icons: resolveStoreIcons(storeSlug, profile?.faviconUrl ?? null),
+  };
+}
+
+function resolveStoreIcons(storeSlug: string, faviconUrl: string | null): Metadata["icons"] {
+  if (faviconUrl) return { icon: faviconUrl, apple: faviconUrl };
+  const fallback = getStoreBrandFallback(storeSlug);
+  if (!fallback) return undefined;
+  return {
+    icon: [
+      { url: fallback.favicon, sizes: "48x48" },
+      { url: fallback.icon192, type: "image/png", sizes: "192x192" },
+      { url: fallback.icon, type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: fallback.favicon,
+    apple: { url: fallback.appleIcon, sizes: "180x180" },
   };
 }
 
@@ -110,6 +131,8 @@ export default async function StoreLayout({
   // same query kategori/[categorySlug]/page.tsx already uses, just filtered
   // here rather than reinventing a new "top-level only" query.
   const topLevelCategories = allCategories.filter((category) => category.parentId === null);
+  // Faz 24 — header + footer logosu: önce store_profiles.logo_url, yoksa repo yedeği.
+  const logoUrl = resolveStoreLogoUrl(storeSlug, profile?.logoUrl);
 
   return (
     <div className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable} font-store-body`}>
@@ -119,11 +142,13 @@ export default async function StoreLayout({
         <StoreHeader
           storeSlug={storeSlug}
           storeName={store.name}
-          logoUrl={profile?.logoUrl ?? null}
+          logoUrl={logoUrl}
           isLoggedIn={Boolean(user)}
           categories={topLevelCategories}
         />
         {children}
+        {/* Faz 24 — site geneli footer (önceden yalnızca ana sayfada vardı). */}
+        <StoreFooter storeSlug={storeSlug} storeName={store.name} logoUrl={logoUrl} categories={topLevelCategories} />
       </CartProvider>
     </div>
   );

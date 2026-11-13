@@ -68,7 +68,7 @@ export function StoreHeader({
           <Link href={`/store/${storeSlug}`} className="flex items-center">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- store-provided public Storage URL, arbitrary per tenant; not worth a next.config.ts remotePatterns entry for a small header logo.
-              <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain" />
+              <img src={logoUrl} alt={storeName} className="h-7 w-auto max-w-[120px] object-contain sm:h-8" />
             ) : (
               <span className={`${storefrontDisplayClasses} text-sm font-bold text-[#F5F5F5] hover:text-[#D95F00]`}>
                 {storeName}

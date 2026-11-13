@@ -171,31 +171,34 @@ export function SilahiniSecBridgeSection({
  * KydexCollectionSection'daki AYNI görsel+gradient+etiket düzenine
  * çevir") — iki ayrı JSX kopyası yerine tek, parametreli bileşen.
  */
-function CategoryImageCard({
+export function CategoryImageCard({
   storeSlug,
   category,
   headingFont,
-  height,
+  aspect,
 }: {
   storeSlug: string;
   category: PublicCategory;
   headingFont: string;
-  height: string;
+  /** Faz 24 — sabit yükseklik yerine en-boy oranı (ör. "aspect-[4/3]"): geniş ekranda dar kartın yatay fotoğrafı sert kırpmasın. */
+  aspect: string;
 }) {
   const imageUrl = category.imageUrl ?? CATEGORY_FALLBACK_IMAGES[category.slug] ?? null;
   return (
     <Link
       href={`/store/${storeSlug}/kategori/${category.slug}`}
-      className={`group relative block ${height} overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
+      className={`group relative block ${aspect} overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
     >
       {imageUrl ? (
         <Image
           src={imageUrl}
           alt={category.name}
           fill
-          unoptimized
+          // Faz 24 — yerel /images/categories/ dosyaları optimize edilir; DB'deki
+          // image_url admin'in serbest metin URL'i (keyfi host, remotePatterns dışı) → unoptimized kalır.
+          unoptimized={!imageUrl.startsWith("/")}
           sizes="(min-width: 1024px) 25vw, 50vw"
-          className="object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
+          className="object-cover object-center opacity-85 transition-transform duration-300 group-hover:scale-105"
         />
       ) : null}
       <div
@@ -239,7 +242,7 @@ export function KydexCollectionSection({
               storeSlug={storeSlug}
               category={category}
               headingFont={headingFont}
-              height="h-[240px]"
+              aspect="aspect-[4/3]"
             />
           ))}
         </div>
@@ -399,12 +402,12 @@ export function OtherCategoriesSection({
               storeSlug={storeSlug}
               category={category}
               headingFont={headingFont}
-              height="h-[150px]"
+              aspect="aspect-[4/3]"
             />
           ))}
           <Link
             href={`/store/${storeSlug}/kategoriler`}
-            className="flex h-[150px] items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
+            className="flex aspect-[4/3] items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
           >
             Tümünü Gör →
           </Link>
@@ -485,92 +488,4 @@ export function InstagramSection({ instagramUrl, headingFont }: { instagramUrl: 
   );
 }
 
-/**
- * 10. Footer — v2 koyu tema. Sadece bu sayfaya (page.tsx) eklendi, ortak
- * layout.tsx'e DEĞİL: görev "hero'nun altına, page.tsx'e ekle" dedi ve
- * /kategoriler ile /silahini-sec'in kendi koduna dokunmamayı istedi — bu
- * sayfaları da kapsayan bir site-geneli footer, o "dokunma" sınırını
- * dolaylı olarak ihlal ederdi. Site geneline yayma (layout.tsx'e taşıma)
- * istenirse ayrı, açık bir görev olarak yapılmalı.
- *
- * KURUMSAL linkleri (Hakkımızda/İletişim/KVKK/Gizlilik/Kullanım Koşulları)
- * BİLEREK YOK: bu 5 sayfa app/(public)/** altında, yani Petra'nın kendi
- * route ağacında yaşıyor — Taktikalp46'ya ait bir karşılığı yok. Araştırma
- * adımı bunu doğruladı (glob), bu yüzden görevin kendi talimatı gereği
- * ("bulamadığın sayfalar için o linki koyma") bu sütun tamamen atlandı.
- * MÜŞTERİ sütunundaki "Hesabım" linki zaten sipariş geçmişini de aynı
- * sayfada gösteriyor (app/store/[storeSlug]/hesap/page.tsx) — ayrı bir
- * "Siparişlerim" linki eklemedi, aynı sayfaya ikinci bir link olurdu.
- */
-export function StoreFooterV2({
-  storeSlug,
-  categories,
-  headingFont,
-}: {
-  storeSlug: string;
-  categories: PublicCategory[];
-  headingFont: string;
-}) {
-  const footerCategories = categories.slice(0, 6);
-
-  return (
-    <footer className="border-t border-[#292929] bg-[#0A0A0A] py-11 text-[#A3A3A3]">
-      <Container>
-        <div className="flex flex-wrap justify-between gap-10">
-          <div className="max-w-[260px]">
-            <div className={`${headingFont} text-lg font-bold text-white`}>TAKTİKALP46</div>
-            <div className="mt-1 text-xs text-[#A3A3A3]">Güvenle Taşı.</div>
-          </div>
-          <div className="flex flex-wrap gap-14">
-            {footerCategories.length > 0 ? (
-              <div>
-                <div className={`${headingFont} mb-3.5 text-xs font-semibold tracking-wide text-white`}>
-                  KATEGORİLER
-                </div>
-                <div className="flex flex-col gap-2 text-sm">
-                  {footerCategories.map((category) => (
-                    <Link
-                      key={category.id}
-                      href={`/store/${storeSlug}/kategori/${category.slug}`}
-                      className="hover:text-[#F5F5F5] hover:underline"
-                    >
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            <div>
-              <div className={`${headingFont} mb-3.5 text-xs font-semibold tracking-wide text-white`}>MÜŞTERİ</div>
-              <div className="flex flex-col gap-2 text-sm">
-                <Link href={`/store/${storeSlug}/hesap`} className="hover:text-[#F5F5F5] hover:underline">
-                  Hesabım
-                </Link>
-                <Link href={`/store/${storeSlug}/sepet`} className="hover:text-[#F5F5F5] hover:underline">
-                  Sepetim
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/*
-          FAZ 7.3 follow-up — "MB Digital Boost tarafından geliştirilmiştir"
-          rozeti. components/layout/site-footer.tsx (Petra'nın kendi
-          footer'ı) BİREBİR aynı metni + aynı /images/mb-digital-boost/
-          mb-mark.png dosyasını (16px, opacity-70) zaten kullanıyor —
-          Petra'nın kendi kodu/görseli SADECE okundu, değiştirilmedi; aynı
-          stil burada tekrarlandı. mb-mark.png kök public/ altında olduğu
-          için (tek bir tenant'a özel değil) yeni bir dosya kopyalamaya
-          gerek yoktu.
-        */}
-        <div className="mt-7 flex flex-col items-center justify-between gap-2 border-t border-[#292929] pt-4 text-center text-xs text-[#7A776E] sm:flex-row sm:text-left">
-          <p>© {new Date().getFullYear()} Taktikalp46 — Güvenle Taşı.</p>
-          <p className="flex items-center gap-1.5">
-            <span>Web sitesi MB Digital Boost tarafından geliştirilmiştir.</span>
-            <Image src="/images/mb-digital-boost/mb-mark.png" alt="" width={16} height={16} className="opacity-70" />
-          </p>
-        </div>
-      </Container>
-    </footer>
-  );
-}
+/* 10. Footer — Faz 24'te components/commerce/public/store-footer.tsx'e taşındı, layout.tsx'ten site geneli render ediliyor. */

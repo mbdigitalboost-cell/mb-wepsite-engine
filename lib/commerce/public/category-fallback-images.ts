@@ -17,4 +17,7 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   "palaska-ve-kemer": "/images/categories/palaska-ve-kemer.jpg",
   "edc-ve-gunluk-tasima": "/images/categories/edc-ve-gunluk-tasima.jpg",
   "kampanyali-urunler": "/images/categories/kampanyali-urunler.jpg",
+  // Faz 24 — GEÇİCİ görsel (gerçek ürün fotoğrafı değil: marka renklerinde
+  // koyu zemin + soluk logo). Gerçek fotoğraf gelince aynı dosya adıyla değiştirilir.
+  "bel-klipsleri-ve-tokalar": "/images/categories/bel-klipsleri-ve-tokalar.jpg",
 };

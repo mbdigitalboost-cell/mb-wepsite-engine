@@ -20,7 +20,6 @@ import {
   OtherCategoriesSection,
   TrustBadgesSection,
   InstagramSection,
-  StoreFooterV2,
 } from "@/components/commerce/public/taktikalp46-homepage-sections";
 
 /**
@@ -262,7 +261,6 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         <BrandStatementSection headingFont={storefrontDisplayClasses} />
         <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
         {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={storefrontDisplayClasses} /> : null}
-        <StoreFooterV2 storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
       </div>
     </div>
   );
