@@ -1899,7 +1899,19 @@ export type Database = {
         Relationships: [];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      /** Faz 26, migration 0042 — seçenek grubu + değerler + varyantlar + bağlantılar tek transaction'da (SECURITY INVOKER). Dönüş: oluşturulan varyant sayısı. */
+      create_product_option_setup: {
+        Args: {
+          p_store_id: string;
+          p_product_id: string;
+          p_group: Json | null;
+          p_values: Json;
+          p_variants: Json;
+        };
+        Returns: number;
+      };
+    };
     Enums: {
       customer_status: CustomerStatus;
       website_status: WebsiteStatus;

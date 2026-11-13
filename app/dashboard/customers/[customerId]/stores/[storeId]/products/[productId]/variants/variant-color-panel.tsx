@@ -7,8 +7,13 @@ import { comboKey, formatVariantLabel, variantSkuSuffix } from "@/lib/commerce/v
 import { getColorSwatch } from "@/lib/utils/color-swatch-map";
 import { createProductImageAction } from "../images/actions";
 import { ProductImageForm } from "../images/image-form";
-import { createMissingVariantsAction, linkImageToVariantAction, updateVariantInlineAction } from "./color-variant-actions";
-import { CreateMissingVariantsForm, VariantInlineForm } from "./color-variant-forms";
+import {
+  createMissingVariantsAction,
+  createOptionSetupAction,
+  linkImageToVariantAction,
+  updateVariantInlineAction,
+} from "./color-variant-actions";
+import { CreateMissingVariantsForm, OptionSetupForm, VariantInlineForm } from "./color-variant-forms";
 
 function formatTry(value: number): string {
   return value.toLocaleString("tr-TR", { style: "currency", currency: "TRY" });
@@ -67,14 +72,16 @@ export async function VariantColorPanel({
   if (!product) return null;
 
   const groups = groupsData ?? [];
-  if (groups.length === 0) return null;
 
-  const { data: valuesData } = await supabase
-    .from("option_values")
-    .select("id, option_group_id, value, sort_order")
-    .in("option_group_id", groups.map((g) => g.id))
-    .eq("store_id", storeId)
-    .order("sort_order");
+  const { data: valuesData } =
+    groups.length > 0
+      ? await supabase
+          .from("option_values")
+          .select("id, option_group_id, value, sort_order")
+          .in("option_group_id", groups.map((g) => g.id))
+          .eq("store_id", storeId)
+          .order("sort_order")
+      : { data: [] as { id: string; option_group_id: string; value: string; sort_order: number }[] };
   const values = valuesData ?? [];
   const variants = variantsData ?? [];
 
@@ -88,7 +95,7 @@ export async function VariantColorPanel({
 
   // Eksik kombinasyonlar (tüm grupların kartezyen çarpımı − mevcut varyantlar).
   const groupedValues = groups.map((g) => values.filter((v) => v.option_group_id === g.id));
-  const combinations = groupedValues.some((list) => list.length === 0)
+  const combinations = groups.length === 0 || groupedValues.some((list) => list.length === 0)
     ? []
     : groupedValues.reduce<(typeof values)[]>((acc, list) => acc.flatMap((combo) => list.map((v) => [...combo, v])), [[]]);
   const existingKeys = new Set([...valueIdsByVariant.values()].map(comboKey));
@@ -102,8 +109,24 @@ export async function VariantColorPanel({
 
   return (
     <section className="mb-8 rounded-xl border border-[#E4E4E7] bg-[#F6F6F7] p-5 text-[#17171A]">
-      <h2 className="text-sm font-semibold tracking-tight">Renk / Varyant / Görsel bağlama</h2>
-      <p className="mt-1 text-xs text-[#71717A]">
+      <h2 className="text-sm font-semibold tracking-tight">Renkler ve Varyantlar</h2>
+
+      {/* Faz 26 — tek adımda kurulum: grup + değerler + varyantlar tek transaction'da. */}
+      <div className="mt-3 rounded-lg border border-[#E4E4E7] bg-white p-4">
+        <p className="text-sm font-medium">{groups.length === 0 ? "Seçenek ekle (ör. Renk)" : "Seçenek ekle"}</p>
+        <p className="mt-0.5 text-xs text-[#71717A]">
+          Değerleri virgülle yazın; her değer için satılabilir bir varyant otomatik oluşur (fiyat üründen, stok 0 — sonra aşağıdan girin).
+        </p>
+        <div className="mt-3">
+          <OptionSetupForm
+            action={createOptionSetupAction.bind(null, customerId, storeId, productId)}
+            existingGroups={groups.map((g) => ({ id: g.id, name: g.name }))}
+            hasVariants={variants.length > 0}
+          />
+        </div>
+      </div>
+
+      <p className="mt-4 text-xs text-[#71717A]">
         Bir renge bağlı görsel varsa, mağazada o renk seçilince galeri o görsellere geçer. Hiçbir renge bağlanmamış görseller ürünün genel
         görselleridir ve her renkte gösterilir.
       </p>
@@ -143,6 +166,8 @@ export async function VariantColorPanel({
                 ? "Seçenek atanmamış — mağazada seçilemez"
                 : !variant.is_active
                   ? "Pasif"
+                  : variant.stock === 0
+                    ? `Stok girin (şu an 0)${ownImages.length > 0 ? ` · ${ownImages.length} görsel bağlı` : ""}`
                   : ownImages.length > 0
                     ? `${ownImages.length} görsel bağlı`
                     : generalImages.length > 0
@@ -160,7 +185,7 @@ export async function VariantColorPanel({
                     />
                     <div>
                       <p className="text-sm font-semibold">{label}</p>
-                      <p className={`text-xs ${ownImages.length > 0 ? "text-green-700" : "text-[#71717A]"}`}>{status}</p>
+                      <p className={`text-xs ${variant.stock === 0 && variant.is_active ? "font-medium text-[#B34C00]" : ownImages.length > 0 ? "text-green-700" : "text-[#71717A]"}`}>{status}</p>
                     </div>
                   </div>
                   <div className="min-w-[280px] flex-1">
@@ -171,6 +196,7 @@ export async function VariantColorPanel({
                         price: variant.price === null ? "" : String(Number(variant.price)),
                         compareAtPrice: variant.compare_at_price === null ? "" : String(Number(variant.compare_at_price)),
                         stock: String(variant.stock),
+                        isActive: variant.is_active,
                       }}
                       productPriceLabel={`Ürün: ${formatTry(Number(product.price))}`}
                     />

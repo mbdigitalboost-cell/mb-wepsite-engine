@@ -126,6 +126,16 @@ export async function VariantsTab({
       {/* Faz 25 — renk → varyant → görsel bağlama paneli (seçenek grubu yoksa hiç render edilmez). */}
       <VariantColorPanel customerId={customerId} storeId={storeId} productId={productId} />
 
+      {/*
+        Faz 26 — eski dört form (seçenek grubu, değer, varyant, değer ataması)
+        SİLİNMEDİ; iki seçenekli ürünler ve düzeltme senaryoları için
+        "Gelişmiş" altında aynen duruyor.
+      */}
+      <details className="rounded-lg border border-black/10 p-4">
+        <summary className="cursor-pointer text-sm font-medium text-foreground/80">
+          Gelişmiş: seçenek grupları ve varyantlar (tek tek düzenleme)
+        </summary>
+        <div className="mt-4">
       <p className="text-sm text-foreground/60">
         Seçenek grupları (Renk, Beden gibi) ve bu gruplardan oluşan satılabilir varyantlar. store_editor+ ekleyip
         düzenleyebilir; kalıcı silme store_admin+&apos;e ayrılmış.
@@ -357,6 +367,8 @@ export async function VariantsTab({
           </div>
         </div>
       </section>
+        </div>
+      </details>
     </div>
   );
 }
