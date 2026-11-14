@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicBrandsWithProductCounts } from "@/lib/commerce/public/brands";
@@ -7,6 +9,12 @@ import { SilahiniSecBreadcrumb } from "@/components/commerce/public/silahini-sec
 import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-band";
 import { BrandAvatar } from "@/components/commerce/public/brand-avatar";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
+
+/** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
+export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
+  const { storeSlug } = await params;
+  return buildStorePageMetadata({ storeSlug, path: "/silahini-sec", title: "Silahını Seç" });
+}
 
 /**
  * FAZ 7.2 — "Silahını Seç" akışı, adım 1: marka seçimi.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme/theme-provider";
 import { defaultTheme } from "@/lib/theme/default-theme";
-import { publicEnv } from "@/lib/config/env";
+import { getCurrentSite } from "@/lib/sites/current";
 import "./globals.css";
 
 // Phase 9.3: `TrackingScripts` moved OUT of this engine-neutral root
@@ -21,7 +21,9 @@ import "./globals.css";
 // a brief specifies a typeface.
 
 export const metadata: Metadata = {
-  metadataBase: new URL(publicEnv.siteUrl),
+  // Faz 28 — sitenin kendi kanonik adresi (registry); önceden
+  // publicEnv.siteUrl'di ve mağaza projesinde localhost'a düşüyordu.
+  metadataBase: new URL(getCurrentSite().canonicalOrigin),
   title: {
     default: "MB Digital Boost",
     template: "%s | MB Digital Boost",

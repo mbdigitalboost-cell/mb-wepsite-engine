@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 import Image from "next/image";
 import Link from "next/link";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
@@ -21,6 +23,12 @@ import {
   TrustBadgesSection,
   InstagramSection,
 } from "@/components/commerce/public/taktikalp46-homepage-sections";
+
+/** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
+export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
+  const { storeSlug } = await params;
+  return buildStorePageMetadata({ storeSlug, path: "" });
+}
 
 /**
  * FAZ 2C-3 STEP 22 — Taktikalp46 / multi-tenant commerce storefront

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -7,6 +9,12 @@ import { CATEGORY_BANNER_IMAGES } from "@/lib/commerce/public/category-fallback-
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 import { CategoryImageCard } from "@/components/commerce/public/taktikalp46-homepage-sections";
+
+/** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
+export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
+  const { storeSlug } = await params;
+  return buildStorePageMetadata({ storeSlug, path: "/kategoriler", title: "Tüm Kategoriler" });
+}
 
 /**
  * FAZ 7.2 — "Tüm Kategoriler" sayfası (üst kategoriler). Faz 24 — v2 koyu tema.

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -76,6 +78,21 @@ async function attachPrimaryImages(
       return { ...product, imageUrl: primary?.url ?? null };
     }),
   );
+}
+
+/** Faz 28 — başlık, açıklama, mutlak canonical + OG url (lib/sites/store-metadata.ts). */
+export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string; productSlug: string }> }): Promise<Metadata> {
+  const { storeSlug, productSlug } = await params;
+  const store = await getStoreBySlug(storeSlug);
+  const product = store ? await getPublicProductBySlug(store.id, productSlug) : null;
+  if (!store || !product) return {};
+  return buildStorePageMetadata({
+    storeSlug,
+    path: `/urun/${product.slug}`,
+    storeName: store.name,
+    title: product.seoTitle ?? product.name,
+    description: product.seoDescription ?? product.shortDescription,
+  });
 }
 
 /**

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -9,6 +11,21 @@ import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { CategoryFilterBar } from "@/components/commerce/public/category-filter-bar";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
+
+/** Faz 28 — başlık, açıklama, mutlak canonical + OG url (filtre parametreleri canonical'a girmez). */
+export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string; categorySlug: string }> }): Promise<Metadata> {
+  const { storeSlug, categorySlug } = await params;
+  const store = await getStoreBySlug(storeSlug);
+  const category = store ? await getPublicCategoryBySlug(store.id, categorySlug) : null;
+  if (!store || !category) return {};
+  return buildStorePageMetadata({
+    storeSlug,
+    path: `/kategori/${category.slug}`,
+    storeName: store.name,
+    title: category.seoTitle ?? category.name,
+    description: category.seoDescription ?? category.description,
+  });
+}
 
 /**
  * FAZ 2C-3 STEP 22 / FAZ 2C-4 STEP 23 / FAZ 2C STEP 33 — category listing.
