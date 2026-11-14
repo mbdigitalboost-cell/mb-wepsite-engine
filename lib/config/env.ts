@@ -11,8 +11,45 @@
  *    etc.) later is a one-line change in one place.
  */
 
+import { resolveSite, type SiteResolution } from "@/lib/sites/registry";
+
 function readPublicEnv(name: string, fallback = ""): string {
   return process.env[name] ?? fallback;
+}
+
+/**
+ * Faz 28 — bu deploy'un hangi siteyi sunduğu (lib/sites/registry.ts).
+ * SITE_KEY NEXT_PUBLIC değil: tarayıcıda okunduğunda undefined'dır (o
+ * zaman geçiş yedeğine düşer) — site kararı yalnız sunucuda/proxy'de
+ * verilir. PANEL_ONLY_MODE yalnız SITE_KEY'siz eski deploy'lar için
+ * geçiş yedeği (bkz. registry.ts LEGACY_DEFAULT_SITE_KEY yorumu).
+ */
+export function readSiteResolution(): SiteResolution {
+  return resolveSite({
+    siteKey: process.env.SITE_KEY,
+    panelOnlyMode: process.env.PANEL_ONLY_MODE === "true",
+  });
+}
+
+/**
+ * Faz 28 — sitenin mutlak adresi. Sıra: NEXT_PUBLIC_SITE_URL → registry
+ * canonicalOrigin (SITE_KEY açıkça verilmişse) → (yalnız development)
+ * http://localhost:3000 → registry yedeği. Önceden doğrudan localhost'a
+ * düşüyordu; taktikalp46-store projesinde NEXT_PUBLIC_SITE_URL olmadığı
+ * için canlı sitemap/robots "http://localhost:3000" yazıyordu.
+ */
+function resolveSiteUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  let resolution: SiteResolution | null = null;
+  try {
+    resolution = readSiteResolution();
+  } catch {
+    resolution = null;
+  }
+  if (resolution?.explicit) return resolution.site.canonicalOrigin;
+  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
+  return resolution?.site.canonicalOrigin ?? "http://localhost:3000";
 }
 
 function readServerEnv(name: string): string | undefined {
@@ -31,7 +68,7 @@ function readServerEnv(name: string): string | undefined {
 export const publicEnv = {
   supabaseUrl: readPublicEnv("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: readPublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-  siteUrl: readPublicEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000"),
+  siteUrl: resolveSiteUrl(),
 
   // Tracking IDs are intentionally optional and empty by default. Nothing
   // fires until a real ID is supplied per-customer/per-environment.
