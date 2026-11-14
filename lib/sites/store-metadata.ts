@@ -21,6 +21,12 @@ export function buildStorePageMetadata(input: {
   storeName?: string;
   title?: string;
   description?: string | null;
+  /**
+   * Faz 29 Kısım C — paylaşım görselinin mağaza içi yolu (ör.
+   * "/paylasim/urun/x?v=…"). Mutlak, temiz adrese çevrilir; og:image +
+   * twitter:card=summary_large_image eklenir.
+   */
+  imagePath?: string;
 }): Metadata {
   const site = findStoreSiteBySlug(input.storeSlug);
   // Faz 29 — kanonik adres her zaman mağazanın kendi domaininde TEMİZ yol
@@ -36,6 +42,12 @@ export function buildStorePageMetadata(input: {
       ? `${input.title} | ${siteName}`
       : input.title;
   const description = input.description?.trim() || undefined;
+  const imageUrl = input.imagePath
+    ? site
+      ? `${site.canonicalOrigin}${buildStoreHref(input.storeSlug, input.storeSlug, input.imagePath)}`
+      : buildStoreHref(undefined, input.storeSlug, input.imagePath)
+    : null;
+  const images = imageUrl ? [{ url: imageUrl, width: 1200, height: 630, type: "image/jpeg", alt: fullTitle ?? siteName ?? "" }] : undefined;
 
   return {
     ...(fullTitle ? { title: { absolute: fullTitle } } : {}),
@@ -48,6 +60,29 @@ export function buildStorePageMetadata(input: {
       ...(siteName ? { siteName } : {}),
       ...(fullTitle ? { title: fullTitle } : {}),
       ...(description ? { description } : {}),
+      ...(images ? { images } : {}),
     },
+    ...(images
+      ? {
+          twitter: {
+            card: "summary_large_image" as const,
+            ...(fullTitle ? { title: fullTitle } : {}),
+            ...(description ? { description } : {}),
+            images: [images[0].url],
+          },
+        }
+      : {}),
   };
+}
+
+/**
+ * Paylaşım görseli adresindeki ?v= değeri: ad/fiyat değişince adres de
+ * değişir, böylece WhatsApp/Facebook önbelleği ve CDN eski fiyatı göstermez.
+ */
+export function shareImageVersion(...parts: Array<string | number | null | undefined>): string {
+  let hash = 5381;
+  for (const char of parts.map((part) => String(part ?? "")).join("|")) {
+    hash = ((hash << 5) + hash + char.charCodeAt(0)) >>> 0;
+  }
+  return hash.toString(36);
 }

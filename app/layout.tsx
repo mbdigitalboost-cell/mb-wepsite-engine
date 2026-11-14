@@ -28,7 +28,10 @@ export const metadata: Metadata = {
     default: "MB Digital Boost",
     template: "%s | MB Digital Boost",
   },
-  description: "MB Digital Boost Website Engine",
+  // Faz 29 — platform açıklaması yalnız panelde; aksi halde mağaza/kurumsal
+  // sayfalarda twitter:description / og:description'a "MB Digital Boost"
+  // sızıyordu.
+  ...(getCurrentSite().kind === "panel" ? { description: "MB Digital Boost Website Engine" } : {}),
   /**
    * Faz 24 — panel/Petra ikonları. Önceden app/favicon.ico, app/icon.png,
    * app/apple-icon.png dosya konvansiyonuyla geliyordu; o konvansiyon kök

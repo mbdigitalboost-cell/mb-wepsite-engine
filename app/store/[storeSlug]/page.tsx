@@ -28,7 +28,7 @@ import {
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: "" });
+  return buildStorePageMetadata({ storeSlug, path: "", imagePath: "/paylasim" });
 }
 
 /**

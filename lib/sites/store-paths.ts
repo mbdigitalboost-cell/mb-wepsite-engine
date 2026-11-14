@@ -30,8 +30,9 @@ export function buildStoreHref(cleanSlug: string | undefined, storeSlug: string,
   return href;
 }
 
-/** Temiz adres olarak sunulan kök yollar (mağaza sitesinde iç yola rewrite edilir). */
-export const CLEAN_STORE_PREFIXES = ["/urun", "/kategori", "/kategoriler", "/silahini-sec", "/sepet", "/odeme", "/hesap", "/siparislerim"] as const;
+/** Temiz adres olarak sunulan kök yollar (mağaza sitesinde iç yola rewrite edilir).
+ * "/paylasim": paylaşım görselleri (Faz 29 Kısım C, app/store/[storeSlug]/paylasim/**). */
+export const CLEAN_STORE_PREFIXES = ["/urun", "/kategori", "/kategoriler", "/silahini-sec", "/sepet", "/odeme", "/hesap", "/siparislerim", "/paylasim"] as const;
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

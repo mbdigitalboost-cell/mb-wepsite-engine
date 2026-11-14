@@ -57,6 +57,8 @@ const MATRIX: Array<[string, string, RouteDecision]> = [
   ["taktikalp46", "/odeme/abc", rewrite("/store/taktikalp46/odeme/abc")],
   ["taktikalp46", "/hesap/giris", rewrite("/store/taktikalp46/hesap/giris")],
   ["taktikalp46", "/siparislerim", rewrite("/store/taktikalp46/siparislerim")],
+  // Faz 29 Kısım C — paylaşım görselleri de temiz adreste.
+  ["taktikalp46", "/paylasim/urun/canik", rewrite("/store/taktikalp46/paylasim/urun/canik")],
   // Eski /store/<kendi slug'ı> adresleri → temiz adrese kalıcı.
   ["taktikalp46", "/store/taktikalp46", redirect("/", 308)],
   ["taktikalp46", "/store/taktikalp46/kategoriler", redirect("/kategoriler", 308)],

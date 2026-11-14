@@ -1,7 +1,7 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
+import { buildStorePageMetadata, shareImageVersion } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
     storeName: store.name,
     title: category.seoTitle ?? category.name,
     description: category.seoDescription ?? category.description,
+    imagePath: `/paylasim/kategori/${category.slug}?v=${shareImageVersion(category.name)}`,
   });
 }
 

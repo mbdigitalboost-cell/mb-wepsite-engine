@@ -15,7 +15,7 @@ import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string; brandSlug: string }> }): Promise<Metadata> {
   const { storeSlug, brandSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: `/silahini-sec/${brandSlug}` });
+  return buildStorePageMetadata({ storeSlug, path: `/silahini-sec/${brandSlug}`, imagePath: "/paylasim" });
 }
 
 /**

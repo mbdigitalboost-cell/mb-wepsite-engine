@@ -14,7 +14,7 @@ import { CategoryImageCard } from "@/components/commerce/public/taktikalp46-home
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: "/kategoriler", title: "Tüm Kategoriler" });
+  return buildStorePageMetadata({ storeSlug, path: "/kategoriler", title: "Tüm Kategoriler", imagePath: "/paylasim" });
 }
 
 /**

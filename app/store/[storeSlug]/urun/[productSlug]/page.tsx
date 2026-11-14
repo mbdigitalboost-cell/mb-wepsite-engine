@@ -1,7 +1,7 @@
 import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
+import { buildStorePageMetadata, shareImageVersion } from "@/lib/sites/store-metadata";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -93,6 +93,7 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
     storeName: store.name,
     title: product.seoTitle ?? product.name,
     description: product.seoDescription ?? product.shortDescription,
+    imagePath: `/paylasim/urun/${product.slug}?v=${shareImageVersion(product.name, product.price, product.compareAtPrice)}`,
   });
 }
 

@@ -30,7 +30,7 @@ test("clean <-> internal mapping", () => {
 });
 
 test("only storefront roots are clean paths", () => {
-  for (const p of ["/", "/urun/x", "/kategori/y", "/kategoriler", "/silahini-sec", "/sepet", "/odeme/1", "/hesap", "/siparislerim"]) {
+  for (const p of ["/", "/urun/x", "/kategori/y", "/kategoriler", "/silahini-sec", "/sepet", "/odeme/1", "/hesap", "/siparislerim", "/paylasim", "/paylasim/urun/x"]) {
     assert.ok(isCleanStorePath(p), p);
   }
   for (const p of ["/iletisim", "/cozumler/a", "/urunler", "/kategorilerx", "/dashboard", "/store/taktikalp46"]) {
