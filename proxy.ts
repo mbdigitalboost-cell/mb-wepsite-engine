@@ -1,55 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/proxy";
 import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
+import { getCurrentSite } from "@/lib/sites/current";
+import { decideRoute } from "@/lib/sites/route-policy";
 
 /**
- * Faz 14 (panel domain ayrımı): this codebase is deployed twice from the
- * SAME repo — once as the customer-facing site (petra-muhendislik.vercel.app)
- * and once as the shared MB Digital Boost panel
- * (mb-digital-boost-web-panel.vercel.app, meant for every website
- * customer's login, not just Petra's). Both deployments contain the exact
- * same public marketing pages (app/(public)/...) — without this flag,
- * visiting the panel deployment's "/" would show Petra's homepage, which
- * is confusing/wrong once there are other customers too.
+ * Faz 28 — "her Vercel projesi = tek site". Bu dosya artık KARAR VERMİYOR:
+ * kararı lib/sites/route-policy.ts'teki saf `decideRoute()` verir (birim
+ * testli: tests/route-policy.test.ts), burası yalnız uygular. Hangi sitenin
+ * sunulduğu SITE_KEY env'inden gelir (lib/sites/registry.ts).
  *
- * `PANEL_ONLY_MODE=true` (set only on the panel project's Vercel env, NOT
- * on petra-muhendislik) makes every route except the panel's own
- * (/dashboard, /login, /auth, /api, Next internals) redirect to /login —
- * so the panel deployment only ever shows the panel, never a customer's
- * public site.
- *
- * FAZ 5.1d — ROOT CAUSE of the live /mfa-challenge redirect loop
- * (ERR_TOO_MANY_REDIRECTS, mbdigitalboost@gmail.com, 2026-09-26):
- * "/mfa-challenge" was missing from this allowlist. On the panel
- * deployment (PANEL_ONLY_MODE=true — the only place this account ever
- * logs in), every request to /mfa-challenge was redirected straight to
- * /login by THIS proxy, before the page ever rendered — the user never
- * saw a code form because the request never reached
- * app/(auth)/mfa-challenge/page.tsx at all. /login then saw the existing
- * (valid, but AAL1) session cookie and sent them back to /dashboard,
- * which saw the still-unsatisfied AAL2 requirement and sent them back to
- * /mfa-challenge, which this proxy redirected to /login again —
- * deterministic, on every single request, matching exactly what was
- * reported. Unblocked at the time by deleting that user's session + TOTP
- * factor directly in the DB (forcing AAL back to a level that never hits
- * this redirect); this one-line addition is the actual fix.
+ * Tarihçe (korunuyor, çünkü kararların nedeni bunlar):
+ *  - Faz 14: PANEL_ONLY_MODE=true panel projesinde her şeyi /login'e
+ *    gönderiyordu (allowlist) — artık route-policy'nin "panel" dalı, aynı
+ *    allowlist + kök → /login.
+ *  - FAZ 5.1d: /mfa-challenge allowlist'te olmadığı için panelde sonsuz
+ *    yönlendirme döngüsü yaşandı — route-policy ADMIN_PREFIXES'te var ve
+ *    testte sabitlendi.
+ *  - Faz 11: kök → /store/taktikalp46 next.config.ts redirects()'e konunca
+ *    (o katman proxy'den ÖNCE ve site-kör çalışır) panel kökü de mağazaya
+ *    gitti. Kök kararı bu yüzden burada, site'ye göre — slug artık sabit
+ *    kod değil, registry'den.
+ *  - Faz 28: mağaza projesi ("değilse mağaza") başka hiçbir yolu
+ *    kısıtlamıyordu; t46store.com Petra'nın sayfalarını ve 404'ünü
+ *    sunuyordu. Artık varsayılan kapalı.
  */
-const PANEL_ONLY_MODE = process.env.PANEL_ONLY_MODE === "true";
-
-const PANEL_ALLOWED_PATH_PREFIXES = [
-  "/dashboard",
-  "/login",
-  "/mfa-challenge",
-  "/auth",
-  "/api",
-  "/_next",
-  "/favicon.ico",
-  "/store",
-];
-
-function isPanelAllowedPath(pathname: string) {
-  return PANEL_ALLOWED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
 
 /**
  * Domain-bazlı mağaza yönlendirmesi (2026-09 karar: Petra tarzı "her
@@ -76,52 +51,29 @@ function rewriteForStoreDomain(request: NextRequest): NextResponse | null {
   return NextResponse.rewrite(url);
 }
 
-/**
- * Kök path (/) yönlendirmesi — bu repo ORİJİNAL olarak Petra Mühendislik'in
- * tek kiracılı sitesiydi, / hâlâ paylaşılan app/(public)/page.tsx'i
- * (Petra'nın içeriği) render ediyor; Taktikalp46 mağaza motoru
- * (/store/[storeSlug]/**) kodun ÜSTÜNE eklendi, köke hiç dokunulmadı.
- *
- * ÖNCEKİ (YANLIŞ) DENEME — bkz. commit 50487c5: next.config.ts'e statik bir
- * redirects() kaydı eklenmişti. Next.js'in kendi belgesi (node_modules/
- * next/dist/docs/01-app/02-guides/redirecting.md: "redirects runs BEFORE
- * Proxy") — bu, next.config'teki redirect'in proje-kör olarak HER
- * deployment'ta (mb-digital-boost-web-panel DAHİL) bu middleware'den ÖNCE
- * çalışması, PANEL_ONLY_MODE'un kendi "/" -> /login mantığına fırsat
- * kalmadan devreye girmesi anlamına geliyordu — panelin kendi canlı
- * deployment'ında GERÇEKTEN test edilip bu regresyon doğrulandı (Cowork'ün
- * kendi canlı tarayıcı testi). Doğru yer BURASI: aynı middleware, PANEL_ONLY_MODE
- * ile SİMETRİK dallanıyor — panel projesinde (PANEL_ONLY_MODE=true) kök zaten
- * aşağıdaki PANEL_ONLY_MODE bloğunda /login'e gidiyor; mağaza projesinde
- * (PANEL_ONLY_MODE=false/unset) kök burada /store/taktikalp46'a gidiyor.
- * İkisi asla aynı anda tetiklenmiyor (if/else).
- *
- * Tek kiracılı statik bir hedef (`taktikalp46`) — ikinci bir mağaza/kiracı
- * bu `main` dalına eklenirse bu yaklaşımın (ya da hedefin) yeniden
- * değerlendirilmesi gerekir. Petra'nın GERÇEK production'ı
- * (petramuhendislik.com) ayrı bir Vercel projesinden, ayrı/dondurulmuş bir
- * git dalından (petra-production) deploy ediyor — bu kod o dala hiç
- * merge edilmeyecek, orayı hiç etkilemiyor.
- */
-function redirectRootForStoreProject(request: NextRequest): NextResponse | null {
-  if (PANEL_ONLY_MODE) return null;
-  if (request.nextUrl.pathname !== "/") return null;
-
-  return NextResponse.redirect(new URL("/store/taktikalp46", request.url));
-}
-
 export async function proxy(request: NextRequest) {
+  // Not: STORE_DOMAINS bugün boş (bkz. Faz 28 Kısım D envanteri — temiz
+  // adresler ayrı fazda); boşken bu her zaman null döner.
   const domainRewrite = rewriteForStoreDomain(request);
   if (domainRewrite) return domainRewrite;
 
-  if (PANEL_ONLY_MODE && !isPanelAllowedPath(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const decision = decideRoute({ site: getCurrentSite(), pathname: request.nextUrl.pathname });
+
+  switch (decision.type) {
+    case "redirect": {
+      const target = new URL(decision.target, request.url);
+      // Siteler arası 308'de sorgu dizesi korunur (ör. ?code=… / filtreler).
+      if (decision.status === 308) target.search = request.nextUrl.search;
+      return NextResponse.redirect(target, decision.status);
+    }
+    case "rewrite":
+      return NextResponse.rewrite(new URL(decision.target, request.url));
+    case "notFound":
+      // Sitenin kendi markalı 404'ü; HTTP durum kodunu o sayfa (notFound()) 404 yapar.
+      return NextResponse.rewrite(new URL(decision.rewriteTo, request.url));
+    case "next":
+      return updateSupabaseSession(request);
   }
-
-  const rootRedirect = redirectRootForStoreProject(request);
-  if (rootRedirect) return rootRedirect;
-
-  return updateSupabaseSession(request);
 }
 
 export const config = {
