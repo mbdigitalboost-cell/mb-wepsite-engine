@@ -54,7 +54,7 @@ export async function createMissingVariantsAction(
   _prevState: ColorVariantFormState,
   formData: FormData,
 ): Promise<ColorVariantFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
   const { data: product } = await supabase
@@ -210,7 +210,7 @@ export async function createOptionSetupAction(
   _prevState: ColorVariantFormState,
   formData: FormData,
 ): Promise<ColorVariantFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
   const requestedGroupId = String(formData.get("groupId") ?? "").trim();
@@ -403,7 +403,7 @@ export async function updateVariantInlineAction(
   _prevState: ColorVariantFormState,
   formData: FormData,
 ): Promise<ColorVariantFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const sku = String(formData.get("sku") ?? "").trim();
   const priceRaw = String(formData.get("price") ?? "").trim();
@@ -460,7 +460,7 @@ export async function linkImageToVariantAction(
   imageId: string,
   variantId: string | null,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
   if (variantId) {

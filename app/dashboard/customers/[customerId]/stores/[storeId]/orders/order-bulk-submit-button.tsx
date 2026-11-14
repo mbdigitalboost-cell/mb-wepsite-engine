@@ -7,6 +7,8 @@ interface OrderBulkSubmitButtonProps {
   pendingLabel: string;
   variant?: "outline" | "primary";
   formAction?: (formData: FormData) => Promise<void>;
+  /** Faz 29 — "Müşteri · Mağaza": onay penceresinde gösterilir. */
+  scopeLabel?: string;
 }
 
 /**
@@ -26,7 +28,7 @@ interface OrderBulkSubmitButtonProps {
  * buton) submit sırasında BİRLİKTE disabled olur — hangi buton
  * tıklanırsa tıklansın, ikinci bir tıklama artık mümkün değil.
  */
-export function OrderBulkSubmitButton({ label, pendingLabel, variant = "outline", formAction }: OrderBulkSubmitButtonProps) {
+export function OrderBulkSubmitButton({ label, pendingLabel, variant = "outline", formAction, scopeLabel }: OrderBulkSubmitButtonProps) {
   const { pending } = useFormStatus();
 
   const className =
@@ -35,7 +37,26 @@ export function OrderBulkSubmitButton({ label, pendingLabel, variant = "outline"
       : "h-8 rounded-md border border-black/15 px-3 text-xs text-foreground/80 hover:border-black/30 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <button type="submit" formAction={formAction} disabled={pending} className={className}>
+    <button
+      type="submit"
+      formAction={formAction}
+      disabled={pending}
+      className={className}
+      onClick={(event) => {
+        // Faz 29 — toplu işlem öncesi: hangi müşteride, kaç sipariş.
+        if (!scopeLabel) return;
+        const form = event.currentTarget.form;
+        const count = form ? form.querySelectorAll('input[name="orderIds"]:checked').length : 0;
+        if (count === 0) {
+          event.preventDefault();
+          window.alert("Önce en az bir sipariş seçin.");
+          return;
+        }
+        if (!window.confirm(`${scopeLabel}\n\n${count} sipariş için "${label}" uygulanacak. Devam edilsin mi?`)) {
+          event.preventDefault();
+        }
+      }}
+    >
       {pending ? pendingLabel : label}
     </button>
   );

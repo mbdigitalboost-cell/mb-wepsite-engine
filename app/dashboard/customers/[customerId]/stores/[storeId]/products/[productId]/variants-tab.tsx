@@ -62,7 +62,7 @@ export async function VariantsTab({
   storeId: string;
   productId: string;
 }) {
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
 

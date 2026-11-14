@@ -29,7 +29,7 @@ export async function addProductsToCategoryAction(
   _prevState: CategoryProductsFormState,
   formData: FormData,
 ): Promise<CategoryProductsFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const productIds = [...new Set(formData.getAll("productIds").map((v) => String(v).trim()).filter(Boolean))];
   if (productIds.length === 0) return { error: "Eklemek için en az bir ürün seçin.", success: null };
 
@@ -79,7 +79,7 @@ export async function removeProductFromCategoryAction(
   categoryId: string,
   productId: string,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
   const { data: removed } = await supabase
     .from("product_categories")

@@ -20,7 +20,7 @@ export async function createHomepageSectionAction(
   _prevState: HomepageSectionFormState,
   formData: FormData,
 ): Promise<HomepageSectionFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = homepageSectionFormSchema.safeParse({
     sectionTypeKey: formData.get("sectionTypeKey"),
@@ -109,7 +109,7 @@ export async function updateHomepageSectionAction(
   _prevState: HomepageSectionFormState,
   formData: FormData,
 ): Promise<HomepageSectionFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   if (!isHomepageSectionTypeKey(sectionTypeKey)) {
     return { error: "Geçersiz bölüm tipi." };
@@ -182,7 +182,7 @@ export async function toggleHomepageSectionActiveAction(
   sectionId: string,
   nextActive: boolean,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -210,7 +210,7 @@ export async function toggleHomepageSectionActiveAction(
 
 /** Permanent delete — store_admin+ ONLY (same split as navigation items). */
 export async function deleteHomepageSectionAction(customerId: string, storeId: string, sectionId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("store_homepage_sections").delete().eq("id", sectionId).eq("store_id", storeId);
@@ -238,7 +238,7 @@ export async function moveHomepageSectionAction(
   sectionId: string,
   direction: "up" | "down",
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: sections, error } = await supabase
@@ -264,7 +264,8 @@ export async function moveHomepageSectionAction(
       supabase
         .from("store_homepage_sections")
         .update({ sort_order: (position + 1) * 10 })
-        .eq("id", section.id),
+        .eq("id", section.id)
+        .eq("store_id", storeId),
     ),
   );
 

@@ -32,7 +32,7 @@ export default async function StoreCategoriesPage({
   params: Promise<{ customerId: string; storeId: string }>;
 }) {
   const { customerId, storeId } = await params;
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase

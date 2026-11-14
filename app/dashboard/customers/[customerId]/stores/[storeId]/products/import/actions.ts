@@ -81,7 +81,7 @@ export async function validateImportAction(
   storeId: string,
   formData: FormData,
 ): Promise<ImportPreviewState> {
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const parsedFile = await parseAndCheckFile(formData);
   if (!parsedFile.ok) return { status: "error", error: parsedFile.error, results: [] };
@@ -112,7 +112,7 @@ export async function commitImportAction(
   storeId: string,
   formData: FormData,
 ): Promise<ImportCommitState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsedFile = await parseAndCheckFile(formData);
   if (!parsedFile.ok) return { status: "error", error: parsedFile.error, summary: null, rowErrors: [] };

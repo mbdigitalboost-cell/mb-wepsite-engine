@@ -44,7 +44,7 @@ export default async function EditProductPage({
   params: Promise<{ customerId: string; storeId: string; productId: string }>;
 }) {
   const { customerId, storeId, productId } = await params;
-  const { isAdmin } = await requireStoreAccess(storeId);
+  const { isAdmin } = await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase.from("stores").select("id, name, slug").eq("id", storeId).eq("customer_id", customerId).maybeSingle();

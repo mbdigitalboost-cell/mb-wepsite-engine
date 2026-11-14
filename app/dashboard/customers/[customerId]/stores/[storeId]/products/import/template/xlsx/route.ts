@@ -12,8 +12,8 @@ import { buildProductImportXlsxTemplateBuffer } from "@/lib/commerce/import/xlsx
  * only does the auth check and sets response headers.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ customerId: string; storeId: string }> }) {
-  const { storeId } = await params;
-  await requireStoreAccess(storeId);
+  const { customerId, storeId } = await params;
+  await requireStoreAccess(storeId, customerId);
 
   const buffer = buildProductImportXlsxTemplateBuffer();
 

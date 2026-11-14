@@ -138,7 +138,7 @@ export async function createProductAction(
   _prevState: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productFormSchema.safeParse(readProductFormValues(formData));
   if (!parsed.success) {
@@ -230,7 +230,7 @@ export async function createProductAction(
  * istenmeyen taslaklar üretebilirdi).
  */
 export async function createDraftProductAction(customerId: string, storeId: string): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
   let productId: string | null = null;
@@ -280,7 +280,7 @@ export async function updateProductAction(
   _prevState: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productFormSchema.safeParse(readProductFormValues(formData));
   if (!parsed.success) {
@@ -369,7 +369,7 @@ export async function toggleProductActiveAction(
   productId: string,
   nextActive: boolean,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -425,7 +425,7 @@ export async function toggleProductActiveAction(
  * deleteProductImageAction'ındaki AYNI "Storage önce, DB sonra" sırası).
  */
 export async function deleteProductAction(customerId: string, storeId: string, productId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const orderCount = await getProductOrderCount(storeId, productId);
   if (orderCount > 0) {
@@ -494,7 +494,7 @@ export async function deleteProductAction(customerId: string, storeId: string, p
  *     kendi isteğiyle aktif etmeden müşteri tarafında görünmesin diye.
  */
 export async function duplicateProductAction(customerId: string, storeId: string, productId: string): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: source, error: fetchError } = await supabase
@@ -639,7 +639,7 @@ export async function bulkUpdateProductsAction(customerId: string, storeId: stri
   }
 
   if (bulkAction === "deleteForever") {
-    const { user } = await requireStoreAdminAccess(storeId);
+    const { user } = await requireStoreAdminAccess(storeId, customerId);
     const supabase = await createSupabaseServerClient();
 
     const { data: orderedRows } = await supabase
@@ -691,7 +691,7 @@ export async function bulkUpdateProductsAction(customerId: string, storeId: stri
   }
 
   if (bulkAction === "changeCategory") {
-    const { user } = await requireStoreEditorAccess(storeId);
+    const { user } = await requireStoreEditorAccess(storeId, customerId);
     const categoryId = String(formData.get("bulkCategoryId") ?? "").trim();
     if (!categoryId) return;
 
@@ -725,7 +725,7 @@ export async function bulkUpdateProductsAction(customerId: string, storeId: stri
   }
 
   // activate / deactivate — eski davranış, değişmedi.
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
   const nextActive = bulkAction === "activate";
 
   const supabase = await createSupabaseServerClient();

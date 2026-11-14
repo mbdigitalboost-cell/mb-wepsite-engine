@@ -20,7 +20,7 @@ export default async function ProductImportPage({
   params: Promise<{ customerId: string; storeId: string }>;
 }) {
   const { customerId, storeId } = await params;
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase

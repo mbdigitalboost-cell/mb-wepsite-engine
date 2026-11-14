@@ -14,7 +14,7 @@ import { createDraftProductAction } from "../actions";
  */
 export default async function NewProductPage({ params }: { params: Promise<{ customerId: string; storeId: string }> }) {
   const { customerId, storeId } = await params;
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase.from("stores").select("id, name").eq("id", storeId).eq("customer_id", customerId).maybeSingle();

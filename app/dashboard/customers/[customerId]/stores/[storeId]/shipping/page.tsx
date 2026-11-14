@@ -29,7 +29,7 @@ export default async function StoreShippingIntegrationPage({
   params: Promise<{ customerId: string; storeId: string }>;
 }) {
   const { customerId, storeId } = await params;
-  await requireStoreAdminAccess(storeId);
+  await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase.from("stores").select("id, name, slug").eq("id", storeId).eq("customer_id", customerId).maybeSingle();

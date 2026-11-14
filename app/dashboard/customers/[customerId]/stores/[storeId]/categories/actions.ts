@@ -62,7 +62,7 @@ export async function createCategoryAction(
   _prevState: CategoryFormState,
   formData: FormData,
 ): Promise<CategoryFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = categoryFormSchema.safeParse(readCategoryFormValues(formData));
   if (!parsed.success) {
@@ -124,7 +124,7 @@ export async function updateCategoryAction(
   _prevState: CategoryFormState,
   formData: FormData,
 ): Promise<CategoryFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = categoryFormSchema.safeParse(readCategoryFormValues(formData));
   if (!parsed.success) {
@@ -183,7 +183,7 @@ export async function updateCategoryAction(
  * simply lose that reference.
  */
 export async function deleteCategoryAction(customerId: string, storeId: string, categoryId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("categories").delete().eq("id", categoryId).eq("store_id", storeId);

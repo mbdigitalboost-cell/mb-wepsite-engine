@@ -18,8 +18,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ customerId: string; storeId: string; orderId: string }> },
 ): Promise<Response> {
-  const { storeId, orderId } = await params;
-  await requireStoreEditorAccess(storeId);
+  const { customerId, storeId, orderId } = await params;
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: order } = await supabase

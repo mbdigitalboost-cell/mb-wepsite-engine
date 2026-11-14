@@ -47,7 +47,7 @@ export async function createBrandAction(
   _prevState: BrandFormState,
   formData: FormData,
 ): Promise<BrandFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = brandFormSchema.safeParse(readBrandFormValues(formData));
   if (!parsed.success) {
@@ -102,7 +102,7 @@ export async function updateBrandAction(
   _prevState: BrandFormState,
   formData: FormData,
 ): Promise<BrandFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = brandFormSchema.safeParse(readBrandFormValues(formData));
   if (!parsed.success) {
@@ -155,7 +155,7 @@ export async function updateBrandAction(
  * intended, already-verified (P0 hardening turn) behavior.
  */
 export async function deleteBrandAction(customerId: string, storeId: string, brandId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("brands").delete().eq("id", brandId).eq("store_id", storeId);
@@ -193,7 +193,7 @@ export async function uploadBrandLogoAction(
   _prevState: BrandLogoFormState,
   formData: FormData,
 ): Promise<BrandLogoFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const file = formData.get("logoFile");
   if (!(file instanceof File) || file.size === 0) {
@@ -236,7 +236,7 @@ export async function addBrandModelAction(
   _prevState: BrandModelFormState,
   formData: FormData,
 ): Promise<BrandModelFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Model adı zorunlu." };
@@ -283,7 +283,7 @@ export async function deleteBrandModelAction(
   brandId: string,
   modelId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("brand_models").delete().eq("id", modelId).eq("store_id", storeId);
@@ -331,7 +331,7 @@ export async function moveBrandModelAction(
   direction: "up" | "down",
   modelId: string,
 ): Promise<void> {
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: models } = await supabase

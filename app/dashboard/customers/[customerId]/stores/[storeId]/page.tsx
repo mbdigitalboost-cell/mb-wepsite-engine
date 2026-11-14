@@ -31,7 +31,7 @@ export default async function StoreDetailPage({
   params: Promise<{ customerId: string; storeId: string }>;
 }) {
   const { customerId, storeId } = await params;
-  const { isAdmin } = await requireStoreAccess(storeId);
+  const { isAdmin } = await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
 

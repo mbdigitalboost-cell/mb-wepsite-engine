@@ -71,7 +71,7 @@ export async function createAddonAction(
   _prevState: ProductAddonFormState,
   formData: FormData,
 ): Promise<ProductAddonFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productAddonFormSchema.safeParse(readProductAddonFormValues(productId, formData));
   if (!parsed.success) {
@@ -131,7 +131,7 @@ export async function updateAddonAction(
   _prevState: ProductAddonFormState,
   formData: FormData,
 ): Promise<ProductAddonFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productAddonFormSchema.safeParse(readProductAddonFormValues(productId, formData));
   if (!parsed.success) {
@@ -189,7 +189,7 @@ export async function setAddonActiveAction(
   addonId: string,
   nextActive: boolean,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -232,7 +232,7 @@ export async function deleteAddonAction(
   productId: string,
   addonId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase

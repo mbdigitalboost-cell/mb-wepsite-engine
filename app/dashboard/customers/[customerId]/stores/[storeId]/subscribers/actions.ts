@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireStoreAdminAccess, requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { contactIsKnown, rowBelongsToStore, type OwnershipQueryClient } from "@/lib/auth/tenant-scope";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { sendEmail } from "@/lib/notifications/send-email";
 import { sendWhatsappMessage } from "@/lib/notifications/send-whatsapp";
@@ -36,7 +37,7 @@ function basePath(customerId: string, storeId: string): string {
  * yerine anlaşılır bir Türkçe hata dönmek için.
  */
 export async function createDiscountAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const targetKind = String(formData.get("targetKind") ?? "");
   const storeCustomerId = String(formData.get("storeCustomerId") ?? "").trim() || null;
@@ -93,6 +94,15 @@ export async function createDiscountAction(customerId: string, storeId: string, 
 
   const supabase = await createSupabaseServerClient();
 
+  // Faz 29 — store_customer_id tek kolonlu FK (migration 0036): başka
+  // mağazanın kayıtlı müşterisine indirim tanımlanabiliyordu.
+  if (
+    targetKind === "registered" &&
+    !(await rowBelongsToStore(supabase as unknown as OwnershipQueryClient, "store_customers", storeCustomerId, storeId))
+  ) {
+    redirect(`${basePath(customerId, storeId)}?error=form`);
+  }
+
   const { error } = await supabase.from("customer_discounts").insert({
     store_id: storeId,
     store_customer_id: targetKind === "registered" ? storeCustomerId : null,
@@ -130,7 +140,7 @@ export async function createDiscountAction(customerId: string, storeId: string, 
 
 /** store_admin+ — aynı yetki tier'ı, indirimi kalıcı silmek yerine devre dışı bırakır (migration 0036'nın kendi "no delete" duruşu). */
 export async function deactivateDiscountAction(customerId: string, storeId: string, discountId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -158,12 +168,33 @@ export async function deactivateDiscountAction(customerId: string, storeId: stri
 }
 
 /**
+ * Faz 29 — bu mağazanın gerçek kitlesi: kayıtlı müşteriler + sipariş
+ * verenler (Aboneler sayfasının listelediği kaynaklar). Mesaj yalnız bu
+ * listedeki bir adrese/telefona gidebilir.
+ */
+async function loadStoreAudience(storeId: string): Promise<{ storeName: string | null; emails: string[]; phones: string[] }> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: store }, { data: customers }, { data: orders }] = await Promise.all([
+    supabase.from("stores").select("name").eq("id", storeId).maybeSingle(),
+    supabase.from("store_customers").select("email, phone").eq("store_id", storeId),
+    supabase.from("orders").select("customer_email, customer_phone").eq("store_id", storeId),
+  ]);
+  const emails = [...(customers ?? []).map((c) => c.email), ...(orders ?? []).map((o) => o.customer_email)].filter(
+    (v): v is string => Boolean(v),
+  );
+  const phones = [...(customers ?? []).map((c) => c.phone), ...(orders ?? []).map((o) => o.customer_phone)].filter(
+    (v): v is string => Boolean(v),
+  );
+  return { storeName: store?.name ?? null, emails, phones };
+}
+
+/**
  * store_editor+ — bir mesaj göndermek (indirim tanımlamaktan farklı olarak)
  * finansal bir etki değil, orders'ın kendi editor-tier okuma/yazma
  * ayrımıyla aynı seviyede tutuldu.
  */
 export async function sendSubscriberEmailAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const to = String(formData.get("to") ?? "").trim();
   const subject = String(formData.get("subject") ?? "").trim();
@@ -171,7 +202,13 @@ export async function sendSubscriberEmailAction(customerId: string, storeId: str
 
   if (!to || !subject || !text) redirect(`${basePath(customerId, storeId)}?error=form`);
 
-  const result = await sendEmail({ to, subject, text });
+  // Faz 29 — alıcı bu mağazanın abonesi/sipariş vereni olmalı (önceden
+  // formdaki herhangi bir adrese platform göndericisiyle gidebiliyordu);
+  // gönderen adı mağazanın adı.
+  const audience = await loadStoreAudience(storeId);
+  if (!contactIsKnown(to, audience.emails)) redirect(`${basePath(customerId, storeId)}?error=recipient`);
+
+  const result = await sendEmail({ to, subject, text, fromName: audience.storeName ?? undefined });
 
   if (!result.sent) {
     redirect(`${basePath(customerId, storeId)}?error=email-not-sent`);
@@ -191,12 +228,15 @@ export async function sendSubscriberEmailAction(customerId: string, storeId: str
 
 /** store_editor+ — sendSubscriberEmailAction'la aynı yetki gerekçesi. */
 export async function sendSubscriberWhatsappAction(customerId: string, storeId: string, formData: FormData): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const to = String(formData.get("to") ?? "").trim();
   const text = String(formData.get("message") ?? "").trim();
 
   if (!to || !text) redirect(`${basePath(customerId, storeId)}?error=form`);
+
+  const audience = await loadStoreAudience(storeId);
+  if (!contactIsKnown(to, audience.phones)) redirect(`${basePath(customerId, storeId)}?error=recipient`);
 
   const result = await sendWhatsappMessage({ to, text });
 

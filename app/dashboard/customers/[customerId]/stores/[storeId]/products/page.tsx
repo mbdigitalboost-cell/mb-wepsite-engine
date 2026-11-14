@@ -101,7 +101,7 @@ export default async function StoreProductsPage({
 }) {
   const { customerId, storeId } = await params;
   const sp = await searchParams;
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase
@@ -111,6 +111,9 @@ export default async function StoreProductsPage({
     .eq("customer_id", customerId)
     .maybeSingle();
   if (!store) notFound();
+  // Faz 29 — toplu işlem onay metninde müşteri adı (yanlış müşteride işlem yapılmasın).
+  const { data: scopeCustomer } = await supabase.from("customers").select("name").eq("id", customerId).maybeSingle();
+  const scopeLabel = `${scopeCustomer?.name ?? "?"} · ${store.name}`;
 
   const [{ data: categories }, { data: brands }] = await Promise.all([
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
@@ -317,7 +320,7 @@ export default async function StoreProductsPage({
          */
         <form action={bulkUpdateProductsAction.bind(null, customerId, storeId)}>
           <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-foreground/60">
-            <BulkActionControls categories={categories ?? []} />
+            <BulkActionControls categories={categories ?? []} scopeLabel={scopeLabel} />
             <span>Kalıcı sil: sipariş geçmişi olanlar otomatik atlanır.</span>
           </div>
 

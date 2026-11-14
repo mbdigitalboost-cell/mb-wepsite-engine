@@ -18,7 +18,7 @@ export default async function CategoryProductsPage({
   params: Promise<{ customerId: string; storeId: string; categoryId: string }>;
 }) {
   const { customerId, storeId, categoryId } = await params;
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const [{ data: store }, { data: category }] = await Promise.all([

@@ -26,8 +26,8 @@ function toCsvLine(cells: string[]): string {
  * it is not wired to silently succeed.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ customerId: string; storeId: string }> }) {
-  const { storeId } = await params;
-  await requireStoreAccess(storeId);
+  const { customerId, storeId } = await params;
+  await requireStoreAccess(storeId, customerId);
 
   const demoRow = [
     "DEMO ÜRÜN - IMPORT EDİLMEZ",

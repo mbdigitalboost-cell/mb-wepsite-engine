@@ -22,7 +22,7 @@ export async function updateStoreProfileAction(
   _prevState: StoreProfileFormState,
   formData: FormData,
 ): Promise<StoreProfileFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const parsed = storeProfileFormSchema.safeParse({
     displayName: formData.get("displayName"),

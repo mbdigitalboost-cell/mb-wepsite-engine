@@ -5,7 +5,16 @@ import { Button } from "@/components/ui/button";
 
 interface BulkActionControlsProps {
   categories: Array<{ id: string; name: string }>;
+  /** Faz 29 — "Müşteri · Mağaza": onay penceresinde gösterilir. */
+  scopeLabel: string;
 }
+
+const ACTION_LABELS: Record<string, string> = {
+  activate: "Aktif Yap",
+  deactivate: "Pasif Yap",
+  changeCategory: "Kategori Değiştir",
+  deleteForever: "Kalıcı Sil",
+};
 
 /**
  * Admin Panel İşlevsellik devir metni, Kısım C — toplu işlem çubuğu artık
@@ -22,7 +31,7 @@ interface BulkActionControlsProps {
  * hâlâ products/page.tsx'in kendi Server Component'inde, SADECE bu
  * seçim/onay mantığı client tarafında.
  */
-export function BulkActionControls({ categories }: BulkActionControlsProps) {
+export function BulkActionControls({ categories, scopeLabel }: BulkActionControlsProps) {
   const [action, setAction] = useState("activate");
 
   return (
@@ -59,11 +68,20 @@ export function BulkActionControls({ categories }: BulkActionControlsProps) {
         size="sm"
         variant="outline"
         onClick={(event) => {
+          // Faz 29 — her toplu işlemde: hangi müşteri, kaç ürün.
+          const form = (event.currentTarget as HTMLButtonElement).form;
+          const count = form ? form.querySelectorAll('input[name="productIds"]:checked').length : 0;
+          if (count === 0) {
+            event.preventDefault();
+            window.alert("Önce en az bir ürün seçin.");
+            return;
+          }
           if (action === "deleteForever") {
             const confirmed = window.confirm(
-              "Seçili ürünlerden sipariş geçmişi OLMAYANLAR kalıcı olarak silinecek. Sipariş geçmişi olan ürünler otomatik atlanır ve Pasif/Aktif durumları değişmeden kalır. Devam edilsin mi?",
+              `${scopeLabel}\n\nSeçili ${count} üründen sipariş geçmişi OLMAYANLAR kalıcı olarak silinecek. Sipariş geçmişi olan ürünler otomatik atlanır ve Pasif/Aktif durumları değişmeden kalır. Devam edilsin mi?`,
             );
             if (!confirmed) event.preventDefault();
+            return;
           }
           if (action === "changeCategory") {
             const button = event.currentTarget as HTMLButtonElement;
@@ -72,6 +90,10 @@ export function BulkActionControls({ categories }: BulkActionControlsProps) {
               event.preventDefault();
               window.alert("Önce yeni kategoriyi seçin.");
             }
+            if (!select?.value) return;
+          }
+          if (!window.confirm(`${scopeLabel}\n\n${count} ürün için "${ACTION_LABELS[action] ?? action}" uygulanacak. Devam edilsin mi?`)) {
+            event.preventDefault();
           }
         }}
       >

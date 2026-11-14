@@ -33,7 +33,7 @@ export async function saveShippingTokenAction(
   _prevState: ShippingFormState,
   formData: FormData,
 ): Promise<ShippingFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const token = String(formData.get("apiToken") ?? "").trim();
   if (token.length < TOKEN_MIN_LENGTH || token.length > TOKEN_MAX_LENGTH) {
@@ -64,7 +64,7 @@ export async function removeShippingTokenAction(
   storeId: string,
   _prevState: ShippingFormState,
 ): Promise<ShippingFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   try {
     await saveShippingToken(storeId, null);
@@ -90,7 +90,7 @@ export async function testShippingConnectionAction(
   storeId: string,
   _prevState: ShippingFormState,
 ): Promise<ShippingFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const integration = await getShippingIntegrationSecrets(storeId);
   if (!integration?.apiToken) {
@@ -133,7 +133,7 @@ export async function updateShippingSettingsAction(
   _prevState: ShippingFormState,
   formData: FormData,
 ): Promise<ShippingFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const defaultDesiRaw = Number(formData.get("defaultDesi") ?? 1);
   if (!Number.isFinite(defaultDesiRaw) || defaultDesiRaw <= 0 || defaultDesiRaw > 500) {

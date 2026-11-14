@@ -7,6 +7,7 @@ import { requireAal2 } from "@/lib/auth/require-aal2";
 import { getCurrentMemberships } from "@/lib/auth/get-memberships";
 import { isAdminRole, isStoreRole, isStoreWriteRole, isStoreAdminTierRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { storeMatchesCustomer } from "@/lib/auth/tenant-scope";
 
 export interface StoreAccessContext {
   user: User;
@@ -48,10 +49,12 @@ async function resolveStoreCustomerId(storeId: string): Promise<string | null> {
   return data?.customer_id ?? null;
 }
 
-export async function requireStoreAccess(storeId: string): Promise<StoreAccessContext> {
+export async function requireStoreAccess(storeId: string, expectedCustomerId: string): Promise<StoreAccessContext> {
   const { user } = await requireSession();
   const customerId = await resolveStoreCustomerId(storeId);
   if (!customerId) notFound();
+  // Faz 29 — URL'deki müşteri, mağazanın GERÇEK müşterisi olmalı (bkz. tenant-scope.ts).
+  if (!storeMatchesCustomer(customerId, expectedCustomerId)) notFound();
 
   const memberships = await getCurrentMemberships(user.id);
   const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
@@ -65,10 +68,12 @@ export async function requireStoreAccess(storeId: string): Promise<StoreAccessCo
 }
 
 /** store_editor+ (Branding / Navigation / Homepage Builder yazma). */
-export async function requireStoreEditorAccess(storeId: string): Promise<StoreAccessContext> {
+export async function requireStoreEditorAccess(storeId: string, expectedCustomerId: string): Promise<StoreAccessContext> {
   const { user } = await requireSession();
   const customerId = await resolveStoreCustomerId(storeId);
   if (!customerId) notFound();
+  // Faz 29 — URL'deki müşteri, mağazanın GERÇEK müşterisi olmalı (bkz. tenant-scope.ts).
+  if (!storeMatchesCustomer(customerId, expectedCustomerId)) notFound();
 
   const memberships = await getCurrentMemberships(user.id);
   const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
@@ -96,10 +101,12 @@ export async function requireStoreEditorAccess(storeId: string): Promise<StoreAc
  * düzenleme) BİLİNÇLİ OLARAK bu kontrolü İÇERMİYOR — bkz.
  * lib/auth/require-aal2.ts'in dosya yorumu.
  */
-export async function requireStoreAdminAccess(storeId: string): Promise<StoreAccessContext> {
+export async function requireStoreAdminAccess(storeId: string, expectedCustomerId: string): Promise<StoreAccessContext> {
   const { user } = await requireSession();
   const customerId = await resolveStoreCustomerId(storeId);
   if (!customerId) notFound();
+  // Faz 29 — URL'deki müşteri, mağazanın GERÇEK müşterisi olmalı (bkz. tenant-scope.ts).
+  if (!storeMatchesCustomer(customerId, expectedCustomerId)) notFound();
 
   const memberships = await getCurrentMemberships(user.id);
   const isAdmin = memberships.some((membership) => isAdminRole(membership.role));

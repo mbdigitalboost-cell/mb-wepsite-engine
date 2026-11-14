@@ -66,7 +66,7 @@ export async function ImagesTab({
   storeId: string;
   productId: string;
 }) {
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: images } = await supabase

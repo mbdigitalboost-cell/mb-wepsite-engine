@@ -135,7 +135,7 @@ export async function createOptionGroupAction(
   _prevState: OptionGroupFormState,
   formData: FormData,
 ): Promise<OptionGroupFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = optionGroupFormSchema.safeParse(readOptionGroupFormValues(productId, formData));
   if (!parsed.success) {
@@ -183,7 +183,7 @@ export async function updateOptionGroupAction(
   _prevState: OptionGroupFormState,
   formData: FormData,
 ): Promise<OptionGroupFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = optionGroupFormSchema.safeParse(readOptionGroupFormValues(productId, formData));
   if (!parsed.success) {
@@ -231,7 +231,7 @@ export async function deleteOptionGroupAction(
   productId: string,
   optionGroupId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -287,7 +287,7 @@ export async function createOptionValueAction(
   _prevState: OptionValueFormState,
   formData: FormData,
 ): Promise<OptionValueFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = optionValueFormSchema.safeParse(readOptionValueFormValues(formData));
   if (!parsed.success) {
@@ -326,7 +326,26 @@ export async function createOptionValueAction(
   return { error: null };
 }
 
-/** store_editor+ (RLS: option_values_update_editor_tier). Moving a value to a different optionGroupId is allowed only if that group ALSO belongs to this product. */
+/**
+ * store_editor+ (RLS: option_values_update_editor_tier). Moving a value to
+ * a different optionGroupId is allowed only if that group ALSO belongs to
+ * this product.
+ *
+ * FAZ 2C-2.2 hardening (read-only audit finding): the previous version
+ * only validated the NEW target `optionGroupId` — it never checked that
+ * the EXISTING `optionValueId` being updated currently belongs to this
+ * product at all. A store_editor could submit a real optionValueId
+ * belonging to a DIFFERENT product in the same store (id guessing/direct
+ * Server Action call, bypassing the UI) and have it silently reassigned
+ * into this product's own option group — the actual UPDATE's WHERE
+ * clause (`.eq("id", optionValueId).eq("store_id", storeId)`) is
+ * store-scoped but not product-scoped, and RLS (`option_values_update_editor_tier`)
+ * only checks store membership too, so nothing else was catching this.
+ * `loadOwnedOptionValueGroups` already answers exactly this question for
+ * `setVariantOptionValuesAction` below (does this option_value's CURRENT
+ * option_group belong to THIS product?) — reused here as a
+ * single-element lookup rather than writing a new helper.
+ */
 export async function updateOptionValueAction(
   customerId: string,
   storeId: string,
@@ -335,12 +354,15 @@ export async function updateOptionValueAction(
   _prevState: OptionValueFormState,
   formData: FormData,
 ): Promise<OptionValueFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = optionValueFormSchema.safeParse(readOptionValueFormValues(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Geçersiz form." };
   }
+
+  const ownedValue = await loadOwnedOptionValueGroups([optionValueId], productId, storeId);
+  if (!ownedValue) return { error: INVALID_OPTION_VALUE_MESSAGE };
 
   const validGroup = await assertOptionGroupBelongsToProduct(parsed.data.optionGroupId, productId, storeId);
   if (!validGroup) return { error: INVALID_OPTION_GROUP_MESSAGE };
@@ -385,7 +407,7 @@ export async function deleteOptionValueAction(
   optionGroupId: string,
   optionValueId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const validGroup = await assertOptionGroupBelongsToProduct(optionGroupId, productId, storeId);
   if (!validGroup) return;
@@ -451,7 +473,7 @@ export async function createProductVariantAction(
   _prevState: ProductVariantFormState,
   formData: FormData,
 ): Promise<ProductVariantFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productVariantFormSchema.safeParse(readProductVariantFormValues(productId, formData));
   if (!parsed.success) {
@@ -504,7 +526,7 @@ export async function updateProductVariantAction(
   _prevState: ProductVariantFormState,
   formData: FormData,
 ): Promise<ProductVariantFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productVariantFormSchema.safeParse(readProductVariantFormValues(productId, formData));
   if (!parsed.success) {
@@ -560,7 +582,7 @@ export async function deleteProductVariantAction(
   productId: string,
   variantId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -616,7 +638,7 @@ export async function setVariantOptionValuesAction(
   _prevState: VariantOptionAssignmentFormState,
   formData: FormData,
 ): Promise<VariantOptionAssignmentFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const optionValueIds = formData.getAll("optionValueIds").filter((v): v is string => typeof v === "string");
   const parsed = variantOptionValueAssignmentSchema.safeParse({ variantId, optionValueIds });
@@ -701,7 +723,7 @@ export async function removeVariantOptionValueAction(
   variantId: string,
   optionValueId: string,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const validVariant = await assertVariantBelongsToProduct(variantId, productId, storeId);
   if (!validVariant) return;

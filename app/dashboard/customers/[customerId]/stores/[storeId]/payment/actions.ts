@@ -37,7 +37,7 @@ export async function savePaymentKeysAction(
   _prevState: PaymentFormState,
   formData: FormData,
 ): Promise<PaymentFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const apiKey = String(formData.get("apiKey") ?? "").trim();
   const secretKey = String(formData.get("secretKey") ?? "").trim();
@@ -71,7 +71,7 @@ export async function removePaymentKeysAction(
   storeId: string,
   _prevState: PaymentFormState,
 ): Promise<PaymentFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   try {
     await savePaymentKeys(storeId, null);
@@ -97,7 +97,7 @@ export async function testPaymentConnectionAction(
   storeId: string,
   _prevState: PaymentFormState,
 ): Promise<PaymentFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const credentials = await getPaymentIntegrationCredentials(storeId, { requireActive: false });
   if (!credentials) return { error: "Önce API anahtarı ve gizli anahtarı kaydedin.", success: null };
@@ -138,7 +138,7 @@ export async function updatePaymentSettingsAction(
   _prevState: PaymentFormState,
   formData: FormData,
 ): Promise<PaymentFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const mode = parseMode(formData.get("mode"));
   if (!mode) return { error: "Geçerli bir mod seçin (Test / Canlı).", success: null };

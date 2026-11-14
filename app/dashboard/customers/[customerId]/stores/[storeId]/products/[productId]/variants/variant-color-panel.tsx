@@ -50,7 +50,7 @@ export async function VariantColorPanel({
   storeId: string;
   productId: string;
 }) {
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
   const [{ data: product }, { data: groupsData }, { data: variantsData }, { data: imagesData }] = await Promise.all([

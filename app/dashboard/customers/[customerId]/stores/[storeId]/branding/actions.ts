@@ -15,7 +15,7 @@ export async function updateStoreBrandingAction(
   _prevState: StoreBrandingFormState,
   formData: FormData,
 ): Promise<StoreBrandingFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = storeBrandingFormSchema.safeParse({
     primaryColor: formData.get("primaryColor"),

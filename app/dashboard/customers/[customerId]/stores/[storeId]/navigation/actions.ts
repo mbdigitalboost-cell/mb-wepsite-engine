@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireStoreEditorAccess, requireStoreAdminAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { rowBelongsToStore, type OwnershipQueryClient } from "@/lib/auth/tenant-scope";
 import {
   storeNavigationMenuFormSchema,
   storeNavigationItemFormSchema,
@@ -14,9 +15,31 @@ import type { StoreNavigationFormState } from "./form-state";
 
 type MenuType = (typeof STORE_MENU_TYPES)[number];
 
+/**
+ * Faz 29 — menü ve üst öğe bu mağazaya mı ait? `menu_id` composite FK ile
+ * DB'de korunuyor ama `parent_item_id` tek kolonlu FK (migration 0010):
+ * başka bir mağazanın menü öğesi üst öğe olarak bağlanabiliyordu. Platform
+ * admin için RLS her mağazayı açtığından kontrol uygulama katmanında.
+ */
+async function assertMenuAndParent(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  storeId: string,
+  menuId: string | null,
+  parentItemId: string | null | undefined,
+): Promise<string | null> {
+  const client = supabase as unknown as OwnershipQueryClient;
+  if (menuId && !(await rowBelongsToStore(client, "store_navigation_menus", menuId, storeId))) {
+    return "Menü bu mağazaya ait değil.";
+  }
+  if (parentItemId && !(await rowBelongsToStore(client, "store_navigation_items", parentItemId, storeId))) {
+    return "Üst öğe bu mağazaya ait değil.";
+  }
+  return null;
+}
+
 /** Ensures a menu of this type exists for the store, creating it if not (store_editor+). Idempotent — `unique(store_id, menu_type)` is the real guard. */
 export async function ensureNavigationMenuAction(customerId: string, storeId: string, menuType: MenuType): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = storeNavigationMenuFormSchema.safeParse({ menuType });
   if (!parsed.success) return;
@@ -59,7 +82,7 @@ export async function createNavigationItemAction(
   _prevState: StoreNavigationFormState,
   formData: FormData,
 ): Promise<StoreNavigationFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = storeNavigationItemFormSchema.safeParse({
     label: formData.get("label"),
@@ -72,12 +95,15 @@ export async function createNavigationItemAction(
   }
 
   const supabase = await createSupabaseServerClient();
+  const ownershipError = await assertMenuAndParent(supabase, storeId, menuId, parsed.data.parentItemId);
+  if (ownershipError) return { error: ownershipError };
 
   // Append at the end — gap-based sort_order, never trusts a client value.
   const { data: maxRow } = await supabase
     .from("store_navigation_items")
     .select("sort_order")
     .eq("menu_id", menuId)
+    .eq("store_id", storeId)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -122,7 +148,7 @@ export async function updateNavigationItemAction(
   _prevState: StoreNavigationFormState,
   formData: FormData,
 ): Promise<StoreNavigationFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = storeNavigationItemFormSchema.safeParse({
     label: formData.get("label"),
@@ -135,6 +161,9 @@ export async function updateNavigationItemAction(
   }
 
   const supabase = await createSupabaseServerClient();
+  if (parsed.data.parentItemId === itemId) return { error: "Bir öğe kendisinin üst öğesi olamaz." };
+  const ownershipError = await assertMenuAndParent(supabase, storeId, null, parsed.data.parentItemId);
+  if (ownershipError) return { error: ownershipError };
   const { error } = await supabase
     .from("store_navigation_items")
     .update({
@@ -171,7 +200,7 @@ export async function toggleNavigationItemActiveAction(
   itemId: string,
   nextActive: boolean,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -200,7 +229,7 @@ export async function toggleNavigationItemActiveAction(
 
 /** Permanent delete — store_admin+ ONLY (store_editor may only deactivate via updateNavigationItemAction). */
 export async function deleteNavigationItemAction(customerId: string, storeId: string, itemId: string): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("store_navigation_items").delete().eq("id", itemId).eq("store_id", storeId);
@@ -239,13 +268,15 @@ export async function moveNavigationItemAction(
   itemId: string,
   direction: "up" | "down",
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: items, error } = await supabase
     .from("store_navigation_items")
     .select("id, sort_order")
     .eq("menu_id", menuId)
+    // Faz 29 — menuId istemciden gelir; store_id olmadan başka mağazanın menüsü sıralanabiliyordu.
+    .eq("store_id", storeId)
     .order("sort_order", { ascending: true });
 
   if (error || !items) {
@@ -265,7 +296,8 @@ export async function moveNavigationItemAction(
       supabase
         .from("store_navigation_items")
         .update({ sort_order: (position + 1) * 10 })
-        .eq("id", item.id),
+        .eq("id", item.id)
+        .eq("store_id", storeId),
     ),
   );
 

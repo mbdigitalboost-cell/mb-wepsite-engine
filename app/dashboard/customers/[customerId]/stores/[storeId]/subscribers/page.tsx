@@ -46,6 +46,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "create-failed": "İndirim oluşturulamadı.",
   "deactivate-failed": "İndirim devre dışı bırakılamadı.",
   "email-not-sent": "E-posta gönderilemedi (sağlayıcı yapılandırılmamış olabilir).",
+  recipient: "Alıcı bu mağazanın abonesi ya da sipariş vereni değil; mesaj gönderilmedi.",
   "whatsapp-not-sent": "WhatsApp mesajı gönderilemedi (sağlayıcı yapılandırılmamış olabilir).",
 };
 
@@ -70,7 +71,7 @@ export default async function StoreSubscribersPage({
 }) {
   const { customerId, storeId } = await params;
   const sp = await searchParams;
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase

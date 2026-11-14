@@ -133,7 +133,7 @@ export default async function StoreOrdersPage({
 }) {
   const { customerId, storeId } = await params;
   const sp = await searchParams;
-  await requireStoreEditorAccess(storeId);
+  await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase
@@ -143,6 +143,9 @@ export default async function StoreOrdersPage({
     .eq("customer_id", customerId)
     .maybeSingle();
   if (!store) notFound();
+  // Faz 29 — toplu işlem onay metninde müşteri adı (yanlış müşteride işlem yapılmasın).
+  const { data: scopeCustomer } = await supabase.from("customers").select("name").eq("id", customerId).maybeSingle();
+  const scopeLabel = `${scopeCustomer?.name ?? "?"} · ${store.name}`;
 
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const offset = (page - 1) * PAGE_SIZE;
@@ -410,7 +413,7 @@ export default async function StoreOrdersPage({
                 </option>
               ))}
             </select>
-            <OrderBulkSubmitButton label="Uygula" pendingLabel="Uygulanıyor…" variant="outline" />
+            <OrderBulkSubmitButton label="Uygula" pendingLabel="Uygulanıyor…" variant="outline" scopeLabel={scopeLabel} />
             {shipmentPicker ? (
               /*
                 Faz 20 — Kargoya Hazırla'nın iki ek alanı, AYNI formun içinde
@@ -454,6 +457,7 @@ export default async function StoreOrdersPage({
             ) : null}
             {quickAction ? (
               <OrderBulkSubmitButton
+                scopeLabel={scopeLabel}
                 label={quickAction.label}
                 pendingLabel="Uygulanıyor…"
                 variant="primary"

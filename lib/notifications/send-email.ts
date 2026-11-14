@@ -1,5 +1,6 @@
 import "server-only";
 import { serverEnv } from "@/lib/config/env";
+import { formatFromAddress } from "@/lib/notifications/format-from";
 
 export interface SendEmailResult {
   sent: boolean;
@@ -25,13 +26,13 @@ export interface SendEmailResult {
  * dosya bu env var'ı hiçbir deployment'ta test EDEMEDİ (bkz. bu fazın kendi
  * raporu) — gerçek bir gönderim, RESEND_API_KEY eklenene kadar doğrulanamaz.
  */
-export async function sendEmail(params: { to: string; subject: string; text: string }): Promise<SendEmailResult> {
+export async function sendEmail(params: { to: string; subject: string; text: string; fromName?: string }): Promise<SendEmailResult> {
   const apiKey = serverEnv.resendApiKey;
   if (!apiKey) {
     return { sent: false, error: "E-posta sağlayıcısı henüz yapılandırılmadı (RESEND_API_KEY eksik)." };
   }
 
-  const from = serverEnv.resendFromEmail || "onboarding@resend.dev";
+  const from = formatFromAddress(serverEnv.resendFromEmail || "onboarding@resend.dev", params.fromName);
 
   try {
     const response = await fetch("https://api.resend.com/emails", {

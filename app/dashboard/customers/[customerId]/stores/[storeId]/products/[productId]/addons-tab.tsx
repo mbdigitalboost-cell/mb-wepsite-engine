@@ -43,7 +43,7 @@ export async function AddonsTab({
   productId: string;
   basePrice: number;
 }) {
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: addonsData } = await supabase

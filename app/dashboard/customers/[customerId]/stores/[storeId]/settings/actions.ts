@@ -16,7 +16,7 @@ export async function updateStoreSettingsAction(
   _prevState: StoreSettingsFormState,
   formData: FormData,
 ): Promise<StoreSettingsFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const parsed = storeSettingsFormSchema.safeParse({
     currency: formData.get("currency"),
@@ -71,7 +71,7 @@ export async function setStoreMaintenanceModeAction(
   _prevState: StoreSettingsFormState,
   formData: FormData,
 ): Promise<StoreSettingsFormState> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const parsed = storeMaintenanceFormSchema.safeParse({
     maintenanceMode: formData.get("maintenanceMode"),

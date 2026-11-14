@@ -10,7 +10,7 @@ export default async function StoreBrandingPage({
   params: Promise<{ customerId: string; storeId: string }>;
 }) {
   const { customerId, storeId } = await params;
-  await requireStoreAccess(storeId);
+  await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase.from("stores").select("id, name").eq("id", storeId).eq("customer_id", customerId).maybeSingle();

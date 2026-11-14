@@ -76,7 +76,7 @@ export async function updateOrderStatusAction(
   orderId: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const status = String(formData.get("status") ?? "");
   if (!isOrderStatus(status)) return;
@@ -120,7 +120,7 @@ export async function updateOrderPaymentStatusAction(
   orderId: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const paymentStatus = String(formData.get("paymentStatus") ?? "");
   if (!isPaymentStatus(paymentStatus)) return;
@@ -188,7 +188,7 @@ export async function updateShippingInfoAction(
   orderId: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const carrier = String(formData.get("carrier") ?? "").trim();
   const trackingNumber = String(formData.get("trackingNumber") ?? "").trim();
@@ -258,7 +258,7 @@ export async function bulkUpdateOrdersAction(
   returnPath: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
   const targetStatus = String(formData.get("targetStatus") ?? "");
@@ -332,7 +332,7 @@ export async function bulkAdvanceOrderStatusAction(
   returnPath: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
   if (orderIds.length === 0) return;
@@ -431,7 +431,7 @@ export async function bulkPrepareForShipmentAction(
   returnPath: string,
   formData: FormData,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const orderIds = formData.getAll("orderIds").map(String).filter(Boolean);
   if (orderIds.length === 0) return;
@@ -550,7 +550,7 @@ export async function retryShipmentPushAction(
   orderId: string,
   returnPath: string,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const result = await pushOrdersToShippingProvider({ storeId, customerId, actorUserId: user.id, orderIds: [orderId], force: true });
 

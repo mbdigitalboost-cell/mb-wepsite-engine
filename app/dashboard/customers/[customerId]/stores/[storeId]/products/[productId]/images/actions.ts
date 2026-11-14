@@ -137,7 +137,7 @@ export async function createProductImageAction(
   _prevState: ProductImageFormState,
   formData: FormData,
 ): Promise<ProductImageFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -228,7 +228,7 @@ export async function updateProductImageAction(
   _prevState: ProductImageFormState,
   formData: FormData,
 ): Promise<ProductImageFormState> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   const parsed = productImageFormSchema.safeParse(readProductImageFormValues(productId, formData));
   if (!parsed.success) {
@@ -294,7 +294,7 @@ export async function setPrimaryImageAction(
   productId: string,
   imageId: string,
 ): Promise<void> {
-  const { user } = await requireStoreEditorAccess(storeId);
+  const { user } = await requireStoreEditorAccess(storeId, customerId);
 
   await clearOtherPrimaryImages(productId, storeId, imageId);
 
@@ -354,7 +354,7 @@ export async function deleteProductImageAction(
   productId: string,
   imageId: string,
 ): Promise<void> {
-  const { user } = await requireStoreAdminAccess(storeId);
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: existing } = await supabase
