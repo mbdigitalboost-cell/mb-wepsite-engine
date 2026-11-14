@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireStoreAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
+import { getAdminCategoryOptions, getProductCategoryLinks } from "@/lib/commerce/category-options";
 import { getProductOrderCount } from "@/lib/commerce/product-order-history";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
@@ -54,9 +55,9 @@ export default async function EditProductPage({
     .maybeSingle();
   if (!store) notFound();
 
-  const [{ data: product }, { data: categories }, { data: brands }, modelsByBrand, orderCount] = await Promise.all([
+  const [{ data: product }, categories, { data: brands }, modelsByBrand, orderCount] = await Promise.all([
     supabase.from("products").select("*").eq("id", productId).eq("store_id", storeId).maybeSingle(),
-    supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+    getAdminCategoryOptions(storeId),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     getBrandModelsSuggestionMap(storeId),
     // Admin Panel İşlevsellik devir metni, Kısım A — koşullu kalıcı silme
@@ -67,6 +68,7 @@ export default async function EditProductPage({
   ]);
 
   if (!product) notFound();
+  const categoryLinks = await getProductCategoryLinks(storeId, productId);
 
   const toggleActive = toggleProductActiveAction.bind(null, customerId, storeId, productId, !product.is_active);
   const deleteAction = deleteProductAction.bind(null, customerId, storeId, productId);
@@ -140,7 +142,8 @@ export default async function EditProductPage({
               }}
               initialTrackInventory={product.track_inventory}
               initialIsActive={product.is_active}
-              categoryOptions={categories ?? []}
+              categoryOptions={categories}
+              initialCategoryIds={categoryLinks.ids}
               brandOptions={brands ?? []}
               modelsByBrand={modelsByBrand}
               action={updateProductAction.bind(null, customerId, storeId, productId)}

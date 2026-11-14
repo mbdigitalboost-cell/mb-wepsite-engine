@@ -1367,6 +1367,31 @@ export type Database = {
           },
         ];
       };
+      /** Faz 27, migration 0043 — ürün ↔ kategori (çoklu). is_primary satırı products.category_id ile trigger üzerinden senkron. */
+      product_categories: {
+        Row: {
+          product_id: string;
+          category_id: string;
+          store_id: string;
+          is_primary: boolean;
+          created_at: string;
+        };
+        Insert: {
+          product_id: string;
+          category_id: string;
+          store_id: string;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          product_id?: string;
+          category_id?: string;
+          store_id?: string;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       /**
        * FAZ 2, migration 0029_orders.sql. No anon RLS policy at all (any
        * operation) — written EXCLUSIVELY via createSupabaseAdminClient()
@@ -1908,6 +1933,16 @@ export type Database = {
           p_group: Json | null;
           p_values: Json;
           p_variants: Json;
+        };
+        Returns: number;
+      };
+      /** Faz 27, migration 0043 — ürünün kategori kümesini atomik yazar (SECURITY INVOKER). Dönüş: üründeki bağ sayısı. */
+      set_product_categories: {
+        Args: {
+          p_store_id: string;
+          p_product_id: string;
+          p_category_ids: string[];
+          p_primary_category_id: string | null;
         };
         Returns: number;
       };

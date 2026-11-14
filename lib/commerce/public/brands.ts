@@ -80,11 +80,20 @@ export async function getPublicBrandBySlug(storeId: string, brandSlug: string): 
 export async function getPublicBrandsForCategory(storeId: string, categoryId: string): Promise<PublicBrand[]> {
   const client = createSupabasePublicClient();
 
+  // Faz 27 — kategori üyeliği product_categories'ten (çoklu kategori).
+  const { data: linkRows } = await client
+    .from("product_categories")
+    .select("product_id")
+    .eq("store_id", storeId)
+    .eq("category_id", categoryId);
+  const productIds = [...new Set((linkRows ?? []).map((row) => row.product_id))];
+  if (productIds.length === 0) return [];
+
   const { data: productRows, error: productsError } = await client
     .from("products")
     .select("brand_id")
     .eq("store_id", storeId)
-    .eq("category_id", categoryId)
+    .in("id", productIds)
     .not("brand_id", "is", null);
 
   if (productsError) {

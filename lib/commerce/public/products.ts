@@ -216,6 +216,27 @@ export type PublicProductSort = "price_asc" | "price_desc" | "newest";
  * davranışı DEĞİŞMEDEN korunuyor; bu sadece kategori sayfasının yeni
  * sıralama kontrolü için eklenen, opt-in bir davranış.
  */
+/**
+ * Faz 27 — bir kategoriye bağlı TÜM ürün id'leri (product_categories,
+ * migration 0043). Ana kategori olsun olmasın: ikinci kategoriye eklenen
+ * ürün o kategori sayfasında da görünür. anon RLS
+ * (product_categories_select_public_active) yalnız aktif ürünlerin bağlarını
+ * döndürür; ürün sorgusunun kendi is_active kapısı ayrıca geçerli.
+ */
+export async function getPublicProductIdsForCategory(storeId: string, categoryId: string): Promise<string[]> {
+  const client = createSupabasePublicClient();
+  const { data, error } = await client
+    .from("product_categories")
+    .select("product_id")
+    .eq("store_id", storeId)
+    .eq("category_id", categoryId);
+  if (error) {
+    console.error("[commerce/public] getPublicProductIdsForCategory failed:", error.message);
+    return [];
+  }
+  return [...new Set((data ?? []).map((row) => row.product_id))];
+}
+
 export async function getPublicProducts(
   storeId: string,
   options: { categoryId?: string; brandId?: string; model?: string; sort?: PublicProductSort } = {},
@@ -224,7 +245,10 @@ export async function getPublicProducts(
 
   let query = client.from("products").select(PRODUCT_COLUMNS).eq("store_id", storeId);
   if (options.categoryId) {
-    query = query.eq("category_id", options.categoryId);
+    // Faz 27 — tek category_id yerine çoklu kategori bağları.
+    const productIds = await getPublicProductIdsForCategory(storeId, options.categoryId);
+    if (productIds.length === 0) return [];
+    query = query.in("id", productIds);
   }
   if (options.brandId) {
     query = query.eq("brand_id", options.brandId);

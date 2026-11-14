@@ -4,6 +4,7 @@ import { useActionState, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { initialProductFormState, type ProductFormState } from "./form-state";
 import { inputClasses } from "@/lib/utils/input-classes";
+import { CategoryPicker, type CategoryPickerOption } from "./category-picker";
 
 interface ProductFormValues {
   name: string;
@@ -50,7 +51,10 @@ interface ProductFormProps {
   initialValues?: ProductFormValues;
   initialTrackInventory?: boolean;
   initialIsActive?: boolean;
-  categoryOptions: RelationOption[];
+  /** Faz 27 — çoklu kategori seçici seçenekleri (alt kategoriler "Üst › Alt" etiketli). */
+  categoryOptions: CategoryPickerOption[];
+  /** Faz 27 — ürünün mevcut kategori bağları (product_categories). */
+  initialCategoryIds?: string[];
   brandOptions: RelationOption[];
   /** FAZ 9 — brandId -> previously-used models in this store (lib/commerce/product-models-by-brand.ts), used only for the "önceden kullanılmış modeller" suggestion chips below — never enforced as a fixed list. */
   modelsByBrand: Record<string, string[]>;
@@ -83,6 +87,7 @@ export function ProductForm({
   initialTrackInventory = true,
   initialIsActive = true,
   categoryOptions,
+  initialCategoryIds,
   brandOptions,
   modelsByBrand,
   action,
@@ -267,25 +272,18 @@ export function ProductForm({
         />
       </div>
 
+      <div className="rounded-md border border-black/10 p-3">
+        <p className="mb-2 text-sm font-medium text-foreground">
+          Kategoriler <span className="text-foreground/40">(birden fazla seçilebilir)</span>
+        </p>
+        <CategoryPicker
+          options={categoryOptions}
+          initialSelectedIds={initialCategoryIds ?? (initialValues.categoryId ? [initialValues.categoryId] : [])}
+          initialPrimaryId={initialValues.categoryId || null}
+        />
+      </div>
+
       <div className="flex flex-wrap gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor={`${formId}-categoryId`} className="mb-1.5 block text-sm font-medium text-foreground">
-            Kategori <span className="text-foreground/40">(opsiyonel)</span>
-          </label>
-          <select
-            id={`${formId}-categoryId`}
-            name="categoryId"
-            defaultValue={initialValues.categoryId}
-            className={inputClasses}
-          >
-            <option value="">— Yok —</option>
-            {categoryOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="flex-1 min-w-[200px]">
           <label htmlFor={`${formId}-brandId`} className="mb-1.5 block text-sm font-medium text-foreground">
             Marka <span className="text-foreground/40">(opsiyonel)</span>

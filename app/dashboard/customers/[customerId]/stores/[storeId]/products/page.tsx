@@ -130,7 +130,16 @@ export default async function StoreProductsPage({
     const pattern = toSafeOrValue(toIlikePattern(q));
     query = query.or(`name.ilike.${pattern},sku.ilike.${pattern}`);
   }
-  if (sp.categoryId) query = query.eq("category_id", sp.categoryId);
+  // Faz 27 — kategori filtresi çoklu kategori bağlarından (ana + ek kategoriler).
+  if (sp.categoryId) {
+    const { data: links } = await supabase
+      .from("product_categories")
+      .select("product_id")
+      .eq("store_id", storeId)
+      .eq("category_id", sp.categoryId);
+    const ids = [...new Set((links ?? []).map((row) => row.product_id))];
+    query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  }
   if (sp.brandId) query = query.eq("brand_id", sp.brandId);
   if (sp.active === "true") query = query.eq("is_active", true);
   if (sp.active === "false") query = query.eq("is_active", false);
@@ -249,7 +258,7 @@ export default async function StoreProductsPage({
           <select id="active" name="active" defaultValue={sp.active ?? ""} className={inputClasses}>
             <option value="">Tümü</option>
             <option value="true">Aktif</option>
-            <option value="false">Pasif</option>
+            <option value="false">Yayında değil</option>
           </select>
         </div>
         <div className="min-w-[140px]">
@@ -338,7 +347,7 @@ export default async function StoreProductsPage({
                     {product.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
                     <span>Stok: {product.stock}</span>
                     <Badge variant={product.is_active ? "solid" : "outline"}>
-                      {product.is_active ? "Aktif" : "Pasif"}
+                      {product.is_active ? "Yayında" : "Yayında değil"}
                     </Badge>
                   </span>
                 </Link>

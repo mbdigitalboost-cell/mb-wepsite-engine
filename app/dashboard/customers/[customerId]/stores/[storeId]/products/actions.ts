@@ -14,6 +14,55 @@ import { removeProductImageObject } from "@/lib/commerce/upload-product-image";
 import type { ProductFormState } from "./form-state";
 
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
+
+/**
+ * Faz 27 — çoklu kategori seçimi (category-picker.tsx). `categoryIds`
+ * birden çok giriş, `primaryCategoryId` ana. Ana seçili değilse ilk seçili
+ * ana kabul edilir; hiç seçim yoksa ikisi de boş.
+ */
+function readCategorySelection(formData: FormData): { ids: string[]; primaryId: string | null } {
+  const ids = [...new Set(formData.getAll("categoryIds").map((value) => String(value).trim()).filter(Boolean))];
+  const requestedPrimary = String(formData.get("primaryCategoryId") ?? "").trim();
+  const primaryId = ids.includes(requestedPrimary) ? requestedPrimary : (ids[0] ?? null);
+  return { ids, primaryId };
+}
+
+/** Tüm seçili kategoriler bu mağazaya ait mi? (Composite FK zaten son kapı; burada temiz hata mesajı için.) */
+async function assertCategoriesBelongToStore(ids: string[], storeId: string): Promise<boolean> {
+  if (ids.length === 0) return true;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("categories").select("id").eq("store_id", storeId).in("id", ids);
+  return (data ?? []).length === ids.length;
+}
+
+/**
+ * Faz 27 — ürünün kategori kümesini set_product_categories (migration 0043,
+ * SECURITY INVOKER, tek transaction) ile yazar; products.category_id aynası
+ * trigger'la gelir. Dönüş: eklenen/çıkarılan bağ sayıları (audit için).
+ */
+async function saveProductCategories(
+  storeId: string,
+  productId: string,
+  selection: { ids: string[]; primaryId: string | null },
+): Promise<{ error: string | null; added: number; removed: number }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: before } = await supabase
+    .from("product_categories")
+    .select("category_id")
+    .eq("store_id", storeId)
+    .eq("product_id", productId);
+  const beforeIds = new Set((before ?? []).map((row) => row.category_id));
+  const { error } = await supabase.rpc("set_product_categories", {
+    p_store_id: storeId,
+    p_product_id: productId,
+    p_category_ids: selection.ids,
+    p_primary_category_id: selection.primaryId,
+  });
+  if (error) return { error: `Kategoriler kaydedilemedi: ${error.message}`, added: 0, removed: 0 };
+  const added = selection.ids.filter((id) => !beforeIds.has(id)).length;
+  const removed = [...beforeIds].filter((id) => !selection.ids.includes(id)).length;
+  return { error: null, added, removed };
+}
 const INVALID_BRAND_MESSAGE = "Geçersiz marka.";
 
 /**
@@ -97,6 +146,8 @@ export async function createProductAction(
 
   const relationError = await validateRelations(parsed.data.categoryId ?? "", parsed.data.brandId ?? "", storeId);
   if (relationError) return { error: relationError };
+  const categorySelection = readCategorySelection(formData);
+  if (!(await assertCategoriesBelongToStore(categorySelection.ids, storeId))) return { error: INVALID_CATEGORY_MESSAGE };
 
   const supabase = await createSupabaseServerClient();
   const { data: product, error } = await supabase
@@ -106,7 +157,8 @@ export async function createProductAction(
       // products/new/page.tsx via .bind(null, customerId, storeId)) — the
       // form never submits a store_id/storeId field.
       store_id: storeId,
-      category_id: parsed.data.categoryId || null,
+      // Faz 27 — ana kategori; ek kategoriler aşağıda set_product_categories ile.
+      category_id: categorySelection.primaryId,
       brand_id: parsed.data.brandId || null,
       name: parsed.data.name,
       slug: parsed.data.slug,
@@ -132,6 +184,11 @@ export async function createProductAction(
   }
   if (!product) {
     return { error: "Kaydedilemedi: bilinmeyen hata" };
+  }
+
+  if (categorySelection.ids.length > 1) {
+    const categoryResult = await saveProductCategories(storeId, product.id, categorySelection);
+    if (categoryResult.error) console.error("[products] create: extra categories failed:", categoryResult.error);
   }
 
   // Site Tasarımı v3 + Silahını Seç Sistemi devir metni, Kısım C —
@@ -177,12 +234,15 @@ export async function updateProductAction(
 
   const relationError = await validateRelations(parsed.data.categoryId ?? "", parsed.data.brandId ?? "", storeId);
   if (relationError) return { error: relationError };
+  const categorySelection = readCategorySelection(formData);
+  if (!(await assertCategoriesBelongToStore(categorySelection.ids, storeId))) return { error: INVALID_CATEGORY_MESSAGE };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("products")
     .update({
-      category_id: parsed.data.categoryId || null,
+      // Faz 27 — category_id BURADA yazılmıyor: kategori kümesi aşağıda
+      // set_product_categories ile atomik yazılır, category_id aynası trigger'dan.
       brand_id: parsed.data.brandId || null,
       name: parsed.data.name,
       slug: parsed.data.slug,
@@ -207,6 +267,25 @@ export async function updateProductAction(
 
   if (error) {
     return { error: toFriendlyError(error) };
+  }
+
+  const categoryResult = await saveProductCategories(storeId, productId, categorySelection);
+  if (categoryResult.error) return { error: categoryResult.error };
+  if (categoryResult.added > 0 || categoryResult.removed > 0) {
+    await logAuditEvent({
+      userId: user.id,
+      customerId,
+      action: "product.categories_update",
+      entityType: "product",
+      entityId: productId,
+      metadata: {
+        source: "product_form",
+        added: categoryResult.added,
+        removed: categoryResult.removed,
+        categoryIds: categorySelection.ids,
+        primaryCategoryId: categorySelection.primaryId,
+      },
+    });
   }
 
   if (parsed.data.brandId && parsed.data.models.length > 0) {

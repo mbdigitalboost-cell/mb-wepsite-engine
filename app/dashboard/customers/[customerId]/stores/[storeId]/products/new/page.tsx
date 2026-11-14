@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
+import { getAdminCategoryOptions } from "@/lib/commerce/category-options";
 import { ProductForm } from "../product-form";
 import { createProductAction } from "../actions";
 import { ProductTabs } from "../[productId]/product-tabs";
@@ -33,8 +34,8 @@ export default async function NewProductPage({
     .maybeSingle();
   if (!store) notFound();
 
-  const [{ data: categories }, { data: brands }, modelsByBrand] = await Promise.all([
-    supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
+  const [categories, { data: brands }, modelsByBrand] = await Promise.all([
+    getAdminCategoryOptions(storeId),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     getBrandModelsSuggestionMap(storeId),
   ]);
@@ -56,7 +57,7 @@ export default async function NewProductPage({
           initialTab="basic"
           basicContent={
             <ProductForm
-              categoryOptions={categories ?? []}
+              categoryOptions={categories}
               brandOptions={brands ?? []}
               modelsByBrand={modelsByBrand}
               action={createProductAction.bind(null, customerId, storeId)}

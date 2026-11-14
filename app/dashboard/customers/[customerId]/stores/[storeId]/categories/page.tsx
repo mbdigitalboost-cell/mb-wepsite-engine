@@ -51,6 +51,10 @@ export default async function StoreCategoriesPage({
 
   const rows = (categories ?? []) as CategoryRow[];
   const nameById = new Map(rows.map((row) => [row.id, row.name]));
+  // Faz 27 — kategori başına ürün sayısı (product_categories, ana + ek kategoriler).
+  const { data: linkRows } = await supabase.from("product_categories").select("category_id").eq("store_id", storeId);
+  const productCountByCategory = new Map<string, number>();
+  for (const link of linkRows ?? []) productCountByCategory.set(link.category_id, (productCountByCategory.get(link.category_id) ?? 0) + 1);
   const createAction = createCategoryAction.bind(null, customerId, storeId);
 
   return (
@@ -87,6 +91,12 @@ export default async function StoreCategoriesPage({
                       {!category.is_active ? <span className="text-xs text-foreground/40">(pasif)</span> : null}
                     </p>
                     <p className="text-xs text-foreground/50">/{category.slug}</p>
+                    <Link
+                      href={`/dashboard/customers/${customerId}/stores/${storeId}/categories/${category.id}`}
+                      className="mt-0.5 inline-block text-xs font-medium text-[#B34C00] underline-offset-2 hover:underline"
+                    >
+                      {productCountByCategory.get(category.id) ?? 0} ürün · Ürünleri yönet / ekle →
+                    </Link>
                     {category.parent_id ? (
                       <p className="text-xs text-foreground/50">
                         Üst kategori: {nameById.get(category.parent_id) ?? "—"}
