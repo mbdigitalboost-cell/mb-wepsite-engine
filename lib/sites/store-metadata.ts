@@ -79,9 +79,12 @@ export function buildStorePageMetadata(input: {
  * Paylaşım görseli adresindeki ?v= değeri: ad/fiyat değişince adres de
  * değişir, böylece WhatsApp/Facebook önbelleği ve CDN eski fiyatı göstermez.
  */
+/** Görsel tasarımı değişince artırın: tüm paylaşım adresleri yenilenir (CDN/WhatsApp önbelleği). */
+const SHARE_IMAGE_LAYOUT_VERSION = 2;
+
 export function shareImageVersion(...parts: Array<string | number | null | undefined>): string {
   let hash = 5381;
-  for (const char of parts.map((part) => String(part ?? "")).join("|")) {
+  for (const char of [SHARE_IMAGE_LAYOUT_VERSION, ...parts].map((part) => String(part ?? "")).join("|")) {
     hash = ((hash << 5) + hash + char.charCodeAt(0)) >>> 0;
   }
   return hash.toString(36);

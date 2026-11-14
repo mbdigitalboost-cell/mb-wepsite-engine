@@ -104,10 +104,10 @@ export async function renderShareImage(input: ShareImageInput): Promise<Response
   );
 
   const priceBlock = input.price ? (
-    <div style={{ display: "flex", alignItems: "baseline", marginTop: 28 }}>
-      <div style={{ display: "flex", fontSize: 54, fontWeight: 700, color: ACCENT }}>{input.price.current}</div>
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", marginTop: 28 }}>
+      <div style={{ display: "flex", fontSize: 50, fontWeight: 700, color: ACCENT, whiteSpace: "nowrap" }}>{input.price.current}</div>
       {input.price.previous ? (
-        <div style={{ display: "flex", fontSize: 32, color: MUTED, textDecoration: "line-through", marginLeft: 22 }}>
+        <div style={{ display: "flex", fontSize: 28, color: MUTED, textDecoration: "line-through", marginLeft: 20, whiteSpace: "nowrap" }}>
           {input.price.previous}
         </div>
       ) : null}
