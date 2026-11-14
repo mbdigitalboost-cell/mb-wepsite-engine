@@ -2,69 +2,40 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
-import { getAdminCategoryOptions } from "@/lib/commerce/category-options";
-import { ProductForm } from "../product-form";
-import { createProductAction } from "../actions";
-import { ProductTabs } from "../[productId]/product-tabs";
+import { Button } from "@/components/ui/button";
+import { createDraftProductAction } from "../actions";
 
 /**
- * Create mode of the unified product screen (see [productId]/page.tsx's
- * own doc comment). Only Temel Bilgiler is usable — there is no
- * productId yet for Görseller/Varyantlar/Ek Ürün Alanları to attach to
- * — the other 3 tabs render locked via ProductTabs's own `mode="create"`
- * handling. On successful save, createProductAction (unchanged action
- * logic, only its redirect target changed — see products/actions.ts)
- * sends the admin straight to the new product's Görseller tab.
+ * Faz 27 Kısım B — eski /products/new adresi (yer imleri için). Sayfa
+ * açılınca KENDİLİĞİNDEN satır oluşturmaz (GET'te yan etki, link
+ * prefetch'lerinde istenmeyen taslaklar üretirdi); tek buton taslak ürünü
+ * POST ile oluşturup tek sayfa formuna yönlendirir. Ürün listesindeki
+ * "Yeni Ürün" butonu aynı action'ı doğrudan çağırır.
  */
-export default async function NewProductPage({
-  params,
-}: {
-  params: Promise<{ customerId: string; storeId: string }>;
-}) {
+export default async function NewProductPage({ params }: { params: Promise<{ customerId: string; storeId: string }> }) {
   const { customerId, storeId } = await params;
   await requireStoreEditorAccess(storeId);
 
   const supabase = await createSupabaseServerClient();
-  const { data: store } = await supabase
-    .from("stores")
-    .select("id, name")
-    .eq("id", storeId)
-    .eq("customer_id", customerId)
-    .maybeSingle();
+  const { data: store } = await supabase.from("stores").select("id, name").eq("id", storeId).eq("customer_id", customerId).maybeSingle();
   if (!store) notFound();
-
-  const [categories, { data: brands }, modelsByBrand] = await Promise.all([
-    getAdminCategoryOptions(storeId),
-    supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
-    getBrandModelsSuggestionMap(storeId),
-  ]);
 
   return (
     <div>
-      <Link
-        href={`/dashboard/customers/${customerId}/stores/${storeId}/products`}
-        className="text-xs text-foreground/50 hover:text-foreground hover:underline"
-      >
-        ← {store.name} · Products
+      <Link href={`/dashboard/customers/${customerId}/stores/${storeId}/products`} className="text-xs text-foreground/50 hover:text-foreground hover:underline">
+        ← {store.name} · Ürünler
       </Link>
-
       <h1 className="mt-2 text-xl font-semibold tracking-tight">Yeni Ürün</h1>
-
-      <div className="mt-6">
-        <ProductTabs
-          mode="create"
-          initialTab="basic"
-          basicContent={
-            <ProductForm
-              categoryOptions={categories}
-              brandOptions={brands ?? []}
-              modelsByBrand={modelsByBrand}
-              action={createProductAction.bind(null, customerId, storeId)}
-              submitLabel="Ürün Oluştur"
-            />
-          }
-        />
+      <div className="mt-6 max-w-lg rounded-xl border border-[#E4E4E7] bg-white p-5">
+        <p className="text-sm text-[#17171A]">
+          Yeni ürün bir <strong>taslak</strong> olarak oluşturulur: mağazada görünmez. Görsel, renk, kategori ve fiyatı tek sayfada
+          ekleyip hazır olunca &quot;Yayınla&quot;ya basarsınız.
+        </p>
+        <form action={createDraftProductAction.bind(null, customerId, storeId)} className="mt-4">
+          <Button type="submit" size="sm">
+            Taslak oluştur ve düzenle
+          </Button>
+        </form>
       </div>
     </div>
   );

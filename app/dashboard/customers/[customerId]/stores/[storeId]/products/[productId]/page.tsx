@@ -5,79 +5,68 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
 import { getAdminCategoryOptions, getProductCategoryLinks } from "@/lib/commerce/category-options";
 import { getProductOrderCount } from "@/lib/commerce/product-order-history";
+import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
 import { Badge } from "@/components/ui/badge";
-import { ProductForm } from "../product-form";
+import {
+  ProductBasicsCard,
+  ProductCard,
+  ProductFormRoot,
+  ProductInventoryCard,
+  ProductOrganizationCard,
+  ProductPricingCard,
+  ProductSaveBar,
+  ProductSeoCard,
+  ProductStatusCard,
+} from "../product-form";
 import { DeleteProductButton } from "../delete-product-button";
 import { DuplicateProductButton } from "../duplicate-product-button";
 import { updateProductAction, toggleProductActiveAction, deleteProductAction, duplicateProductAction } from "../actions";
-import { ProductTabs } from "./product-tabs";
-import { isProductTabKey, type ProductTabKey } from "./product-tab-keys";
 import { ImagesTab } from "./images-tab";
 import { VariantsTab } from "./variants-tab";
 import { AddonsTab } from "./addons-tab";
 
 /**
- * Unified product create/edit screen (tabbed) — Temel Bilgiler /
- * Görseller / Varyantlar / Ek Ürün Alanları all on this one page now,
- * instead of separate /images, /variants, /addons routes only reachable
- * after the product was already saved. `?tab=` picks the initially
- * active tab (createProductAction now redirects here with `?tab=images`
- * on successful create, so a brand-new product lands the admin straight
- * on Görseller — see products/actions.ts).
+ * Faz 27 Kısım B — tek sayfa ürün formu (Shopify düzeni). Sekmeler kalktı:
+ *  Sol: Temel bilgiler → Görseller → Fiyat → Stok → Renk ve seçenekler →
+ *       Ek ürün alanları → Arama motoru görünümü.
+ *  Sağ: Durum (Yayında / Taslak) → Ürün organizasyonu (çoklu kategori,
+ *       marka, uyumlu modeller) → Kargo.
+ *  Altta sabit Kaydet çubuğu.
  *
- * All 4 tabs' data is fetched on every load of this page, regardless of
- * which one is initially active — a deliberate, accepted trade-off:
- * switching tabs is then a pure client-side render with zero extra
- * requests (see product-tabs.tsx), and the extra queries this costs on
- * page load are cheap at this catalog's scale (a handful of images/
- * variants/addons per product). No new server action or query logic was
- * written for this — images-tab.tsx/variants-tab.tsx/addons-tab.tsx are
- * the original images/variants/addons page.tsx bodies, moved here
- * unchanged; every action still lives in its own original actions.ts.
+ * images-tab / variants-tab / addons-tab ve tüm action'ları DEĞİŞMEDEN
+ * dikey bölümlere taşındı (Eylül'deki sekme birleştirmesiyle aynı mantık,
+ * bu sefer sekme yerine bölüm). Temel alanlar ProductFormRoot'un tek
+ * formuna `form` niteliğiyle bağlı — bkz. product-form.tsx.
  */
 export default async function EditProductPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string; productId: string }>;
-  searchParams: Promise<{ tab?: string }>;
 }) {
   const { customerId, storeId, productId } = await params;
-  const { tab } = await searchParams;
   const { isAdmin } = await requireStoreAccess(storeId);
 
   const supabase = await createSupabaseServerClient();
-  const { data: store } = await supabase
-    .from("stores")
-    .select("id, name")
-    .eq("id", storeId)
-    .eq("customer_id", customerId)
-    .maybeSingle();
+  const { data: store } = await supabase.from("stores").select("id, name, slug").eq("id", storeId).eq("customer_id", customerId).maybeSingle();
   if (!store) notFound();
 
-  const [{ data: product }, categories, { data: brands }, modelsByBrand, orderCount] = await Promise.all([
+  const [{ data: product }, categoryOptions, { data: brands }, modelsByBrand, orderCount, categoryLinks, { count: variantCount }] = await Promise.all([
     supabase.from("products").select("*").eq("id", productId).eq("store_id", storeId).maybeSingle(),
     getAdminCategoryOptions(storeId),
     supabase.from("brands").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
     getBrandModelsSuggestionMap(storeId),
-    // Admin Panel İşlevsellik devir metni, Kısım A — koşullu kalıcı silme
-    // için gerçek sipariş sayısı. isAdmin değilse hiç kullanılmıyor (buton
-    // aşağıda zaten render edilmiyor) ama her ihtimalde tek sorgu, maliyeti
-    // ihmal edilebilir.
     getProductOrderCount(storeId, productId),
+    getProductCategoryLinks(storeId, productId),
+    supabase.from("product_variants").select("id", { count: "exact", head: true }).eq("product_id", productId).eq("store_id", storeId),
   ]);
-
   if (!product) notFound();
-  const categoryLinks = await getProductCategoryLinks(storeId, productId);
 
   const toggleActive = toggleProductActiveAction.bind(null, customerId, storeId, productId, !product.is_active);
   const deleteAction = deleteProductAction.bind(null, customerId, storeId, productId);
-  // Same DuplicateProductButton component as the list page — it renders a
-  // bare formAction submit button (no own <form>, see its own doc comment,
-  // designed to nest inside the list page's bulk-select form), so here it
-  // needs a small wrapping <form> of its own, same shape as toggleActive's.
   const duplicateAction = duplicateProductAction.bind(null, customerId, storeId, productId);
-  const initialTab: ProductTabKey = isProductTabKey(tab) ? tab : "basic";
+  const customDomain = Object.entries(STORE_DOMAINS).find(([, slug]) => slug === store.slug)?.[0];
+  const storePathPrefix = customDomain ? customDomain : `…/store/${store.slug}`;
+  const hasVariants = (variantCount ?? 0) > 0;
 
   return (
     <div>
@@ -85,78 +74,107 @@ export default async function EditProductPage({
         href={`/dashboard/customers/${customerId}/stores/${storeId}/products`}
         className="text-xs text-foreground/50 hover:text-foreground hover:underline"
       >
-        ← {store.name} · Products
+        ← {store.name} · Ürünler
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{product.name}</h1>
-        <Badge variant={product.is_active ? "solid" : "outline"}>{product.is_active ? "Aktif" : "Pasif"}</Badge>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="truncate text-xl font-semibold tracking-tight">{product.name}</h1>
+          <Badge variant={product.is_active ? "success" : "warning"}>{product.is_active ? "Yayında" : "Taslak"}</Badge>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <form action={duplicateAction}>
+            <DuplicateProductButton action={duplicateAction} />
+          </form>
+          {isAdmin ? <DeleteProductButton productName={product.name} orderCount={orderCount} action={deleteAction} /> : null}
+          <form action={toggleActive}>
+            <button
+              type="submit"
+              className={`inline-flex h-9 items-center rounded-lg px-4 text-sm font-semibold ${
+                product.is_active ? "border border-[#E4E4E7] bg-white text-[#17171A] hover:border-[#17171A]" : "bg-[#B34C00] text-white hover:bg-[#8F3D00]"
+              }`}
+            >
+              {product.is_active ? "Taslağa al" : "Yayınla"}
+            </button>
+          </form>
+        </div>
       </div>
+      {!product.is_active ? (
+        <p className="mt-1 text-xs text-[#71717A]">
+          Bu ürün taslak: mağazada görünmez. Bilgileri kaydedip hazır olunca &quot;Yayınla&quot;ya basın.
+        </p>
+      ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <form action={toggleActive}>
-          <button
-            type="submit"
-            className="rounded px-2 py-1 text-xs text-foreground/60 underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {product.is_active ? "Pasifleştir" : "Aktifleştir"}
-          </button>
-        </form>
-        <form action={duplicateAction}>
-          <DuplicateProductButton action={duplicateAction} />
-        </form>
-        {/*
-          Admin Panel İşlevsellik devir metni, Kısım A — kalıcı silme
-          store_admin+ (deleteProductAction zaten requireStoreAdminAccess
-          ile koruyordu, ama bu sayfa isAdmin'i ÖNCEDEN hiç kullanmıyordu:
-          buton HER görüntüleyen için render ediliyordu, store_editor
-          tıkladığında action sessizce notFound() atıyordu — kullanıcının
-          "kalıcı sil olmuyor" şikayetinin GERÇEK kök nedeni buydu. Artık
-          sadece isAdmin için render ediliyor.
-        */}
-        {isAdmin ? <DeleteProductButton productName={product.name} orderCount={orderCount} action={deleteAction} /> : null}
-      </div>
+      <ProductFormRoot action={updateProductAction.bind(null, customerId, storeId, productId)}>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="min-w-0 space-y-6">
+            <ProductBasicsCard
+              initial={{ name: product.name, shortDescription: product.short_description ?? "", description: product.description ?? "" }}
+            />
 
-      <div className="mt-6">
-        <ProductTabs
-          mode="edit"
-          initialTab={initialTab}
-          basicContent={
-            <ProductForm
-              initialValues={{
+            <ProductCard id="gorseller" title="Görseller" description="Birincil görsel kapak olur; liste sırası 'Sıra' ile belirlenir.">
+              <ImagesTab customerId={customerId} storeId={storeId} productId={productId} />
+            </ProductCard>
+
+            <ProductPricingCard
+              initial={{ price: Number(product.price), compareAtPrice: product.compare_at_price === null ? "" : Number(product.compare_at_price) }}
+            />
+
+            <ProductInventoryCard
+              initial={{ sku: product.sku ?? "", barcode: product.barcode ?? "", stock: product.stock }}
+              initialTrackInventory={product.track_inventory}
+              hasVariants={hasVariants}
+            />
+
+            <ProductCard id="secenekler" title="Renk ve seçenekler">
+              <details open={hasVariants} className="group">
+                <summary className="cursor-pointer list-none rounded-lg border border-dashed border-[#D4D4D8] px-4 py-3 text-sm text-[#52525B] hover:border-[#B34C00] group-open:mb-4">
+                  {hasVariants ? "Renkler ve varyantlar" : "+ Beden veya renk gibi seçenekler ekleyin"}
+                </summary>
+                <VariantsTab customerId={customerId} storeId={storeId} productId={productId} />
+              </details>
+            </ProductCard>
+
+            <ProductCard id="ek-alanlar" title="Ek ürün alanları" description="Kılıf üstü yazı gibi ücretli ekler.">
+              <AddonsTab customerId={customerId} storeId={storeId} productId={productId} basePrice={Number(product.price)} />
+            </ProductCard>
+
+            <ProductSeoCard
+              storePathPrefix={storePathPrefix}
+              initial={{
                 name: product.name,
                 slug: product.slug,
-                sku: product.sku ?? "",
-                barcode: product.barcode ?? "",
-                models: product.models ?? [],
-                shortDescription: product.short_description ?? "",
-                description: product.description ?? "",
-                categoryId: product.category_id ?? "",
-                brandId: product.brand_id ?? "",
-                price: Number(product.price),
-                compareAtPrice: product.compare_at_price === null ? "" : Number(product.compare_at_price),
-                stock: product.stock,
-                sortOrder: product.sort_order,
                 seoTitle: product.seo_title ?? "",
                 seoDescription: product.seo_description ?? "",
+                sortOrder: product.sort_order,
               }}
-              initialTrackInventory={product.track_inventory}
-              initialIsActive={product.is_active}
-              categoryOptions={categories}
-              initialCategoryIds={categoryLinks.ids}
-              brandOptions={brands ?? []}
-              modelsByBrand={modelsByBrand}
-              action={updateProductAction.bind(null, customerId, storeId, productId)}
-              submitLabel="Değişiklikleri Kaydet"
             />
-          }
-          imagesContent={<ImagesTab customerId={customerId} storeId={storeId} productId={productId} />}
-          variantsContent={<VariantsTab customerId={customerId} storeId={storeId} productId={productId} />}
-          addonsContent={
-            <AddonsTab customerId={customerId} storeId={storeId} productId={productId} basePrice={Number(product.price)} />
-          }
-        />
-      </div>
+          </div>
+
+          <aside className="space-y-6 lg:sticky lg:top-6">
+            <ProductStatusCard initialIsActive={product.is_active} />
+            <ProductOrganizationCard
+              categoryOptions={categoryOptions}
+              initialCategoryIds={categoryLinks.ids}
+              initialPrimaryCategoryId={categoryLinks.primaryId ?? product.category_id}
+              brandOptions={brands ?? []}
+              initialBrandId={product.brand_id ?? ""}
+              modelsByBrand={modelsByBrand}
+              initialModels={product.models ?? []}
+            />
+            <ProductCard title="Kargo">
+              <p className="text-xs text-[#71717A]">
+                Ürün bazlı desi alanı henüz yok; Basit Kargo gönderiminde mağazanın varsayılan desi/kg değeri kullanılır.{" "}
+                <Link href={`/dashboard/customers/${customerId}/stores/${storeId}/shipping`} className="text-[#B34C00] underline-offset-2 hover:underline">
+                  Kargo ayarları →
+                </Link>
+              </p>
+            </ProductCard>
+          </aside>
+        </div>
+
+        <ProductSaveBar label="Kaydet" />
+      </ProductFormRoot>
     </div>
   );
 }

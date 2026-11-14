@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireStoreEditorAccess, requireStoreAdminAccess } from "@/lib/auth/require-store-access";
@@ -215,6 +216,60 @@ export async function createProductAction(
   // right after creating a product, since that's typically the next
   // thing they add — see [productId]/page.tsx / product-tabs.tsx.
   redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${product.id}?tab=images`);
+}
+
+/**
+ * Faz 27 Kısım B — "Yeni ürün": hemen bir TASLAK ürün satırı oluşturur
+ * (is_active=false) ve tek sayfa formuna yönlendirir; görsel, renk/varyant,
+ * kategori doğrudan bu satıra eklenir (hepsi ürüne FK ile bağlı olduğu için
+ * önce satır gerekir — Shopify da böyle yapar). Şema değişikliği yok:
+ * "taslak" = is_active false. Slug/SKU benzersiz geçici değerler; admin
+ * sayfada değiştirir. Yarıda bırakılan taslaklar ürün listesinde
+ * "Yayında değil" filtresiyle görünür ve sipariş görmediyse silinebilir.
+ * POST ile çağrılır (GET'te satır oluşturmak, link prefetch'lerinde
+ * istenmeyen taslaklar üretebilirdi).
+ */
+export async function createDraftProductAction(customerId: string, storeId: string): Promise<void> {
+  const { user } = await requireStoreEditorAccess(storeId);
+  const supabase = await createSupabaseServerClient();
+
+  let productId: string | null = null;
+  for (let attempt = 0; attempt < 3 && !productId; attempt++) {
+    const suffix = randomBytes(3).toString("hex");
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        store_id: storeId,
+        name: "Yeni ürün",
+        slug: `taslak-${suffix}`,
+        sku: `TASLAK-${suffix.toUpperCase()}`,
+        price: 0,
+        stock: 0,
+        track_inventory: true,
+        is_active: false,
+        sort_order: 0,
+      })
+      .select("id")
+      .single();
+    if (data) productId = data.id;
+    else if (error && error.code !== "23505") {
+      console.error("[products] draft create failed:", error.message);
+      break;
+    }
+  }
+  if (!productId) redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products?draftError=1`);
+
+  await logAuditEvent({
+    userId: user.id,
+    customerId,
+    action: "product.create",
+    entityType: "product",
+    entityId: productId,
+    metadata: { draft: true },
+  });
+
+  revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
+  redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}`);
 }
 
 /** store_editor+ (RLS: products_update_editor_tier). Also handles the is_active toggle when submitted through the full form (a separate lighter-weight toggleProductActiveAction exists for the detail page's standalone toggle button). */

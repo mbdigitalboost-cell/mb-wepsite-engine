@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inputClasses } from "@/lib/utils/input-classes";
 import { LOW_STOCK_THRESHOLD } from "@/lib/commerce/inventory";
-import { bulkUpdateProductsAction, duplicateProductAction } from "./actions";
+import { bulkUpdateProductsAction, duplicateProductAction, createDraftProductAction } from "./actions";
 import { DuplicateProductButton } from "./duplicate-product-button";
 import { ProductSearchInput } from "./product-search-input";
 import { BulkActionControls } from "./bulk-action-controls";
@@ -193,9 +193,12 @@ export default async function StoreProductsPage({
           <Button href={`${basePath}/import`} size="sm" variant="outline">
             İçe Aktar
           </Button>
-          <Button href={`${basePath}/new`} size="sm">
-            Yeni Ürün
-          </Button>
+          {/* Faz 27 — taslak satır POST ile oluşturulur, tek sayfa formuna gider. */}
+          <form action={createDraftProductAction.bind(null, customerId, storeId)}>
+            <Button type="submit" size="sm">
+              Yeni Ürün
+            </Button>
+          </form>
         </div>
       </div>
       <p className="mt-1 text-sm text-foreground/60">
