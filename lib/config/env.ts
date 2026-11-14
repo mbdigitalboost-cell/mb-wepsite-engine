@@ -69,6 +69,13 @@ export const publicEnv = {
   supabaseUrl: readPublicEnv("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: readPublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   siteUrl: resolveSiteUrl(),
+  /**
+   * Faz 29 — bu deploy'un TEMİZ adresle sunduğu mağaza slug'ı (yoksa "").
+   * next.config.ts build'de SITE_KEY'den üretip gömer; literal erişim
+   * zorunlu (Next yalnız `process.env.NEXT_PUBLIC_X` yazımını istemciye
+   * gömer). Kullanım: lib/sites/store-href.ts.
+   */
+  cleanStoreSlug: process.env.NEXT_PUBLIC_CLEAN_STORE_SLUG ?? "",
 
   // Tracking IDs are intentionally optional and empty by default. Nothing
   // fires until a real ID is supplied per-customer/per-environment.

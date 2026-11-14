@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -71,7 +72,7 @@ export function SilahiniSecBreadcrumb({
           <span key={label} className="flex items-center gap-3">
             {index > 0 ? <span aria-hidden="true" className="h-[1.5px] w-7 bg-[#3A3A3A]" /> : null}
             {step === 1 && status === "done" ? (
-              <Link href={`/store/${storeSlug}/silahini-sec`} className="flex items-center gap-2">
+              <Link href={`${storeBase(storeSlug)}/silahini-sec`} className="flex items-center gap-2">
                 {dot}
                 <span className={labelClasses}>{displayLabel}</span>
               </Link>

@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import Image from "next/image";
 import { ImageOff } from "lucide-react";
@@ -35,7 +36,7 @@ export function ProductImageCardGrid({
         {products.map((product) => (
           <li key={product.id}>
             <Link
-              href={`/store/${storeSlug}/urun/${product.slug}`}
+              href={`${storeBase(storeSlug)}/urun/${product.slug}`}
               className="group block overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00] hover:shadow-lg"
             >
               <div className="relative h-[140px] bg-[#1D1D1B]">

@@ -1,3 +1,4 @@
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import Link from "next/link";
 import Image from "next/image";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
@@ -39,7 +40,7 @@ export function StoreFooter({
       <Container>
         <div className="flex flex-wrap justify-between gap-10">
           <div className="max-w-[260px]">
-            <Link href={`/store/${storeSlug}`} className="inline-flex items-center" aria-label={`${storeName} ana sayfa`}>
+            <Link href={storeHref(storeSlug)} className="inline-flex items-center" aria-label={`${storeName} ana sayfa`}>
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- DB'den gelebilecek keyfi tenant URL'i ya da küçük statik dosya; header ile aynı gerekçe.
                 <img src={logoUrl} alt={storeName} className="h-12 w-auto object-contain" />
@@ -57,7 +58,7 @@ export function StoreFooter({
                   {footerCategories.map((category) => (
                     <Link
                       key={category.id}
-                      href={`/store/${storeSlug}/kategori/${category.slug}`}
+                      href={`${storeBase(storeSlug)}/kategori/${category.slug}`}
                       className="hover:text-[#F5F5F5] hover:underline"
                     >
                       {category.name}
@@ -69,13 +70,13 @@ export function StoreFooter({
             <div>
               <div className={`${storefrontDisplayClasses} mb-3.5 text-xs font-semibold tracking-wide text-white`}>MÜŞTERİ</div>
               <div className="flex flex-col gap-2 text-sm">
-                <Link href={`/store/${storeSlug}/hesap`} className="hover:text-[#F5F5F5] hover:underline">
+                <Link href={`${storeBase(storeSlug)}/hesap`} className="hover:text-[#F5F5F5] hover:underline">
                   Hesabım
                 </Link>
-                <Link href={`/store/${storeSlug}/siparislerim`} className="hover:text-[#F5F5F5] hover:underline">
+                <Link href={`${storeBase(storeSlug)}/siparislerim`} className="hover:text-[#F5F5F5] hover:underline">
                   Siparişlerim
                 </Link>
-                <Link href={`/store/${storeSlug}/sepet`} className="hover:text-[#F5F5F5] hover:underline">
+                <Link href={`${storeBase(storeSlug)}/sepet`} className="hover:text-[#F5F5F5] hover:underline">
                   Sepetim
                 </Link>
               </div>

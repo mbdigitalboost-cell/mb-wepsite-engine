@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { revalidatePath } from "next/cache";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import {
@@ -451,7 +452,7 @@ export async function createOrderAction(
     // Faz 22 — kart: client bu sayfaya yönlenir, sepet ödeme doğrulanana
     // kadar BOŞALTILMAZ (checkout-form.tsx). Sipariş uuid'si tahmin
     // edilemez; sayfa ayrıca mağaza eşleşmesini kontrol eder.
-    paymentRedirectUrl: isCardPayment ? `/store/${storeSlug}/odeme/${order.id}` : null,
+    paymentRedirectUrl: isCardPayment ? `${storeBase(storeSlug)}/odeme/${order.id}` : null,
   };
 }
 

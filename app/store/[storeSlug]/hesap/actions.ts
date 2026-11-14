@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { AuthError, User } from "@supabase/supabase-js";
@@ -213,7 +214,7 @@ export async function signupAction(
     addressNeighborhood,
     addressLine,
   });
-  redirect(`/store/${storeSlug}/hesap`);
+  redirect(`${storeBase(storeSlug)}/hesap`);
 }
 
 export async function loginAction(
@@ -256,11 +257,11 @@ export async function loginAction(
     data.user.email ?? email,
     extractProfileMetaFromUser(data.user),
   );
-  redirect(`/store/${storeSlug}/hesap`);
+  redirect(`${storeBase(storeSlug)}/hesap`);
 }
 
 export async function logoutAction(storeSlug: string): Promise<void> {
   const supabase = await createSupabaseStorefrontServerClient();
   await supabase.auth.signOut();
-  redirect(`/store/${storeSlug}`);
+  redirect(storeHref(storeSlug));
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -18,11 +19,11 @@ import { CARD_PAYMENT_METHOD, PAYMENT_METHODS } from "@/lib/validation/order";
  */
 export async function switchPaymentMethodAction(storeSlug: string, orderId: string, formData: FormData): Promise<void> {
   const store = await getStoreBySlug(storeSlug);
-  if (!store) redirect(`/store/${storeSlug}/sepet`);
+  if (!store) redirect(`${storeBase(storeSlug)}/sepet`);
 
   const method = String(formData.get("paymentMethod") ?? "");
   if (!(PAYMENT_METHODS as readonly string[]).includes(method)) {
-    redirect(`/store/${storeSlug}/odeme/${orderId}?hata=yontem`);
+    redirect(`${storeBase(storeSlug)}/odeme/${orderId}?hata=yontem`);
   }
 
   const admin = createSupabaseAdminClient();
@@ -37,7 +38,7 @@ export async function switchPaymentMethodAction(storeSlug: string, orderId: stri
     .select("id, order_number");
 
   if (!updated || updated.length === 0) {
-    redirect(`/store/${storeSlug}/odeme/${orderId}`);
+    redirect(`${storeBase(storeSlug)}/odeme/${orderId}`);
   }
 
   const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.id).maybeSingle();
@@ -53,5 +54,5 @@ export async function switchPaymentMethodAction(storeSlug: string, orderId: stri
     revalidatePath(`/dashboard/customers/${storeRow.customer_id}/stores/${store.id}/orders`);
   }
 
-  redirect(`/store/${storeSlug}/sepet?siparis=${orderId}&odeme=yontem`);
+  redirect(`${storeBase(storeSlug)}/sepet?siparis=${orderId}&odeme=yontem`);
 }

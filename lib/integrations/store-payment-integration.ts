@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/config/env";
-import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
+import { findStoreSiteBySlug } from "@/lib/sites/registry";
 import type { IyzicoCredentials } from "@/lib/integrations/iyzico";
 import type { PaymentIntegrationMode } from "@/lib/supabase/types";
 
@@ -39,8 +39,10 @@ export interface PaymentIntegrationSummary {
 
 /** iyzico paneline (Ayarlar → Firma Ayarları → İşyeri Bildirimleri) yapıştırılacak adres. Mağaza, ?store= ile çözülür — iyzico'da imza başlığı (X-IYZ-SIGNATURE-V3) hesapta açıksa ayrıca doğrulanır. */
 export function buildPaymentWebhookUrl(storeId: string, storeSlug: string): string {
-  const customDomain = Object.entries(STORE_DOMAINS).find(([, slug]) => slug === storeSlug)?.[0];
-  const base = (customDomain ? `https://${customDomain}` : publicEnv.siteUrl).replace(/\/+$/, "");
+  // Faz 29 — mağazanın kendi domaini (lib/sites/registry.ts); kaydı yoksa bu
+  // deploy'un adresi. Eski (panel domainli) adres de çalışmaya devam eder:
+  // webhook route'u panel + mağaza sitelerinde açık (route-policy).
+  const base = (findStoreSiteBySlug(storeSlug)?.canonicalOrigin ?? publicEnv.siteUrl).replace(/\/+$/, "");
   return `${base}/api/webhooks/iyzico?store=${encodeURIComponent(storeId)}`;
 }
 

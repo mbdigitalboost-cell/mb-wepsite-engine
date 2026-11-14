@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import type { PublicProduct } from "@/lib/commerce/public/products";
 import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -57,7 +58,7 @@ export function ProductGrid({ storeSlug, products }: ProductGridProps) {
       {products.map((product) => (
         <li key={product.id}>
           <Link
-            href={`/store/${storeSlug}/urun/${product.slug}`}
+            href={`${storeBase(storeSlug)}/urun/${product.slug}`}
             className="block rounded-[14px] border border-[#292929] bg-[#171717] p-3 text-sm transition-colors hover:border-[#D95F00]"
           >
             {/* STEP 33 display-only — product.brand already resolved by getPublicProducts/attachBrandsToProducts, no extra query here. No link/filter, plain label. */}

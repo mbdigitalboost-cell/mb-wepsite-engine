@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
@@ -61,7 +62,7 @@ export async function StorefrontCtaBand({ storeId, storeSlug }: { storeId: strin
             Bizi Instagram&apos;da Takip Et →
           </a>
         ) : (
-          <Link href={`/store/${storeSlug}/silahini-sec`} className={ctaClassName}>
+          <Link href={`${storeBase(storeSlug)}/silahini-sec`} className={ctaClassName}>
             Diğer Markalara Göz At →
           </Link>
         )}

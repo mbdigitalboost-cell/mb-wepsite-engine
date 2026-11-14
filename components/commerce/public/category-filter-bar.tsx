@@ -1,5 +1,6 @@
 "use client";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { useRouter, useSearchParams } from "next/navigation";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import type { PublicBrand } from "@/lib/commerce/public/brands";
@@ -63,7 +64,7 @@ export function CategoryFilterBar({
       params.delete(key);
     }
     const query = params.toString();
-    router.push(`/store/${storeSlug}/kategori/${categorySlug}${query ? `?${query}` : ""}`);
+    router.push(`${storeBase(storeSlug)}/kategori/${categorySlug}${query ? `?${query}` : ""}`);
   }
 
   return (

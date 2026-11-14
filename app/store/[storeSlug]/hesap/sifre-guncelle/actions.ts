@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { redirect } from "next/navigation";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { setPasswordFormSchema } from "@/lib/validation/invite";
@@ -24,7 +25,7 @@ export async function updatePasswordAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/store/${storeSlug}/hesap/giris`);
+    redirect(`${storeBase(storeSlug)}/hesap/giris`);
   }
 
   const parsed = setPasswordFormSchema.safeParse({
@@ -40,5 +41,5 @@ export async function updatePasswordAction(
     return { error: `Şifre güncellenemedi: ${error.message}` };
   }
 
-  redirect(`/store/${storeSlug}/hesap`);
+  redirect(`${storeBase(storeSlug)}/hesap`);
 }

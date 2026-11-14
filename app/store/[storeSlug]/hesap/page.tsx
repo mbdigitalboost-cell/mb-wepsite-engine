@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
@@ -40,7 +41,7 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/store/${storeSlug}/hesap/giris`);
+  if (!user) redirect(`${storeBase(storeSlug)}/hesap/giris`);
 
   const { data: orders } = await supabase
     .from("orders")
@@ -59,7 +60,7 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href={`/store/${storeSlug}/hesap/adreslerim`}
+              href={`${storeBase(storeSlug)}/hesap/adreslerim`}
               className="text-sm text-[#A3A3A3] underline-offset-2 hover:text-[#F5F5F5] hover:underline"
             >
               Adreslerim
@@ -82,7 +83,7 @@ export default async function StoreAccountPage({ params }: { params: Promise<{ s
         <div className="mt-8 flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-[#A3A3A3]">Siparişlerim</h2>
           <Link
-            href={`/store/${storeSlug}/siparislerim`}
+            href={`${storeBase(storeSlug)}/siparislerim`}
             className="text-xs font-medium text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
           >
             Tüm Sipariş Detaylarını Gör →

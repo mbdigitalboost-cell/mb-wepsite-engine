@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -62,7 +63,7 @@ async function handle(request: Request): Promise<NextResponse> {
   const origin = url.origin;
 
   if (result.outcome === "not_found") {
-    return NextResponse.redirect(`${origin}/store/${store.slug}/siparislerim`, 303);
+    return NextResponse.redirect(`${origin}${storeBase(store.slug)}/siparislerim`, 303);
   }
 
   const ordersPath = `/dashboard/customers/${store.customer_id}/stores/${store.id}/orders`;
@@ -72,12 +73,12 @@ async function handle(request: Request): Promise<NextResponse> {
   }
 
   if (result.outcome === "paid") {
-    return NextResponse.redirect(`${origin}/store/${store.slug}/sepet?siparis=${result.order.id}&odeme=basarili`, 303);
+    return NextResponse.redirect(`${origin}${storeBase(store.slug)}/sepet?siparis=${result.order.id}&odeme=basarili`, 303);
   }
   if (result.order) {
-    return NextResponse.redirect(`${origin}/store/${store.slug}/odeme/${result.order.id}?hata=1`, 303);
+    return NextResponse.redirect(`${origin}${storeBase(store.slug)}/odeme/${result.order.id}?hata=1`, 303);
   }
-  return NextResponse.redirect(`${origin}/store/${store.slug}/sepet`, 303);
+  return NextResponse.redirect(`${origin}${storeBase(store.slug)}/sepet`, 303);
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

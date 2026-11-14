@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { Space_Grotesk } from "next/font/google";
 import { Truck } from "lucide-react";
 import type { PublicOrderWithItems } from "@/lib/commerce/public/order-lookup";
@@ -65,7 +66,7 @@ export function OrderStatusCard({ order, storeSlug }: { order: PublicOrderWithIt
         {cardPaymentPending ? (
           <>
             {" · "}
-            <a href={`/store/${storeSlug}/odeme/${order.id}`} className="text-[#D95F00] underline-offset-2 hover:underline">
+            <a href={`${storeBase(storeSlug)}/odeme/${order.id}`} className="text-[#D95F00] underline-offset-2 hover:underline">
               Ödemeyi tamamla →
             </a>
           </>

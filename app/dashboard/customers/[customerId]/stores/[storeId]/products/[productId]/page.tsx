@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandModelsSuggestionMap } from "@/lib/commerce/brand-models";
 import { getAdminCategoryOptions, getProductCategoryLinks } from "@/lib/commerce/category-options";
 import { getProductOrderCount } from "@/lib/commerce/product-order-history";
-import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
+import { findStoreSiteBySlug } from "@/lib/sites/registry";
 import { Badge } from "@/components/ui/badge";
 import {
   ProductBasicsCard,
@@ -64,8 +64,9 @@ export default async function EditProductPage({
   const toggleActive = toggleProductActiveAction.bind(null, customerId, storeId, productId, !product.is_active);
   const deleteAction = deleteProductAction.bind(null, customerId, storeId, productId);
   const duplicateAction = duplicateProductAction.bind(null, customerId, storeId, productId);
-  const customDomain = Object.entries(STORE_DOMAINS).find(([, slug]) => slug === store.slug)?.[0];
-  const storePathPrefix = customDomain ? customDomain : `…/store/${store.slug}`;
+  // Faz 29 — arama önizlemesi mağazanın gerçek (temiz) adresini gösterir: t46store.com/urun/...
+  const storeSite = findStoreSiteBySlug(store.slug);
+  const storePathPrefix = storeSite ? new URL(storeSite.canonicalOrigin).host.replace(/^www\./, "") : `…/store/${store.slug}`;
   const hasVariants = (variantCount ?? 0) > 0;
 
   return (

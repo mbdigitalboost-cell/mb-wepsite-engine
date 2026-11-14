@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -60,7 +61,7 @@ export default async function StoreChooseWeaponBrandPage({
       <Container className="py-10">
         <SilahiniSecBreadcrumb storeSlug={storeSlug} activeStep={2} brandName={brand.name} />
         <Link
-          href={`/store/${storeSlug}/silahini-sec`}
+          href={`${storeBase(storeSlug)}/silahini-sec`}
           className="mt-3 inline-block text-xs text-[#A3A3A3] hover:text-[#F5F5F5] hover:underline"
         >
           ← Markalar
@@ -74,11 +75,11 @@ export default async function StoreChooseWeaponBrandPage({
           <div className="mt-8 flex flex-col items-center gap-4 rounded-[14px] border border-[#292929] bg-[#171717] px-6 py-12 text-center">
             <p className="text-sm text-[#A3A3A3]">Bu markada henüz ürün yok.</p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href={`/store/${storeSlug}/silahini-sec`} className={storefrontButtonClasses}>
+              <Link href={`${storeBase(storeSlug)}/silahini-sec`} className={storefrontButtonClasses}>
                 Silahını Seç&apos;e Dön
               </Link>
               <Link
-                href={`/store/${storeSlug}/kategoriler`}
+                href={`${storeBase(storeSlug)}/kategoriler`}
                 className="text-sm font-medium text-[#D95F00] hover:text-[#F26A00]"
               >
                 Tüm Kategoriler&apos;e Göz At
@@ -89,7 +90,7 @@ export default async function StoreChooseWeaponBrandPage({
           <div className="mt-6">
             <p className="text-sm text-[#A3A3A3]">Bu markada henüz model girilmemiş.</p>
             <Link
-              href={`/store/${storeSlug}/silahini-sec/${brandSlug}/sonuclar`}
+              href={`${storeBase(storeSlug)}/silahini-sec/${brandSlug}/sonuclar`}
               className="mt-3 inline-block text-sm font-medium text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
             >
               Tüm {brand.name} Ürünlerini Gör →
@@ -102,7 +103,7 @@ export default async function StoreChooseWeaponBrandPage({
               {models.map((model) => (
                 <li key={model}>
                   <Link
-                    href={`/store/${storeSlug}/silahini-sec/${brandSlug}/sonuclar?model=${encodeURIComponent(model)}`}
+                    href={`${storeBase(storeSlug)}/silahini-sec/${brandSlug}/sonuclar?model=${encodeURIComponent(model)}`}
                     className={`${storefrontDisplayClasses} flex h-20 items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] p-4 text-center text-sm font-semibold text-[#F5F5F5] transition-colors hover:border-[#D95F00]`}
                   >
                     {model}

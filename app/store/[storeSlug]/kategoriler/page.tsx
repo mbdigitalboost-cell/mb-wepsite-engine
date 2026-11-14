@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -54,7 +55,7 @@ export default async function StoreAllCategoriesPage({ params }: { params: Promi
                 <li key={category.id}>
                   {banner ? (
                     <Link
-                      href={`/store/${storeSlug}/kategori/${category.slug}`}
+                      href={`${storeBase(storeSlug)}/kategori/${category.slug}`}
                       aria-label={category.name}
                       className="group relative block aspect-[3/1] overflow-hidden rounded-[16px] border border-[#292929] bg-[#171717] transition-colors hover:border-[#D95F00] focus-visible:border-[#D95F00] focus-visible:outline-none"
                     >

@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -58,7 +59,7 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
               <li key={brand.id}>
                 {brand.productCount > 0 ? (
                   <Link
-                    href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
+                    href={`${storeBase(storeSlug)}/silahini-sec/${brand.slug}`}
                     className="group relative flex aspect-square flex-col items-center justify-center gap-3 overflow-hidden rounded-[14px] border border-[#D95F00]/50 bg-[#171717] p-5 text-center transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00]"
                   >
                     <div
@@ -92,7 +93,7 @@ export default async function StoreChooseWeaponPage({ params }: { params: Promis
         {/* Devir metni v2 — kanvasta (SilahiniSec.dc.html) grid'in altında bu alt metin/link var, canlıda yoktu. */}
         <p className="mt-7 text-[12.5px] text-[#6B6B6B]">
           Markanı bulamadın mı?{" "}
-          <Link href={`/store/${storeSlug}/kategoriler`} className="text-[#D95F00] underline-offset-2 hover:underline">
+          <Link href={`${storeBase(storeSlug)}/kategoriler`} className="text-[#D95F00] underline-offset-2 hover:underline">
             Tüm kategorilere
           </Link>{" "}
           göz atabilirsin.

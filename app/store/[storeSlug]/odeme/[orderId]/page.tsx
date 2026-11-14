@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Banknote, CreditCard, Landmark, ShieldCheck } from "lucide-react";
@@ -57,10 +58,10 @@ export default async function StoreCardPaymentPage({
   if (!order) notFound();
 
   if (order.payment_status === "paid" && isCardOrder(order)) {
-    redirect(`/store/${storeSlug}/sepet?siparis=${orderId}&odeme=basarili`);
+    redirect(`${storeBase(storeSlug)}/sepet?siparis=${orderId}&odeme=basarili`);
   }
 
-  const sepetPath = `/store/${storeSlug}/sepet`;
+  const sepetPath = `${storeBase(storeSlug)}/sepet`;
   const total = orderTotal(order);
 
   if (!isCardOrder(order) || order.status !== "pending" || order.payment_status !== "unpaid") {
@@ -73,7 +74,7 @@ export default async function StoreCardPaymentPage({
             beklenmiyor
             {order.payment_method ? ` (ödeme yöntemi: ${order.payment_method})` : ""}.
           </p>
-          <Link href={`/store/${storeSlug}/siparislerim`} className={`${storefrontButtonOutlineClasses} mt-6 inline-flex`}>
+          <Link href={`${storeBase(storeSlug)}/siparislerim`} className={`${storefrontButtonOutlineClasses} mt-6 inline-flex`}>
             Siparişlerim
           </Link>
         </Container>
@@ -143,7 +144,7 @@ export default async function StoreCardPaymentPage({
                 <p role="alert" className="text-sm text-red-300">
                   {initError}
                 </p>
-                <a href={`/store/${storeSlug}/odeme/${orderId}`} className={`${storefrontButtonOutlineClasses} mt-4 inline-flex`}>
+                <a href={`${storeBase(storeSlug)}/odeme/${orderId}`} className={`${storefrontButtonOutlineClasses} mt-4 inline-flex`}>
                   Tekrar Dene
                 </a>
               </div>

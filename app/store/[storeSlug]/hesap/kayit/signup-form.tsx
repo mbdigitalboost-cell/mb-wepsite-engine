@@ -1,5 +1,6 @@
 "use client";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { useActionState, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
@@ -47,7 +48,7 @@ export function SignupForm({ storeSlug }: { storeSlug: string }) {
           yapabilirsiniz.
         </p>
         <Link
-          href={`/store/${storeSlug}/hesap/giris`}
+          href={`${storeBase(storeSlug)}/hesap/giris`}
           className="mt-3 inline-block text-sm text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline"
         >
           Giriş sayfasına git
@@ -139,7 +140,7 @@ export function SignupForm({ storeSlug }: { storeSlug: string }) {
 
       <p className="text-center text-xs text-[#A3A3A3]">
         Zaten hesabınız var mı?{" "}
-        <Link href={`/store/${storeSlug}/hesap/giris`} className="text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
+        <Link href={`${storeBase(storeSlug)}/hesap/giris`} className="text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
           Giriş yapın
         </Link>
       </p>

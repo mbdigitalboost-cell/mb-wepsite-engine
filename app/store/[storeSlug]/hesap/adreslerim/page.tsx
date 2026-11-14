@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -26,7 +27,7 @@ export default async function StoreAddressesPage({ params }: { params: Promise<{
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/store/${storeSlug}/hesap/giris`);
+  if (!user) redirect(`${storeBase(storeSlug)}/hesap/giris`);
 
   const { data: addresses } = await supabase
     .from("store_customer_addresses")
@@ -38,7 +39,7 @@ export default async function StoreAddressesPage({ params }: { params: Promise<{
 
   return (
     <Container className="py-10">
-      <Link href={`/store/${storeSlug}/hesap`} className="text-xs text-foreground/50 hover:text-foreground hover:underline">
+      <Link href={`${storeBase(storeSlug)}/hesap`} className="text-xs text-foreground/50 hover:text-foreground hover:underline">
         ← Hesabım
       </Link>
       <h1 className="mt-2 text-2xl font-semibold text-foreground">Adreslerim</h1>
@@ -70,7 +71,7 @@ export default async function StoreAddressesPage({ params }: { params: Promise<{
 
                 <div className="flex flex-col items-end gap-1.5 text-sm">
                   <Link
-                    href={`/store/${storeSlug}/hesap/adreslerim/${address.id}/duzenle`}
+                    href={`${storeBase(storeSlug)}/hesap/adreslerim/${address.id}/duzenle`}
                     className="text-brand-accent underline-offset-2 hover:underline"
                   >
                     Düzenle

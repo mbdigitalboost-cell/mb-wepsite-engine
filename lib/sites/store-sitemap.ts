@@ -2,8 +2,10 @@
  * Faz 28 — mağaza sitemap'inin SAF üreticisi (tests/store-sitemap.test.ts).
  * Veri lib/commerce/public/sitemap-data.ts'ten gelir (anon/RLS okuması);
  * burada ikinci bir savunma olarak pasif kayıtlar da elenir.
- * Tüm adresler `<canonicalOrigin>/store/<slug>/...` — localhost, başka
- * bir sitenin yolu ya da kişisel sayfalar (sepet, hesap, ödeme) asla yok.
+ * Faz 29: adresler TEMİZ — `<canonicalOrigin>/urun/x`, `/kategori/y`
+ * (mağaza kendi domaininde temiz adresle sunulur). localhost, başka bir
+ * sitenin yolu ya da kişisel sayfalar (sepet, hesap, ödeme) asla yok.
+ * `storeSlug` yalnız kayıt için tutulur; adrese girmez.
  */
 export interface SitemapRecord {
   slug: string;
@@ -43,14 +45,14 @@ function latest(records: SitemapRecord[]): Date | undefined {
 }
 
 export function buildStoreSitemap(input: StoreSitemapInput): StoreSitemapEntry[] {
-  const base = `${input.canonicalOrigin.replace(/\/+$/, "")}/store/${input.storeSlug}`;
+  const base = input.canonicalOrigin.replace(/\/+$/, "");
   const categories = input.categories.filter((c) => c.isActive && c.slug);
   const products = input.products.filter((p) => p.isActive && p.slug);
   const brands = input.brands.filter((b) => b.isActive && b.slug);
   const lastCatalogChange = latest([...categories, ...products]);
 
   const entries: StoreSitemapEntry[] = [
-    { url: base, lastModified: lastCatalogChange, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/`, lastModified: lastCatalogChange, changeFrequency: "daily", priority: 1 },
     { url: `${base}/kategoriler`, lastModified: latest(categories), changeFrequency: "weekly", priority: 0.8 },
     ...categories.map((c) => ({
       url: `${base}/kategori/${encodeURIComponent(c.slug)}`,

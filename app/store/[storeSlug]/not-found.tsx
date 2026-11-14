@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentSite } from "@/lib/sites/current";
-import { storeBasePath } from "@/lib/sites/registry";
+import { storeBase } from "@/lib/sites/store-href";
 import { StoreNotFoundContent } from "@/components/sites/store-not-found-content";
 
 /**
@@ -20,5 +20,5 @@ export function generateMetadata(): Metadata {
 
 export default function StoreNotFound() {
   const site = getCurrentSite();
-  return <StoreNotFoundContent storeBasePath={storeBasePath(site) ?? "/"} />;
+  return <StoreNotFoundContent storeBasePath={site.storeSlug ? storeBase(site.storeSlug) : ""} />;
 }

@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -204,13 +205,13 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
-                  href={`/store/${storeSlug}/silahini-sec`}
+                  href={`${storeBase(storeSlug)}/silahini-sec`}
                   className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
                 >
                   Silahını Seç
                 </Link>
                 <Link
-                  href={`/store/${storeSlug}/kategoriler`}
+                  href={`${storeBase(storeSlug)}/kategoriler`}
                   className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
                 >
                   Tüm Kategoriler

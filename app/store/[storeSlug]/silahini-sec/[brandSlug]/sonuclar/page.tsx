@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -48,7 +49,7 @@ export default async function StoreChooseWeaponResultsPage({
       <Container className="py-10">
         <SilahiniSecBreadcrumb storeSlug={storeSlug} activeStep={3} brandName={brand.name} />
         <Link
-          href={`/store/${storeSlug}/silahini-sec/${brandSlug}`}
+          href={`${storeBase(storeSlug)}/silahini-sec/${brandSlug}`}
           className="mt-3 inline-block text-xs text-[#A3A3A3] hover:text-[#F5F5F5] hover:underline"
         >
           ← {brand.name}

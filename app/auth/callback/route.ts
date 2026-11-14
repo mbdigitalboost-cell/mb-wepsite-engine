@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { resolveSafeNextPath } from "@/lib/security/safe-redirect";
+import { getCurrentSite } from "@/lib/sites/current";
+import { storeHref } from "@/lib/sites/store-href";
 
 /**
  * Handles every Supabase Auth "click a link in an email" flow: invite
@@ -48,7 +50,12 @@ export async function GET(request: Request) {
   // a storefront password-reset link would establish its session in the
   // ADMIN's cookie space instead, exactly the cross-contamination this
   // phase fixed everywhere else.
-  const supabase = next.startsWith("/store/") ? await createSupabaseStorefrontServerClient() : await createSupabaseServerClient();
+  // Faz 29 — temiz adreslerde `next` artık "/hesap/sifre-guncelle" gibi
+  // (/store/ öneki yok). Mağaza sitesinde bu route yalnız müşteri şifre
+  // sıfırlaması için açık (admin yolları panele 308'lenir), bu yüzden
+  // mağaza sitesinde her zaman mağaza müşterisi çerez alanı kullanılır.
+  const isStorefrontFlow = next.startsWith("/store/") || getCurrentSite().kind === "store";
+  const supabase = isStorefrontFlow ? await createSupabaseStorefrontServerClient() : await createSupabaseServerClient();
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -58,5 +65,12 @@ export async function GET(request: Request) {
     }
   }
 
+  // Faz 29 — mağaza müşterisinin linki geçersiz/süresi dolmuşsa panelin
+  // /login'ine değil (mağaza sitesinde o adres panele 308'lenir), mağazanın
+  // kendi "şifremi unuttum" sayfasına dön; yeni link isteyebilsin.
+  const site = getCurrentSite();
+  if (isStorefrontFlow && site.kind === "store" && site.storeSlug) {
+    return NextResponse.redirect(`${origin}${storeHref(site.storeSlug, "/hesap/sifremi-unuttum")}`);
+  }
   return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
 }

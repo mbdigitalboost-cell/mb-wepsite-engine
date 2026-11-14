@@ -51,8 +51,14 @@ async function refreshCookieSession(
   await supabase.auth.getUser();
 }
 
-export async function updateSupabaseSession(request: NextRequest) {
-  const response = NextResponse.next({ request });
+/**
+ * Faz 29 — `rewriteTo` verilirse yanıt bir rewrite olur (temiz mağaza
+ * adresi → /store/<slug>/... iç route'u) ama oturum çerezleri yine aynı
+ * şekilde yenilenir; aksi halde temiz adreslerden gelen sepet/hesap/ödeme
+ * istekleri çerez yenilemesini kaçırırdı.
+ */
+export async function updateSupabaseSession(request: NextRequest, rewriteTo?: URL) {
+  const response = rewriteTo ? NextResponse.rewrite(rewriteTo, { request }) : NextResponse.next({ request });
 
   if (!isSupabaseConfigured()) {
     return response;

@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/config/env";
-import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
+import { findStoreSiteBySlug } from "@/lib/sites/registry";
 
 /**
  * Faz 21 — store_shipping_integrations (migration 0039) için TEK erişim
@@ -50,14 +50,16 @@ function generateWebhookSecret(): string {
 }
 
 /**
- * Webhook adresi: mağazanın özel domaini STORE_DOMAINS'te kayıtlıysa o
+ * Webhook adresi: mağazanın domaini registry'de (lib/sites/registry.ts) kayıtlıysa o
  * (https://www.t46store.com gibi), değilse bu deployment'ın kendi
  * NEXT_PUBLIC_SITE_URL'i. Route her iki deployment'ta da aynı kodla
  * çalışır; secret mağazayı çözdüğü için host'un hangisi olduğu önemsiz.
  */
 export function buildShippingWebhookUrl(storeSlug: string, webhookSecret: string): string {
-  const customDomain = Object.entries(STORE_DOMAINS).find(([, slug]) => slug === storeSlug)?.[0];
-  const base = (customDomain ? `https://${customDomain}` : publicEnv.siteUrl).replace(/\/+$/, "");
+  // Faz 29 — mağazanın kendi domaini (lib/sites/registry.ts); kaydı yoksa bu
+  // deploy'un adresi. Eski (panel domainli) adres de çalışmaya devam eder:
+  // webhook route'u panel + mağaza sitelerinde açık (route-policy).
+  const base = (findStoreSiteBySlug(storeSlug)?.canonicalOrigin ?? publicEnv.siteUrl).replace(/\/+$/, "");
   return `${base}/api/webhooks/basit-kargo?secret=${encodeURIComponent(webhookSecret)}`;
 }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -13,7 +14,7 @@ async function requireUser(storeSlug: string, supabase: SupabaseClient<Database>
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/store/${storeSlug}/hesap/giris`);
+  if (!user) redirect(`${storeBase(storeSlug)}/hesap/giris`);
   return user;
 }
 
@@ -106,7 +107,7 @@ export async function addAddressAction(
     return { status: "error", error: "Adres eklenemedi, lütfen tekrar deneyin." };
   }
 
-  redirect(`/store/${storeSlug}/hesap/adreslerim`);
+  redirect(`${storeBase(storeSlug)}/hesap/adreslerim`);
 }
 
 export async function updateAddressAction(
@@ -149,7 +150,7 @@ export async function updateAddressAction(
     return { status: "error", error: "Adres güncellenemedi, lütfen tekrar deneyin." };
   }
 
-  redirect(`/store/${storeSlug}/hesap/adreslerim`);
+  redirect(`${storeBase(storeSlug)}/hesap/adreslerim`);
 }
 
 export async function deleteAddressAction(storeSlug: string, addressId: string): Promise<void> {
@@ -161,7 +162,7 @@ export async function deleteAddressAction(storeSlug: string, addressId: string):
     console.error("[hesap/adreslerim] failed to delete address:", error.message);
   }
 
-  redirect(`/store/${storeSlug}/hesap/adreslerim`);
+  redirect(`${storeBase(storeSlug)}/hesap/adreslerim`);
 }
 
 /**
@@ -194,5 +195,5 @@ export async function setDefaultAddressAction(storeSlug: string, addressId: stri
     await supabase.from("store_customer_addresses").update({ is_default: true }).eq("id", addressId).eq("user_id", user.id);
   }
 
-  redirect(`/store/${storeSlug}/hesap/adreslerim`);
+  redirect(`${storeBase(storeSlug)}/hesap/adreslerim`);
 }

@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -20,7 +21,7 @@ export default async function StoreEditAddressPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/store/${storeSlug}/hesap/giris`);
+  if (!user) redirect(`${storeBase(storeSlug)}/hesap/giris`);
 
   const { data: address } = await supabase
     .from("store_customer_addresses")
@@ -34,7 +35,7 @@ export default async function StoreEditAddressPage({
   return (
     <Container className="py-10">
       <Link
-        href={`/store/${storeSlug}/hesap/adreslerim`}
+        href={`${storeBase(storeSlug)}/hesap/adreslerim`}
         className="text-xs text-foreground/50 hover:text-foreground hover:underline"
       >
         ← Adreslerim

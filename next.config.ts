@@ -1,4 +1,22 @@
 import type { NextConfig } from "next";
+import { resolveSite } from "./lib/sites/registry";
+
+/**
+ * Faz 29 Kısım B — temiz mağaza adresleri. Bu deploy bir mağaza sitesiyse
+ * (SITE_KEY → registry kind "store") slug'ı build'de NEXT_PUBLIC_CLEAN_STORE_SLUG
+ * olarak gömülür; lib/sites/store-href.ts sunucu ve istemcide aynı temiz
+ * adresi üretir. Panel/kurumsal deploy'da boş kalır. Bilinmeyen SITE_KEY
+ * Vercel'de prebuild'de zaten durdurulur (scripts/check-site-env.mjs);
+ * burada yerel geliştirmede sessizce boş bırakılır.
+ */
+function resolveCleanStoreSlug(): string {
+  try {
+    const { site } = resolveSite({ siteKey: process.env.SITE_KEY, panelOnlyMode: process.env.PANEL_ONLY_MODE === "true" });
+    return site.kind === "store" && site.storeSlug ? site.storeSlug : "";
+  } catch {
+    return "";
+  }
+}
 
 // Güvenlik sertleştirmesi (2026-08-22): temel, düşük riskli HTTP güvenlik
 // header'ları. Bilinçli olarak bir Content-Security-Policy EKLEMEDİM —
@@ -17,6 +35,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_CLEAN_STORE_SLUG: resolveCleanStoreSlug(),
+  },
   // Faz 4E: `next/image` varsayılan olarak hiçbir harici host'a izin
   // vermez — bu blok yokken, admin'den yüklenen ve customer Supabase
   // Storage'ında yaşayan HER görsel (ör. Ürün Yelpazesi kartları)

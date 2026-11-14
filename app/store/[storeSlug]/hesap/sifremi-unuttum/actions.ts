@@ -1,5 +1,6 @@
 "use server";
 
+import { storeBase } from "@/lib/sites/store-href";
 import { headers } from "next/headers";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
@@ -55,7 +56,7 @@ export async function requestPasswordResetAction(
   }
 
   const supabase = await createSupabaseStorefrontServerClient();
-  const redirectTo = `${publicEnv.siteUrl}/auth/callback?next=${encodeURIComponent(`/store/${storeSlug}/hesap/sifre-guncelle`)}`;
+  const redirectTo = `${publicEnv.siteUrl}/auth/callback?next=${encodeURIComponent(`${storeBase(storeSlug)}/hesap/sifre-guncelle`)}`;
   await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
   return { status: "sent", error: null };

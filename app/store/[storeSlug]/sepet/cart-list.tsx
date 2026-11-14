@@ -1,5 +1,6 @@
 "use client";
 
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -102,7 +103,7 @@ export function CartList({
       {items.length === 0 ? (
         <div>
           <p className="text-sm text-[#A3A3A3]">Sepetiniz boş.</p>
-          <Link href={`/store/${storeSlug}`} className="mt-3 inline-block text-sm text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
+          <Link href={storeHref(storeSlug)} className="mt-3 inline-block text-sm text-[#D95F00] underline-offset-2 hover:text-[#F26A00] hover:underline">
             ← Alışverişe devam et
           </Link>
         </div>
@@ -138,7 +139,7 @@ export function CartList({
 
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/store/${storeSlug}/urun/${item.productSlug}`}
+                    href={`${storeBase(storeSlug)}/urun/${item.productSlug}`}
                     className="font-medium text-[#F5F5F5] hover:underline"
                   >
                     {item.productName}

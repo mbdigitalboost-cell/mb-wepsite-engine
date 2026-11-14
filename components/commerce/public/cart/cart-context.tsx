@@ -7,10 +7,10 @@ import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNod
  * No cart/order DB tables exist yet (see the roadmap referenced in the
  * task that introduced this), so this is plain localStorage state, keyed
  * PER STORE SLUG (`mb-store-cart:${storeSlug}`) — every /store/[storeSlug]
- * route currently shares one Vercel origin (no custom domains live yet,
- * see lib/commerce/public/store-domains.ts's own inert-infrastructure
- * comment), so an unscoped key would bleed one store's cart into another
- * store's cart in the same browser. This key scoping is what prevents
+ * route used to share one Vercel origin, so an unscoped key would bleed
+ * one store's cart into another store's cart in the same browser. Since
+ * Faz 28/29 every store has its own Vercel project and domain
+ * (lib/sites/registry.ts), but the key stays scoped as defense in depth. This key scoping is what prevents
  * that, not a security boundary (there is no server-side auth here at
  * all — this is anonymous, ephemeral, single-browser state).
  *

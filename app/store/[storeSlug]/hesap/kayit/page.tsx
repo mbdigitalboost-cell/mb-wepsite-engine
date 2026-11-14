@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
 import { Space_Grotesk } from "next/font/google";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -23,7 +24,7 @@ export default async function StoreSignupPage({ params }: { params: Promise<{ st
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect(`/store/${storeSlug}/hesap`);
+  if (user) redirect(`${storeBase(storeSlug)}/hesap`);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">

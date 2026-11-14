@@ -3,7 +3,8 @@ import Link from "next/link";
 /**
  * Faz 28 — mağaza markalı 404 içeriği. İki yerde kullanılır:
  * app/store/[storeSlug]/not-found.tsx (mağaza layout'u içinde, header/
- * footer ile) ve app/not-found.tsx'in "store" dalı (yedek; normalde proxy
+ * footer ile) ve app/not-found.tsx'in "store" dalı. `storeBasePath`: temiz
+ * adresli mağazada "" (Faz 29), değilse "/store/<slug>" (yedek; normalde proxy
  * mağaza sitesinde oraya hiç düşürmez).
  */
 export function StoreNotFoundContent({ storeBasePath }: { storeBasePath: string }) {
@@ -15,7 +16,7 @@ export function StoreNotFoundContent({ storeBasePath }: { storeBasePath: string 
         <p className="mt-4 text-sm text-[#A3A3A3]">Bağlantı hatalı olabilir ya da sayfa kaldırılmış olabilir.</p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
-            href={storeBasePath}
+            href={storeBasePath || "/"}
             className="inline-flex h-11 items-center rounded-lg bg-[#D95F00] px-6 text-sm font-semibold text-white hover:bg-[#B34C00]"
           >
             Ana sayfaya dön

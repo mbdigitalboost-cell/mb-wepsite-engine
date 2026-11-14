@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import Image from "next/image";
 import { Truck, ShieldCheck, RotateCcw, Headphones, ImageOff, Feather, Flame, Settings2 } from "lucide-react";
@@ -110,7 +111,7 @@ export function SilahiniSecBridgeSection({
             <p className="mt-2 text-[13px] text-[#A3A3A3]">Markanı seç, sana tam uyumlu kılıf ve ekipmanı birlikte bulalım.</p>
           </div>
           <Link
-            href={`/store/${storeSlug}/silahini-sec`}
+            href={`${storeBase(storeSlug)}/silahini-sec`}
             className={`${headingFont} flex items-center gap-1.5 text-xs font-semibold text-[#D95F00] hover:text-[#F26A00]`}
           >
             Tüm Markalar →
@@ -122,7 +123,7 @@ export function SilahiniSecBridgeSection({
             brand.productCount > 0 ? (
               <Link
                 key={brand.id}
-                href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
+                href={`${storeBase(storeSlug)}/silahini-sec/${brand.slug}`}
                 className="group relative overflow-hidden rounded-[14px] border border-[#D95F00]/50 bg-[#171717] p-6 transition-transform duration-200 hover:-translate-y-0.5 hover:border-[#D95F00]"
               >
                 <div
@@ -186,7 +187,7 @@ export function CategoryImageCard({
   const imageUrl = category.imageUrl ?? CATEGORY_FALLBACK_IMAGES[category.slug] ?? null;
   return (
     <Link
-      href={`/store/${storeSlug}/kategori/${category.slug}`}
+      href={`${storeBase(storeSlug)}/kategori/${category.slug}`}
       className={`group relative block ${aspect} overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
     >
       {imageUrl ? (
@@ -274,7 +275,7 @@ export function BrandFinderSection({
           {brands.slice(0, 3).map((brand, index) => (
             <Link
               key={brand.id}
-              href={`/store/${storeSlug}/silahini-sec/${brand.slug}`}
+              href={`${storeBase(storeSlug)}/silahini-sec/${brand.slug}`}
               className={`${headingFont} rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 ${
                 index === 0
                   ? "bg-[#D95F00] text-[#1A0D00] hover:bg-[#F26A00]"
@@ -319,7 +320,7 @@ export function FeaturedProductsSection({
           {products.map((product) => (
             <Link
               key={product.id}
-              href={`/store/${storeSlug}/urun/${product.slug}`}
+              href={`${storeBase(storeSlug)}/urun/${product.slug}`}
               className="group block overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
               <div className="relative h-[170px] bg-[#1D1D1B]">
@@ -406,7 +407,7 @@ export function OtherCategoriesSection({
             />
           ))}
           <Link
-            href={`/store/${storeSlug}/kategoriler`}
+            href={`${storeBase(storeSlug)}/kategoriler`}
             className="flex aspect-[4/3] items-center justify-center rounded-[14px] border border-[#292929] bg-[#171717] text-xs font-semibold text-[#D95F00] transition-colors hover:border-[#D95F00]"
           >
             Tümünü Gör →

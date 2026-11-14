@@ -1,5 +1,6 @@
 "use client";
 
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X, User, ChevronRight } from "lucide-react";
@@ -98,7 +99,7 @@ export function StoreMobileMenu({
 
             {/* Hesap/giriş — en üstte, belirgin (kanvasın kendi önceliği: önce kimlik, sonra gezinme). */}
             <Link
-              href={isLoggedIn ? `/store/${storeSlug}/hesap` : `/store/${storeSlug}/hesap/giris`}
+              href={isLoggedIn ? `${storeBase(storeSlug)}/hesap` : `${storeBase(storeSlug)}/hesap/giris`}
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 border-b border-[#292929] p-5"
             >
@@ -115,7 +116,7 @@ export function StoreMobileMenu({
 
             <nav className="flex flex-1 flex-col overflow-auto">
               <Link
-                href={`/store/${storeSlug}`}
+                href={storeHref(storeSlug)}
                 onClick={() => setOpen(false)}
                 className={`${storefrontDisplayClasses} flex items-center justify-between border-b border-[#292929] px-5 py-4 text-sm font-semibold text-[#F5F5F5]`}
               >
@@ -126,7 +127,7 @@ export function StoreMobileMenu({
                 categories.map((category) => (
                   <Link
                     key={category.id}
-                    href={`/store/${storeSlug}/kategori/${category.slug}`}
+                    href={`${storeBase(storeSlug)}/kategori/${category.slug}`}
                     onClick={() => setOpen(false)}
                     className={`${storefrontDisplayClasses} flex items-center justify-between border-b border-[#292929] px-5 py-4 text-sm font-semibold text-[#A3A3A3] hover:text-[#F5F5F5]`}
                   >
@@ -153,7 +154,7 @@ export function StoreMobileMenu({
                 alanda olduğu netleşti.
               */}
               <Link
-                href={`/store/${storeSlug}/siparislerim`}
+                href={`${storeBase(storeSlug)}/siparislerim`}
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-between border-b border-[#292929] px-5 py-4"
                 style={{ background: "rgba(217,95,0,0.07)" }}
@@ -169,7 +170,7 @@ export function StoreMobileMenu({
               {/* FAZ 6.2 — only shown when logged in: an address book only means anything for an account, and the addresses page itself redirects a guest to /giris anyway. */}
               {isLoggedIn ? (
                 <Link
-                  href={`/store/${storeSlug}/hesap/adreslerim`}
+                  href={`${storeBase(storeSlug)}/hesap/adreslerim`}
                   onClick={() => setOpen(false)}
                   className={`${storefrontDisplayClasses} flex items-center justify-between border-b border-[#292929] px-5 py-4 text-sm font-semibold text-[#A3A3A3] hover:text-[#F5F5F5]`}
                 >

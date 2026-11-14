@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentSite } from "@/lib/sites/current";
-import { storeBasePath } from "@/lib/sites/registry";
+import { storeBase } from "@/lib/sites/store-href";
 import { PetraNotFound, petraNotFoundMetadata } from "@/components/sites/petra/petra-not-found";
 import { PanelNotFound } from "@/components/sites/panel-not-found";
 import { StoreNotFoundContent } from "@/components/sites/store-not-found-content";
@@ -29,6 +29,6 @@ export function generateMetadata(): Metadata {
 export default function NotFound() {
   const site = getCurrentSite();
   if (site.kind === "corporate" && site.key === "petra") return <PetraNotFound />;
-  if (site.kind === "store") return <StoreNotFoundContent storeBasePath={storeBasePath(site) ?? "/"} />;
+  if (site.kind === "store") return <StoreNotFoundContent storeBasePath={site.storeSlug ? storeBase(site.storeSlug) : ""} />;
   return <PanelNotFound />;
 }

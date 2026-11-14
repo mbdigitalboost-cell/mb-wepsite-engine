@@ -23,6 +23,7 @@ const next: RouteDecision = { type: "next" };
 const redirect = (target: string, status: 307 | 308): RouteDecision => ({ type: "redirect", target, status });
 const t46NotFound: RouteDecision = { type: "notFound", rewriteTo: "/store/taktikalp46/__404" };
 const rootNotFound: RouteDecision = { type: "notFound", rewriteTo: "/__404" };
+const rewrite = (target: string): RouteDecision => ({ type: "rewrite", target });
 
 const MATRIX: Array<[string, string, RouteDecision]> = [
   // panel
@@ -34,8 +35,9 @@ const MATRIX: Array<[string, string, RouteDecision]> = [
   ["panel", "/auth/callback", next],
   ["panel", "/auth/set-password", next],
   ["panel", "/iletisim", redirect("/login", 307)],
-  ["panel", "/store/taktikalp46", redirect(`${T46}/store/taktikalp46`, 308)],
-  ["panel", "/store/taktikalp46/urun/x", redirect(`${T46}/store/taktikalp46/urun/x`, 308)],
+  // Faz 29 — panelden mağazanın TEMİZ adresine tek 308.
+  ["panel", "/store/taktikalp46", redirect(`${T46}/`, 308)],
+  ["panel", "/store/taktikalp46/urun/x", redirect(`${T46}/urun/x`, 308)],
   ["panel", "/store/baska-magaza", rootNotFound],
   ["panel", "/api/webhooks/basit-kargo", next],
   ["panel", "/api/webhooks/iyzico", next],
@@ -45,17 +47,28 @@ const MATRIX: Array<[string, string, RouteDecision]> = [
   ["panel", "/robots.txt", next],
   ["panel", "/sitemap.xml", next],
   // taktikalp46 (store)
-  ["taktikalp46", "/", redirect("/store/taktikalp46", 307)],
-  ["taktikalp46", "/store/taktikalp46", next],
-  ["taktikalp46", "/store/taktikalp46/kategoriler", next],
-  ["taktikalp46", "/store/taktikalp46/urun/canik", next],
-  ["taktikalp46", "/store/taktikalp46/sepet", next],
+  // Faz 29 — temiz adresler içeride /store/taktikalp46/...'e rewrite.
+  ["taktikalp46", "/", rewrite("/store/taktikalp46")],
+  ["taktikalp46", "/urun/canik", rewrite("/store/taktikalp46/urun/canik")],
+  ["taktikalp46", "/kategoriler", rewrite("/store/taktikalp46/kategoriler")],
+  ["taktikalp46", "/kategori/kampanyali-urunler", rewrite("/store/taktikalp46/kategori/kampanyali-urunler")],
+  ["taktikalp46", "/silahini-sec/canik", rewrite("/store/taktikalp46/silahini-sec/canik")],
+  ["taktikalp46", "/sepet", rewrite("/store/taktikalp46/sepet")],
+  ["taktikalp46", "/odeme/abc", rewrite("/store/taktikalp46/odeme/abc")],
+  ["taktikalp46", "/hesap/giris", rewrite("/store/taktikalp46/hesap/giris")],
+  ["taktikalp46", "/siparislerim", rewrite("/store/taktikalp46/siparislerim")],
+  // Eski /store/<kendi slug'ı> adresleri → temiz adrese kalıcı.
+  ["taktikalp46", "/store/taktikalp46", redirect("/", 308)],
+  ["taktikalp46", "/store/taktikalp46/kategoriler", redirect("/kategoriler", 308)],
+  ["taktikalp46", "/store/taktikalp46/urun/canik", redirect("/urun/canik", 308)],
+  ["taktikalp46", "/store/taktikalp46/sepet", redirect("/sepet", 308)],
   ["taktikalp46", "/iletisim", t46NotFound],
   ["taktikalp46", "/hakkimizda", t46NotFound],
   ["taktikalp46", "/cozumler/split-klimalar", t46NotFound],
   ["taktikalp46", "/btu-hesaplama", t46NotFound],
   ["taktikalp46", "/kvkk-aydinlatma-metni", t46NotFound],
-  ["taktikalp46", "/kategori/x", t46NotFound],
+  ["taktikalp46", "/urunler", t46NotFound],
+  ["taktikalp46", "/kategorilerx", t46NotFound],
   ["taktikalp46", "/store", t46NotFound],
   ["taktikalp46", "/store/baska-magaza", t46NotFound],
   ["taktikalp46", "/store/taktikalp46x", t46NotFound],

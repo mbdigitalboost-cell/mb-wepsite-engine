@@ -1,3 +1,4 @@
+import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -155,7 +156,7 @@ export default async function StoreCategoryPage({
             {subcategories.map((subcategory) => (
               <li key={subcategory.id}>
                 <Link
-                  href={`/store/${storeSlug}/kategori/${subcategory.slug}`}
+                  href={`${storeBase(storeSlug)}/kategori/${subcategory.slug}`}
                   className="block rounded-full border border-[#292929] bg-[#171717] px-3 py-1.5 text-sm text-[#A3A3A3] transition-colors hover:border-[#D95F00] hover:text-[#F5F5F5]"
                 >
                   {subcategory.name}
@@ -183,14 +184,14 @@ export default async function StoreCategoryPage({
             </p>
             {hasActiveFilter ? (
               <Link
-                href={`/store/${storeSlug}/kategori/${categorySlug}`}
+                href={`${storeBase(storeSlug)}/kategori/${categorySlug}`}
                 className="text-sm font-medium text-[#D95F00] hover:text-[#F26A00]"
               >
                 Filtreleri Temizle
               </Link>
             ) : (
               <Link
-                href={`/store/${storeSlug}/kategoriler`}
+                href={`${storeBase(storeSlug)}/kategoriler`}
                 className={`${storefrontDisplayClasses} rounded-full bg-[#D95F00] px-6 py-3 text-sm font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00]`}
               >
                 Tüm Kategorileri Gör

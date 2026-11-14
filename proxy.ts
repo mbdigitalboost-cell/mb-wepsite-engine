@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/proxy";
-import { STORE_DOMAINS } from "@/lib/commerce/public/store-domains";
 import { getCurrentSite } from "@/lib/sites/current";
 import { decideRoute } from "@/lib/sites/route-policy";
 
@@ -24,50 +23,28 @@ import { decideRoute } from "@/lib/sites/route-policy";
  *  - Faz 28: mağaza projesi ("değilse mağaza") başka hiçbir yolu
  *    kısıtlamıyordu; t46store.com Petra'nın sayfalarını ve 404'ünü
  *    sunuyordu. Artık varsayılan kapalı.
+ *  - Faz 29: temiz mağaza adresleri (t46store.com/urun/x) route-policy'de
+ *    iç route'a rewrite edilir. Boş kalmış STORE_DOMAINS host-rewrite'ı
+ *    (2026-09) kaldırıldı; domain ↔ mağaza tek kaynağı lib/sites/registry.ts.
  */
-
-/**
- * Domain-bazlı mağaza yönlendirmesi (2026-09 karar: Petra tarzı "her
- * müşteriye ayrı branch + ayrı Vercel projesi" yerine tek deployment +
- * host-bazlı rewrite — yeni müşteri eklemek için kod/deployment
- * çoğaltmaya gerek kalmasın diye). STORE_DOMAINS'te (bkz.
- * lib/commerce/public/store-domains.ts) kayıtlı bir domain'den istek
- * gelirse, ziyaretçiye HİÇ GÖRÜNMEDEN /store/<slug>'a rewrite edilir —
- * adres çubuğunda her zaman kendi domain'i görünür, /store/<slug> asla
- * görünmez. PANEL_ONLY_MODE kontrolünden ÖNCE çalışır ve eşleşirse hemen
- * döner, böylece bir custom domain ziyaretçisi PANEL_ONLY_MODE ne olursa
- * olsun asla /login'e düşmez. STORE_DOMAINS boşken (henüz hiç domain
- * eklenmemişken) bu fonksiyon her zaman null döner — yani bu değişiklik
- * bir domain gerçekten eklenene kadar mevcut davranışı SIFIR etkiler.
- */
-function rewriteForStoreDomain(request: NextRequest): NextResponse | null {
-  const hostname = request.headers.get("host")?.split(":")[0]?.toLowerCase() ?? "";
-  const storeSlug = STORE_DOMAINS[hostname];
-  if (!storeSlug) return null;
-
-  const url = request.nextUrl.clone();
-  const suffix = url.pathname === "/" ? "" : url.pathname;
-  url.pathname = `/store/${storeSlug}${suffix}`;
-  return NextResponse.rewrite(url);
-}
 
 export async function proxy(request: NextRequest) {
-  // Not: STORE_DOMAINS bugün boş (bkz. Faz 28 Kısım D envanteri — temiz
-  // adresler ayrı fazda); boşken bu her zaman null döner.
-  const domainRewrite = rewriteForStoreDomain(request);
-  if (domainRewrite) return domainRewrite;
-
   const decision = decideRoute({ site: getCurrentSite(), pathname: request.nextUrl.pathname });
 
   switch (decision.type) {
     case "redirect": {
       const target = new URL(decision.target, request.url);
-      // Siteler arası 308'de sorgu dizesi korunur (ör. ?code=… / filtreler).
+      // 308'lerde (siteler arası ve eski /store/<slug> → temiz adres) sorgu dizesi korunur.
       if (decision.status === 308) target.search = request.nextUrl.search;
       return NextResponse.redirect(target, decision.status);
     }
-    case "rewrite":
-      return NextResponse.rewrite(new URL(decision.target, request.url));
+    case "rewrite": {
+      // Faz 29 — temiz mağaza adresi → iç route. Sorgu dizesi korunur;
+      // oturum çerezi de yenilenir (sepet/hesap/ödeme bu yoldan gelir).
+      const target = new URL(decision.target, request.url);
+      target.search = request.nextUrl.search;
+      return updateSupabaseSession(request, target);
+    }
     case "notFound":
       // Sitenin kendi markalı 404'ü; HTTP durum kodunu o sayfa (notFound()) 404 yapar.
       return NextResponse.rewrite(new URL(decision.rewriteTo, request.url));

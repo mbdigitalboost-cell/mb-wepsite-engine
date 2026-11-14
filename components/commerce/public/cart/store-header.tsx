@@ -1,5 +1,6 @@
 "use client";
 
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
@@ -65,7 +66,7 @@ export function StoreHeader({
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <StoreMobileMenu storeSlug={storeSlug} categories={categories} isLoggedIn={isLoggedIn} />
-          <Link href={`/store/${storeSlug}`} className="flex items-center">
+          <Link href={storeHref(storeSlug)} className="flex items-center">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- store-provided public Storage URL, arbitrary per tenant; not worth a next.config.ts remotePatterns entry for a small header logo.
               <img src={logoUrl} alt={storeName} className="h-7 w-auto max-w-[120px] object-contain sm:h-8" />
@@ -77,7 +78,7 @@ export function StoreHeader({
           </Link>
         </div>
         <Link
-          href={`/store/${storeSlug}/sepet`}
+          href={`${storeBase(storeSlug)}/sepet`}
           className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[#3A3A3A] bg-[#171717] px-3 py-1.5 text-sm text-[#F5F5F5] transition-colors hover:border-[#D95F00]"
         >
           <ShoppingCart size={16} aria-hidden="true" />

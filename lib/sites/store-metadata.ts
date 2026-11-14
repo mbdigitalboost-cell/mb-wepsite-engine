@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { findStoreSiteBySlug } from "@/lib/sites/registry";
+import { buildStoreHref } from "@/lib/sites/store-paths";
 
 /**
  * Faz 28 — mağaza sayfalarının canonical + Open Graph url'i. Adres, o
@@ -22,8 +23,12 @@ export function buildStorePageMetadata(input: {
   description?: string | null;
 }): Metadata {
   const site = findStoreSiteBySlug(input.storeSlug);
-  const relative = `/store/${input.storeSlug}${input.path}`;
-  const url = site ? `${site.canonicalOrigin}${relative}` : relative;
+  // Faz 29 — kanonik adres her zaman mağazanın kendi domaininde TEMİZ yol
+  // (https://www.t46store.com/urun/x); registry'de sitesi olmayan mağazada
+  // iç yol (metadataBase'e göre göreli).
+  const url = site
+    ? `${site.canonicalOrigin}${buildStoreHref(input.storeSlug, input.storeSlug, input.path)}`
+    : buildStoreHref(undefined, input.storeSlug, input.path);
   const siteName = input.storeName ?? site?.displayName;
   // Admin'in SEO başlığı zaten mağaza adını içeriyorsa ("… | Taktikalp46") tekrar eklenmez.
   const fullTitle =

@@ -1,3 +1,4 @@
+import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
@@ -177,13 +178,13 @@ export default async function StoreProductPage({
     <div className="min-h-screen bg-[#0A0A0A] pb-24 lg:pb-0">
       <Container className="py-10">
         <nav aria-label="Breadcrumb" className={`${storefrontMonoClasses} flex flex-wrap items-center gap-1.5 text-xs text-[#6B6B6B]`}>
-          <Link href={`/store/${storeSlug}`} className="hover:text-[#F5F5F5] hover:underline">
+          <Link href={storeHref(storeSlug)} className="hover:text-[#F5F5F5] hover:underline">
             Ana Sayfa
           </Link>
           {category ? (
             <>
               <span aria-hidden="true">/</span>
-              <Link href={`/store/${storeSlug}/kategori/${category.slug}`} className="hover:text-[#F5F5F5] hover:underline">
+              <Link href={`${storeBase(storeSlug)}/kategori/${category.slug}`} className="hover:text-[#F5F5F5] hover:underline">
                 {category.name}
               </Link>
             </>

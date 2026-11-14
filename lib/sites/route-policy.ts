@@ -12,6 +12,7 @@
  * TAŞINMAMALI — o katman proxy'den ÖNCE ve site-kör çalışır.
  */
 import { findStoreSiteBySlug, getPanelSite, storeBasePath, type SiteDefinition, type SiteKind } from "./registry.ts";
+import { cleanToInternal, internalToClean, isCleanStorePath } from "./store-paths.ts";
 
 export type RouteDecision =
   | { type: "next" }
@@ -105,7 +106,9 @@ export function decideRoute({ site, pathname }: { site: SiteDefinition; pathname
     const slug = storeSlugOf(pathname);
     if (slug !== null || pathname === "/store") {
       const owner = slug ? findStoreSiteBySlug(slug) : undefined;
-      return owner ? crossSite(owner.canonicalOrigin, pathname) : notFound(site);
+      // Faz 29 — doğrudan mağazanın TEMİZ adresine (tek 308, zincir yok).
+      const clean = owner && slug ? internalToClean(slug, pathname) : null;
+      return owner && clean ? crossSite(owner.canonicalOrigin, clean) : notFound(site);
     }
     // Bugünkü PANEL_ONLY_MODE davranışı: kök dahil her şey /login.
     return { type: "redirect", target: "/login", status: 307 };
@@ -115,11 +118,15 @@ export function decideRoute({ site, pathname }: { site: SiteDefinition; pathname
 
   if (site.kind === "store") {
     const base = storeBasePath(site);
-    if (!base) return notFound(site);
-    if (pathname === "/") return { type: "redirect", target: base, status: 307 };
-    if (matchesPrefix(pathname, base)) return { type: "next" };
+    if (!base || !site.storeSlug) return notFound(site);
+    // Faz 29 — TEMİZ ADRESLER: ziyaretçi /urun/x görür, içeride
+    // /store/<slug>/urun/x render edilir (lib/sites/store-paths.ts).
+    if (isCleanStorePath(pathname)) return { type: "rewrite", target: cleanToInternal(site.storeSlug, pathname) };
+    // Eski /store/<kendi slug'ı>/... adresleri (yer imleri, Google, paylaşılmış linkler) → temiz adrese kalıcı.
+    const clean = internalToClean(site.storeSlug, pathname);
+    if (clean) return { type: "redirect", target: clean, status: 308 };
     // Müşteri şifre sıfırlama e-postası buraya döner
-    // (app/store/[storeSlug]/hesap/sifremi-unuttum/actions.ts → /auth/callback?next=/store/<slug>/...).
+    // (app/store/[storeSlug]/hesap/sifremi-unuttum/actions.ts → /auth/callback?next=/hesap/sifre-guncelle).
     if (pathname === "/auth/callback") return { type: "next" };
     return notFound(site);
   }
