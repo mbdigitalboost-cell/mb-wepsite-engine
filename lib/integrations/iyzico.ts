@@ -4,6 +4,8 @@ import {
   buildIyzicoAuthorizationHeader,
   computeCheckoutFormInitializeSignature,
   computeCheckoutFormRetrieveSignature,
+  computeIyzicoResponseSignature,
+  normalizePriceForSignature,
   generateIyzicoRandomKey,
   signaturesMatch,
 } from "@/lib/integrations/iyzico-signature";
@@ -351,6 +353,65 @@ export async function retrieveCheckoutForm(
   }
 
   return result;
+}
+
+interface RefundV2Response extends IyzicoBaseResponse {
+  paymentId?: string | number;
+  price?: number | string;
+  currency?: string;
+  hostReference?: string;
+  refundHostReference?: string;
+  signature?: string;
+}
+
+export interface RefundResult {
+  paymentId: string;
+  price: number;
+  hostReference: string | null;
+  signatureVerified: boolean;
+}
+
+/**
+ * Faz 30 — POST /v2/payment/refund (Refund V2, paymentId + tutar; kısmi
+ * iade destekli — docs.iyzico.com/en/advanced/refund-and-cancel, iyzico'nun
+ * kendi önerisi "paymentId ve tutarla /v2/payment/refund"). Yanıt imzası:
+ * paymentId, price, currency, conversationId (docs: response-signature-
+ * validation). Başarısızsa IyzicoApiError fırlatır; çağıran durumu
+ * DEĞİŞTİRMEZ. conversationId = iade talebinin id'si (idempotentlik ve
+ * iyzico panelinde eşleştirme için; aynı talep iki kez iade edilmez — durum
+ * makinesi refunded'dan çıkışa izin vermez).
+ */
+export async function refundPaymentV2(
+  credentials: IyzicoCredentials,
+  params: { paymentId: string; price: number; conversationId: string; ip: string },
+): Promise<RefundResult> {
+  const response = await iyzicoPost<RefundV2Response>(credentials, "/v2/payment/refund", {
+    locale: IYZICO_LOCALE,
+    conversationId: params.conversationId,
+    paymentId: params.paymentId,
+    price: formatIyzicoPrice(params.price),
+    currency: "TRY",
+    ip: params.ip,
+  });
+
+  let signatureVerified = false;
+  if (response.signature) {
+    const expected = computeIyzicoResponseSignature(credentials.secretKey, [
+      String(response.paymentId ?? ""),
+      normalizePriceForSignature(response.price ?? 0),
+      response.currency ?? "",
+      response.conversationId ?? "",
+    ]);
+    if (!signaturesMatch(expected, response.signature)) throw new IyzicoSignatureError();
+    signatureVerified = true;
+  }
+
+  return {
+    paymentId: String(response.paymentId ?? params.paymentId),
+    price: Number(response.price ?? params.price),
+    hostReference: response.refundHostReference ?? response.hostReference ?? null,
+    signatureVerified,
+  };
 }
 
 /** 2 ondalık, nokta ayraçlı string — iyzico fiyat alanları bu formatı bekler ("149.90"). */

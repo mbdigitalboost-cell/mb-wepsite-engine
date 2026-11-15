@@ -55,7 +55,7 @@ export const ORDER_STATUS_BADGE_VARIANT: Record<OrderStatus, BadgeVariant> = {
 };
 
 /** FAZ 2.5 — payment_status is an independent axis from order status (see migration 0029's own comment on payment_status). */
-export const PAYMENT_STATUSES: PaymentStatus[] = ["unpaid", "paid", "refunded"];
+export const PAYMENT_STATUSES: PaymentStatus[] = ["unpaid", "paid", "partially_refunded", "refunded"];
 
 export function isPaymentStatus(value: string): value is PaymentStatus {
   return (PAYMENT_STATUSES as string[]).includes(value);
@@ -65,6 +65,8 @@ export function isPaymentStatus(value: string): value is PaymentStatus {
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   unpaid: "Ödenmedi",
   paid: "Ödendi",
+  // Faz 30 — kalem bazında kısmi iade sonrası.
+  partially_refunded: "Kısmi İade",
   refunded: "İade Edildi",
 };
 
@@ -72,5 +74,6 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 export const PAYMENT_STATUS_BADGE_VARIANT: Record<PaymentStatus, BadgeVariant> = {
   unpaid: "warning",
   paid: "success",
+  partially_refunded: "warning",
   refunded: "danger",
 };

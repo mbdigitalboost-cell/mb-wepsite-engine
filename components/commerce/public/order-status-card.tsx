@@ -37,6 +37,7 @@ const STATUS_BADGE_CLASSES: Record<OrderStatus, string> = {
 const PAYMENT_STATUS_TEXT_CLASSES: Record<PaymentStatus, string> = {
   unpaid: "text-[#A3A3A3]",
   paid: "text-emerald-400",
+  partially_refunded: "text-amber-400",
   refunded: "text-red-400",
 };
 

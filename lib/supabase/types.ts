@@ -70,7 +70,14 @@ export type StoreButtonStyle = "rounded" | "square" | "pill";
 /** FAZ 2, migration 0029_orders.sql. */
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "shipped" | "completed" | "cancelled";
 /** FAZ 2.5, migration 0029_orders.sql — independent of OrderStatus, see that enum's own comment. */
-export type PaymentStatus = "unpaid" | "paid" | "refunded";
+/** Faz 30 (migration 0045): "partially_refunded" — kısmi iade sonrası. */
+export type PaymentStatus = "unpaid" | "paid" | "partially_refunded" | "refunded";
+/** Faz 30 — order_returns. */
+export type OrderReturnKind = "cancel" | "return";
+export type OrderReturnStatus = "requested" | "approved" | "received" | "refunded" | "closed" | "rejected" | "cancelled_by_customer";
+export type OrderReturnReason = "changed_mind" | "damaged" | "wrong_item" | "not_fit" | "other";
+export type OrderReturnChannel = "member" | "guest";
+export type OrderReturnRefundMethod = "iyzico" | "iban" | "none";
 
 /** Faz 21 — orders.shipping_sync_status (migration 0039 CHECK constraint ile aynı üç değer). */
 export type ShippingSyncStatus = "not_sent" | "sent" | "failed";
@@ -850,6 +857,7 @@ export type Database = {
           seo_description: string | null;
           created_at: string;
           updated_at: string;
+          is_personalized_non_returnable: boolean;
         };
         Insert: {
           id?: string;
@@ -873,6 +881,7 @@ export type Database = {
           seo_description?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_personalized_non_returnable?: boolean;
         };
         Update: {
           id?: string;
@@ -896,6 +905,7 @@ export type Database = {
           seo_description?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_personalized_non_returnable?: boolean;
         };
         Relationships: [
           {
@@ -1200,6 +1210,7 @@ export type Database = {
           sort_order: number;
           created_at: string;
           updated_at: string;
+          is_personalized_non_returnable: boolean;
         };
         Insert: {
           id?: string;
@@ -1216,6 +1227,7 @@ export type Database = {
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
+          is_personalized_non_returnable?: boolean;
         };
         Update: {
           id?: string;
@@ -1232,6 +1244,7 @@ export type Database = {
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
+          is_personalized_non_returnable?: boolean;
         };
         Relationships: [
           {
@@ -1368,6 +1381,157 @@ export type Database = {
         ];
       };
       /** Faz 27, migration 0043 — ürün ↔ kategori (çoklu). is_primary satırı products.category_id ile trigger üzerinden senkron. */
+      /** Faz 30, migration 0045 — mağaza iade ayarları (editor+ okur, admin-tier yazar). */
+      store_return_settings: {
+        Row: {
+          store_id: string;
+          returns_enabled: boolean;
+          return_window_days: number;
+          return_carrier_name: string | null;
+          return_code: string | null;
+          return_instructions: string | null;
+          return_address: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          returns_enabled?: boolean;
+          return_window_days?: number;
+          return_carrier_name?: string | null;
+          return_code?: string | null;
+          return_instructions?: string | null;
+          return_address?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          store_id?: string;
+          returns_enabled?: boolean;
+          return_window_days?: number;
+          return_carrier_name?: string | null;
+          return_code?: string | null;
+          return_instructions?: string | null;
+          return_address?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      /** Faz 30, migration 0045 — iptal/iade talepleri. INSERT yalnız service-role. */
+      order_returns: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_id: string;
+          return_number: number;
+          kind: OrderReturnKind;
+          status: OrderReturnStatus;
+          reason: OrderReturnReason;
+          customer_note: string | null;
+          channel: OrderReturnChannel;
+          refund_method: OrderReturnRefundMethod | null;
+          refund_amount: number;
+          refund_reference: string | null;
+          refunded_at: string | null;
+          return_code: string | null;
+          return_carrier_name: string | null;
+          return_instructions_snapshot: string | null;
+          admin_note: string | null;
+          rejection_reason: string | null;
+          restock: boolean;
+          requested_at: string;
+          decided_at: string | null;
+          handed_to_carrier_at: string | null;
+          received_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          order_id: string;
+          kind: OrderReturnKind;
+          status?: OrderReturnStatus;
+          reason: OrderReturnReason;
+          customer_note?: string | null;
+          channel: OrderReturnChannel;
+          refund_method?: OrderReturnRefundMethod | null;
+          refund_amount?: number;
+          refund_reference?: string | null;
+          refunded_at?: string | null;
+          return_code?: string | null;
+          return_carrier_name?: string | null;
+          return_instructions_snapshot?: string | null;
+          admin_note?: string | null;
+          rejection_reason?: string | null;
+          restock?: boolean;
+          requested_at?: string;
+          decided_at?: string | null;
+          handed_to_carrier_at?: string | null;
+          received_at?: string | null;
+        };
+        Update: {
+          status?: OrderReturnStatus;
+          refund_method?: OrderReturnRefundMethod | null;
+          refund_amount?: number;
+          refund_reference?: string | null;
+          refunded_at?: string | null;
+          return_code?: string | null;
+          return_carrier_name?: string | null;
+          return_instructions_snapshot?: string | null;
+          admin_note?: string | null;
+          rejection_reason?: string | null;
+          restock?: boolean;
+          decided_at?: string | null;
+          handed_to_carrier_at?: string | null;
+          received_at?: string | null;
+        };
+        Relationships: [];
+      };
+      /** Faz 30, migration 0045 — talep kalemleri. */
+      order_return_items: {
+        Row: {
+          id: string;
+          store_id: string;
+          return_id: string;
+          order_item_id: string;
+          quantity: number;
+          refund_amount: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          return_id: string;
+          order_item_id: string;
+          quantity: number;
+          refund_amount?: number;
+        };
+        Update: {
+          quantity?: number;
+          refund_amount?: number;
+        };
+        Relationships: [];
+      };
+      /** Faz 30, migration 0045 — IBAN (kişisel veri). Policy YOK; yalnız service-role. */
+      order_return_bank_details: {
+        Row: {
+          return_id: string;
+          store_id: string;
+          account_holder: string;
+          iban: string;
+          created_at: string;
+        };
+        Insert: {
+          return_id: string;
+          store_id: string;
+          account_holder: string;
+          iban: string;
+        };
+        Update: {
+          account_holder?: string;
+          iban?: string;
+        };
+        Relationships: [];
+      };
       product_categories: {
         Row: {
           product_id: string;
@@ -1444,6 +1608,8 @@ export type Database = {
           billing_address_city: string | null;
           billing_address_district: string | null;
           billing_address_line: string | null;
+          delivered_at: string | null;
+          is_test: boolean;
         };
         Insert: {
           id?: string;
@@ -1486,6 +1652,8 @@ export type Database = {
           billing_address_city?: string | null;
           billing_address_district?: string | null;
           billing_address_line?: string | null;
+          delivered_at?: string | null;
+          is_test?: boolean;
         };
         Update: {
           id?: string;
@@ -1528,6 +1696,8 @@ export type Database = {
           billing_address_city?: string | null;
           billing_address_district?: string | null;
           billing_address_line?: string | null;
+          delivered_at?: string | null;
+          is_test?: boolean;
         };
         Relationships: [
           {
@@ -1937,6 +2107,23 @@ export type Database = {
         Returns: number;
       };
       /** Faz 27, migration 0043 — ürünün kategori kümesini atomik yazar (SECURITY INVOKER). Dönüş: üründeki bağ sayısı. */
+      /** Faz 30, migration 0045 — satış raporu satırları (SECURITY INVOKER, RLS geçerli; is_test hariç). */
+      store_sales_report_orders: {
+        Args: { p_store_id: string; p_from: string; p_to: string };
+        Returns: Array<{
+          order_id: string;
+          order_number: number;
+          created_at: string;
+          status: OrderStatus;
+          payment_status: PaymentStatus;
+          payment_method: string | null;
+          subtotal: number;
+          discount_amount: number;
+          item_quantity: number;
+          refunded_amount: number;
+          customer_name: string;
+        }>;
+      };
       set_product_categories: {
         Args: {
           p_store_id: string;
