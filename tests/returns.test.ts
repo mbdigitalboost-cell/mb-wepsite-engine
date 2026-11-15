@@ -139,3 +139,9 @@ test("refund method decision", async () => {
   assert.equal(refundMethodFor("cancel", cod), "none"); // teslim yok, para alınmadı
   assert.equal(refundMethodFor("cancel", { paymentMethod: "Havale-EFT", paymentStatus: "paid", paymentProviderPaymentId: null }), "iban");
 });
+
+test("cancel of an order without line items refunds the net (order-level cancel)", () => {
+  const result = computeFinalRefund({ subtotal: 10, discountAmount: 0, alreadyRefunded: 0 }, [], true);
+  assert.equal(result.total, 10);
+  assert.deepEqual(result.lines, []);
+});

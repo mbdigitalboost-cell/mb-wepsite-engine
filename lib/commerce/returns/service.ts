@@ -298,7 +298,12 @@ export async function createReturnRequest(input: CreateReturnInput): Promise<Cre
     }
     selected.push({ orderItemId: line.id, lineTotal: line.lineTotal, quantity: line.quantity, returnQuantity: quantity, previouslyReturnedQuantity: line.returnedQuantity });
   }
-  if (selected.length === 0) return { ok: false, error: kind === "cancel" ? "İptal edilecek kalem kalmadı." : "İade etmek istediğiniz ürünü ve adedi seçin." };
+  // İptal sipariş düzeyindedir: kalemi olmayan (ör. elle/testle oluşturulmuş)
+  // sipariş de iptal edilebilir. Kalemi olup hepsi zaten talepte/iade
+  // edilmişse iptal anlamsızdır.
+  if (selected.length === 0 && (kind === "return" || context.lines.length > 0)) {
+    return { ok: false, error: kind === "cancel" ? "İptal edilecek kalem kalmadı." : "İade etmek istediğiniz ürünü ve adedi seçin." };
+  }
 
   const allCovered = context.lines.every((line) => {
     const pick = selected.find((s) => s.orderItemId === line.id);
@@ -344,15 +349,17 @@ export async function createReturnRequest(input: CreateReturnInput): Promise<Cre
     return { ok: false, error: "Talebiniz kaydedilemedi, lütfen tekrar deneyin." };
   }
 
-  const { error: itemsError } = await admin.from("order_return_items").insert(
-    amounts.lines.map((line) => ({
-      store_id: context.storeId,
-      return_id: created.id,
-      order_item_id: line.orderItemId,
-      quantity: selected.find((s) => s.orderItemId === line.orderItemId)?.returnQuantity ?? 0,
-      refund_amount: refundMethod === "none" ? 0 : line.refund,
-    })),
-  );
+  const { error: itemsError } = amounts.lines.length
+    ? await admin.from("order_return_items").insert(
+        amounts.lines.map((line) => ({
+          store_id: context.storeId,
+          return_id: created.id,
+          order_item_id: line.orderItemId,
+          quantity: selected.find((s) => s.orderItemId === line.orderItemId)?.returnQuantity ?? 0,
+          refund_amount: refundMethod === "none" ? 0 : line.refund,
+        })),
+      )
+    : { error: null };
   if (itemsError) {
     console.error("[returns] items insert failed:", itemsError.message);
     await admin.from("order_returns").delete().eq("id", created.id).eq("store_id", context.storeId);
