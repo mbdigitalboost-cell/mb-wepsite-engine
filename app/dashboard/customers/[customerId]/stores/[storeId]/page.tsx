@@ -8,6 +8,8 @@ import { EditStoreForm } from "./edit-store-form";
 import { setStoreStatusAction } from "@/app/dashboard/stores/actions";
 import { formatPrice } from "@/lib/utils/format-price";
 import { LOW_STOCK_THRESHOLD } from "@/lib/commerce/inventory";
+// Faz 30 — net tutar tanımı satış raporuyla ortak (lib/commerce/returns/amounts.ts).
+import { orderNetAmount } from "@/lib/commerce/returns/amounts";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_BADGE_VARIANT } from "@/lib/commerce/order-status-labels";
 import type { OrderStatus } from "@/lib/supabase/types";
 
@@ -100,7 +102,7 @@ export default async function StoreDetailPage({
   const thirtyDaysAgoMs = getThirtyDaysAgoMs();
 
   for (const row of orderRows ?? []) {
-    const net = Number(row.subtotal) - Number(row.discount_amount ?? 0);
+    const net = orderNetAmount(Number(row.subtotal), Number(row.discount_amount ?? 0));
     if (row.status === "pending") {
       pendingCount += 1;
       pendingAmount += net;
@@ -234,7 +236,7 @@ export default async function StoreDetailPage({
           ) : (
             <ul className="mt-3 divide-y divide-black/10">
               {recentOrders.map((order) => {
-                const net = Number(order.subtotal) - Number(order.discount_amount ?? 0);
+                const net = orderNetAmount(Number(order.subtotal), Number(order.discount_amount ?? 0));
                 const status = order.status as OrderStatus;
                 return (
                   <li key={order.id}>
