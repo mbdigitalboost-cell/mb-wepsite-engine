@@ -23,6 +23,11 @@ const ROWS: Record<string, Array<{ id: string; store_id: string }>> = {
   ],
   store_navigation_items: [{ id: "nav-b1", store_id: STORE_B }],
   store_customers: [{ id: "cust-b1", store_id: STORE_B }],
+  // Faz 30 — iptal/iade.
+  order_returns: [
+    { id: "return-a1", store_id: STORE_A },
+    { id: "return-b1", store_id: STORE_B },
+  ],
 };
 
 /** Supabase'in .from().select().eq().eq().maybeSingle() zincirini taklit eder; RLS yokmuş gibi (platform admin) her satırı görür. */
@@ -98,4 +103,11 @@ test("sender shows the store name, never another brand", () => {
   assert.equal(formatFromAddress("MB Digital Boost <bildirim@mbdigitalboost.com>", "Taktikalp46"), '"Taktikalp46" <bildirim@mbdigitalboost.com>');
   assert.equal(formatFromAddress("bildirim@mbdigitalboost.com", 'Kötü"<ad>'), '"Kötüad" <bildirim@mbdigitalboost.com>');
   assert.equal(formatFromAddress("bildirim@mbdigitalboost.com"), "bildirim@mbdigitalboost.com");
+});
+
+test("Faz 30: A store + B store's return request → rejected (admin actions query id + store_id)", async () => {
+  const client = fakeClient();
+  assert.equal(await rowBelongsToStore(client, "order_returns", "return-b1", STORE_A), false);
+  assert.equal(await rowBelongsToStore(client, "order_returns", "return-a1", STORE_A), true);
+  assert.equal(await rowBelongsToStore(client, "orders", "order-b1", STORE_A), false); // talep açılacak sipariş de mağazaya ait olmalı
 });

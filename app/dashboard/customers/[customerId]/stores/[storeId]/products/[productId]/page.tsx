@@ -153,7 +153,7 @@ export default async function EditProductPage({
           </div>
 
           <aside className="space-y-6 lg:sticky lg:top-6">
-            <ProductStatusCard initialIsActive={product.is_active} />
+            <ProductStatusCard initialIsActive={product.is_active} initialPersonalized={product.is_personalized_non_returnable} />
             <ProductOrganizationCard
               categoryOptions={categoryOptions}
               initialCategoryIds={categoryLinks.ids}

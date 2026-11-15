@@ -301,7 +301,14 @@ export function ProductSeoCard({
 }
 
 /** Sağ sütun — durum. "Taslak" = is_active false (ayrı bir durum kolonu YOK). */
-export function ProductStatusCard({ initialIsActive }: { initialIsActive: boolean }) {
+export function ProductStatusCard({
+  initialIsActive,
+  initialPersonalized = false,
+}: {
+  initialIsActive: boolean;
+  /** Faz 30 — kişiye özel — cayma dışı (varsayılan kapalı). */
+  initialPersonalized?: boolean;
+}) {
   const { formId } = useProductForm();
   const [active, setActive] = useState(initialIsActive);
   return (
@@ -331,6 +338,21 @@ export function ProductStatusCard({ initialIsActive }: { initialIsActive: boolea
         ))}
       </div>
       {active ? <input type="hidden" form={formId} name="isActive" value="on" /> : null}
+      {/* Faz 30 — işaret alanı: updateProductAction bu alanı yalnız bu form gönderdiğinde yazar. */}
+      <input type="hidden" form={formId} name="personalizedField" value="1" />
+      <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#E4E4E7] p-3 text-sm">
+        <input
+          type="checkbox"
+          form={formId}
+          name="isPersonalizedNonReturnable"
+          defaultChecked={initialPersonalized}
+          className="mt-0.5 h-4 w-4 accent-[#B34C00]"
+        />
+        <span>
+          <span className="block font-medium text-[#17171A]">Kişiye özel — cayma dışı</span>
+          <span className="block text-xs text-[#71717A]">Tüketicinin isteğiyle kişiye özel hazırlanan ürünlerde cayma hakkı kullanılamayabilir (MSY m.15/1-b). Hukuki danışmanınıza teyit ettirin.</span>
+        </span>
+      </label>
     </ProductCard>
   );
 }

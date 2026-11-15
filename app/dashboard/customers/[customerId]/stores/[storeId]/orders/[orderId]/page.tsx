@@ -20,6 +20,7 @@ import {
 } from "@/lib/commerce/order-status-labels";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
+import { setOrderTestFlagAction } from "./test-flag-actions";
 
 interface OrderItemRow {
   id: string;
@@ -162,6 +163,13 @@ export default async function StoreOrderDetailPage({
         </div>
       </div>
       <p className="mt-1 text-xs text-foreground/50">{new Date(order.created_at).toLocaleString("tr-TR")}</p>
+      {/* Faz 30 — test siparişi işareti (satış raporundan hariç). */}
+      <form action={setOrderTestFlagAction.bind(null, customerId, storeId, order.id, !order.is_test)} className="mt-2 flex items-center gap-2 text-xs">
+        {order.is_test ? <Badge variant="warning">Test siparişi — raporlarda sayılmaz</Badge> : null}
+        <button type="submit" className="text-foreground/60 underline-offset-2 hover:text-foreground hover:underline">
+          {order.is_test ? "Test işaretini kaldır" : "Test siparişi olarak işaretle"}
+        </button>
+      </form>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <section className="rounded-lg border border-black/10 p-4">

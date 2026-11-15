@@ -314,6 +314,10 @@ export async function updateProductAction(
       sort_order: parsed.data.sortOrder,
       seo_title: parsed.data.seoTitle || null,
       seo_description: parsed.data.seoDescription || null,
+      // Faz 30 — yalnız tek sayfa formu gönderdiğinde (personalizedField işareti).
+      ...(formData.get("personalizedField") === "1"
+        ? { is_personalized_non_returnable: formData.get("isPersonalizedNonReturnable") === "on" }
+        : {}),
     })
     // Row-id filter is NEVER trusted alone — store_id is always ANDed in,
     // same discipline as every other update in this codebase.

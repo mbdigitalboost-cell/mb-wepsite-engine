@@ -99,6 +99,7 @@ export async function createAddonAction(
       track_inventory: parsed.data.trackInventory,
       image_url: parsed.data.imageUrl || null,
       is_required: parsed.data.isRequired,
+      is_personalized_non_returnable: formData.get("isPersonalizedNonReturnable") === "on",
       is_active: parsed.data.isActive,
       sort_order: parsed.data.sortOrder,
     })
@@ -152,6 +153,7 @@ export async function updateAddonAction(
       track_inventory: parsed.data.trackInventory,
       image_url: parsed.data.imageUrl || null,
       is_required: parsed.data.isRequired,
+      is_personalized_non_returnable: formData.get("isPersonalizedNonReturnable") === "on",
       is_active: parsed.data.isActive,
       sort_order: parsed.data.sortOrder,
     })

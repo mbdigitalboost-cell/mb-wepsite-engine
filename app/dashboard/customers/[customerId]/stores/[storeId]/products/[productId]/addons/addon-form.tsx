@@ -15,6 +15,8 @@ interface ProductAddonFormValues {
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
+  /** Faz 30 — kişiye özel — cayma dışı (ör. kılıf üstü yazı). */
+  isPersonalized?: boolean;
 }
 
 const EMPTY_VALUES: ProductAddonFormValues = {
@@ -175,6 +177,15 @@ export function ProductAddonForm({ basePrice, initialValues = EMPTY_VALUES, acti
             className="h-4 w-4 rounded border-black/20"
           />
           Zorunlu
+        </label>
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground" title="Tüketicinin isteğiyle kişiye özel hazırlanan ürünlerde cayma hakkı kullanılamayabilir (MSY m.15/1-b). Hukuki danışmanınıza teyit ettirin.">
+          <input
+            type="checkbox"
+            name="isPersonalizedNonReturnable"
+            defaultChecked={initialValues.isPersonalized ?? false}
+            className="h-4 w-4 rounded border-black/20"
+          />
+          Kişiye özel — cayma dışı
         </label>
         <label className="flex items-center gap-2 text-sm font-medium text-foreground">
           <input

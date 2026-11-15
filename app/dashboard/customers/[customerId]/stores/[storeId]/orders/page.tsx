@@ -20,6 +20,7 @@ import {
 } from "./actions";
 import { SelectAllCheckbox } from "./select-all-checkbox";
 import { OrderBulkSubmitButton } from "./order-bulk-submit-button";
+import { OrdersTabs } from "@/components/dashboard/orders-tabs";
 import { BASIT_KARGO_STRATEGY_HANDLERS, getHandlers, type BasitKargoHandler } from "@/lib/integrations/basit-kargo";
 import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping-integration";
 import type { OrderStatus, PaymentStatus, ShippingSyncStatus } from "@/lib/supabase/types";
@@ -245,6 +246,7 @@ export default async function StoreOrdersPage({
         <h1 className="text-xl font-semibold tracking-tight">Siparişler</h1>
         {pendingCount ? <Badge variant="warning">{pendingCount} yeni sipariş</Badge> : null}
       </div>
+      <OrdersTabs customerId={customerId} storeId={storeId} active="orders" />
       <p className="mt-1 text-sm text-foreground/60">
         Mağaza vitrininden gelen sipariş talepleri. Ödeme entegrasyonu yok — ödeme durumu admin tarafından elle
         işaretlenir.

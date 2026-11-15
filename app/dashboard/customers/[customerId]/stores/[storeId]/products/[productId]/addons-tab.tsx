@@ -15,6 +15,7 @@ interface ProductAddonRow {
   is_required: boolean;
   is_active: boolean;
   sort_order: number;
+  is_personalized_non_returnable: boolean;
 }
 
 function currency(value: number) {
@@ -48,7 +49,7 @@ export async function AddonsTab({
   const supabase = await createSupabaseServerClient();
   const { data: addonsData } = await supabase
     .from("product_addons")
-    .select("id, name, sku, price_delta, stock, track_inventory, image_url, is_required, is_active, sort_order")
+    .select("id, name, sku, price_delta, stock, track_inventory, image_url, is_required, is_active, sort_order, is_personalized_non_returnable")
     .eq("product_id", productId)
     .eq("store_id", storeId)
     .order("sort_order", { ascending: true });
@@ -128,6 +129,7 @@ export async function AddonsTab({
                           imageUrl: addon.image_url ?? "",
                           isRequired: addon.is_required,
                           isActive: addon.is_active,
+                          isPersonalized: addon.is_personalized_non_returnable,
                           sortOrder: addon.sort_order,
                         }}
                         action={updateAction}
