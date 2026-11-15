@@ -4,6 +4,7 @@ import { useActionState, useId } from "react";
 import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { OrderStatusCard } from "@/components/commerce/public/order-status-card";
+import { storeHref } from "@/lib/sites/store-href";
 import { lookupGuestOrderAction } from "./actions";
 import { initialGuestOrderLookupState } from "./form-state";
 
@@ -64,7 +65,13 @@ export function GuestOrderLookupForm({ storeSlug }: { storeSlug: string }) {
         </button>
       </form>
 
-      {state.status === "success" && state.order ? <OrderStatusCard order={state.order} storeSlug={storeSlug} /> : null}
+      {state.status === "success" && state.order ? (
+        <OrderStatusCard
+          order={state.order}
+          storeSlug={storeSlug}
+          detailHref={state.returnToken ? `${storeHref(storeSlug, `/siparislerim/${state.order.id}`)}?t=${encodeURIComponent(state.returnToken)}` : undefined}
+        />
+      ) : null}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getGuestOrderByNumberAndPhone } from "@/lib/commerce/public/order-lookup";
 import { guestOrderLookupSchema } from "@/lib/validation/order";
+import { createGuestReturnToken } from "@/lib/commerce/returns/guest-token";
+import { guestReturnTokenKey } from "@/lib/commerce/returns/service";
 import type { GuestOrderLookupState } from "./form-state";
 
 const GENERIC_NOT_FOUND_ERROR = "Sipariş bulunamadı, bilgileri kontrol edin.";
@@ -29,7 +31,7 @@ export async function lookupGuestOrderAction(
 ): Promise<GuestOrderLookupState> {
   const store = await getStoreBySlug(storeSlug);
   if (!store) {
-    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null };
+    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null, returnToken: null };
   }
 
   const parsed = guestOrderLookupSchema.safeParse({
@@ -37,13 +39,16 @@ export async function lookupGuestOrderAction(
     phone: formData.get("phone"),
   });
   if (!parsed.success) {
-    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null };
+    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null, returnToken: null };
   }
 
   const order = await getGuestOrderByNumberAndPhone(store.id, parsed.data.orderNumber, parsed.data.phone);
   if (!order) {
-    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null };
+    return { status: "error", error: GENERIC_NOT_FOUND_ERROR, order: null, returnToken: null };
   }
 
-  return { status: "success", error: null, order };
+  // Faz 30 — sipariş detayı / iptal-iade sayfasına erişim jetonu (sipariş id'si tek başına yetmez).
+  const key = guestReturnTokenKey();
+  const returnToken = key ? createGuestReturnToken(key, store.id, order.id) : null;
+  return { status: "success", error: null, order, returnToken };
 }

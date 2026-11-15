@@ -41,7 +41,8 @@ const PAYMENT_STATUS_TEXT_CLASSES: Record<PaymentStatus, string> = {
   refunded: "text-red-400",
 };
 
-export function OrderStatusCard({ order, storeSlug }: { order: PublicOrderWithItems; storeSlug?: string }) {
+/** Faz 30 — `detailHref`: sipariş detayı + iptal/iade sayfası (üye: düz adres; misafir: imzalı jetonlu adres). */
+export function OrderStatusCard({ order, storeSlug, detailHref }: { order: PublicOrderWithItems; storeSlug?: string; detailHref?: string }) {
   const total = order.subtotal - order.discountAmount;
   // Faz 22 — kart seçilmiş ama ödenmemiş: müşteri aynı siparişin ödeme sayfasına dönebilir.
   const cardPaymentPending =
@@ -125,6 +126,13 @@ export function OrderStatusCard({ order, storeSlug }: { order: PublicOrderWithIt
           <span className="text-[#A3A3A3]">Kargo bilgisi henüz paylaşılmadı.</span>
         )}
       </div>
+      {detailHref ? (
+        <div className="mt-3 border-t border-[#292929] pt-3">
+          <a href={detailHref} className="text-sm font-semibold text-[#D95F00] underline-offset-2 hover:underline">
+            Sipariş detayı · İptal / İade →
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { getOwnStoreCustomerOrders } from "@/lib/commerce/public/order-lookup";
 import { Container } from "@/components/ui/container";
 import { OrderStatusCard } from "@/components/commerce/public/order-status-card";
 import { GuestOrderLookupForm } from "./guest-lookup-form";
+import { storeHref } from "@/lib/sites/store-href";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ async function OwnOrdersList({
   return (
     <div className="mt-6 space-y-4">
       {orders.map((order) => (
-        <OrderStatusCard key={order.id} order={order} storeSlug={storeSlug} />
+        <OrderStatusCard key={order.id} order={order} storeSlug={storeSlug} detailHref={storeHref(storeSlug, `/siparislerim/${order.id}`)} />
       ))}
     </div>
   );
