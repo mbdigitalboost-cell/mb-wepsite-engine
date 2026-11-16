@@ -20,6 +20,8 @@ import {
   Mail,
   Truck,
   CreditCard,
+  Scale,
+  Building2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -100,6 +102,9 @@ function buildStoreSections(customerId: string, storeId: string): NavSection[] {
         { href: `${base}/subscribers`, label: "Aboneler", icon: Mail },
         { href: `${base}/shipping`, label: "Kargo", icon: Truck, isNew: true },
         { href: `${base}/payment`, label: "Ödeme", icon: CreditCard, isNew: true },
+        // Faz 33 — yasal metinler ve satıcı kimliği.
+        { href: `${base}/legal`, label: "Yasal Metinler", icon: Scale, isNew: true },
+        { href: `${base}/seller`, label: "İşletme Bilgileri", icon: Building2, isNew: true },
       ],
     },
   ];

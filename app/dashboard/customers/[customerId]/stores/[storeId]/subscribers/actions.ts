@@ -8,6 +8,8 @@ import { contactIsKnown, rowBelongsToStore, type OwnershipQueryClient } from "@/
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { sendEmail } from "@/lib/notifications/send-email";
 import { sendWhatsappMessage } from "@/lib/notifications/send-whatsapp";
+import { loadMarketingConsentEvidence } from "@/lib/legal/admin-legal";
+import { canSendSubscriberMessage, marketingConsentStatus } from "@/lib/legal/marketing-consent";
 import type { CustomerDiscountType, CustomerDiscountValueType } from "@/lib/supabase/types";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — avoids a support call over a misread code
@@ -208,6 +210,12 @@ export async function sendSubscriberEmailAction(customerId: string, storeId: str
   const audience = await loadStoreAudience(storeId);
   if (!contactIsKnown(to, audience.emails)) redirect(`${basePath(customerId, storeId)}?error=recipient`);
 
+  // Faz 33 — ticari ileti yalnız izinli kişiye (6563 ETK m.6); izinsize yalnız
+  // admin'in "ticari değil" beyanıyla (sipariş/hizmet bilgisi).
+  const consentStatus = marketingConsentStatus({ email: to }, await loadMarketingConsentEvidence(storeId));
+  const declaredNonCommercial = formData.get("nonCommercial") === "on";
+  if (!canSendSubscriberMessage(consentStatus, declaredNonCommercial)) redirect(`${basePath(customerId, storeId)}?error=no-consent`);
+
   const result = await sendEmail({ to, subject, text, fromName: audience.storeName ?? undefined });
 
   if (!result.sent) {
@@ -220,7 +228,7 @@ export async function sendSubscriberEmailAction(customerId: string, storeId: str
     action: "subscriber.email_sent",
     entityType: "store_customer",
     entityId: null,
-    metadata: { storeId, to },
+    metadata: { storeId, to, consentStatus, declaredNonCommercial },
   });
 
   redirect(`${basePath(customerId, storeId)}?success=email-sent`);
@@ -238,6 +246,11 @@ export async function sendSubscriberWhatsappAction(customerId: string, storeId: 
   const audience = await loadStoreAudience(storeId);
   if (!contactIsKnown(to, audience.phones)) redirect(`${basePath(customerId, storeId)}?error=recipient`);
 
+  // Faz 33 — bkz. sendSubscriberEmailAction.
+  const consentStatus = marketingConsentStatus({ phone: to }, await loadMarketingConsentEvidence(storeId));
+  const declaredNonCommercial = formData.get("nonCommercial") === "on";
+  if (!canSendSubscriberMessage(consentStatus, declaredNonCommercial)) redirect(`${basePath(customerId, storeId)}?error=no-consent`);
+
   const result = await sendWhatsappMessage({ to, text });
 
   if (!result.sent) {
@@ -250,7 +263,7 @@ export async function sendSubscriberWhatsappAction(customerId: string, storeId: 
     action: "subscriber.whatsapp_sent",
     entityType: "store_customer",
     entityId: null,
-    metadata: { storeId, to },
+    metadata: { storeId, to, consentStatus, declaredNonCommercial },
   });
 
   redirect(`${basePath(customerId, storeId)}?success=whatsapp-sent`);

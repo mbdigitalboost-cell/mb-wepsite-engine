@@ -16,6 +16,8 @@ import {
 import { DiscountValueFields } from "./discount-value-fields";
 import { DiscountMinOrderField } from "./discount-min-order-field";
 import type { CustomerDiscountType, CustomerDiscountValueType } from "@/lib/supabase/types";
+import { loadMarketingConsentEvidence } from "@/lib/legal/admin-legal";
+import { MARKETING_CONSENT_LABELS, marketingConsentStatus } from "@/lib/legal/marketing-consent";
 
 interface ActiveDiscountRow {
   id: string;
@@ -47,6 +49,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "deactivate-failed": "İndirim devre dışı bırakılamadı.",
   "email-not-sent": "E-posta gönderilemedi (sağlayıcı yapılandırılmamış olabilir).",
   recipient: "Alıcı bu mağazanın abonesi ya da sipariş vereni değil; mesaj gönderilmedi.",
+  "no-consent": "Bu kişinin ticari ileti izni yok; kampanya mesajı gönderilmedi. Yalnız sipariş/hizmet bilgisi gönderecekseniz \"ticari ileti değildir\" kutusunu işaretleyin.",
   "whatsapp-not-sent": "WhatsApp mesajı gönderilemedi (sağlayıcı yapılandırılmamış olabilir).",
 };
 
@@ -123,6 +126,9 @@ export default async function StoreSubscribersPage({
     return discountByGuestKey.get(key) ?? null;
   }
 
+  // Faz 33 — ticari elektronik ileti izni (siparişteki ayrı, opsiyonel onay; en son kayıt karar verir).
+  const consentEvidence = await loadMarketingConsentEvidence(storeId);
+
   const emailConfigured = Boolean(serverEnv.resendApiKey);
   const whatsappConfigured = Boolean(serverEnv.metaWhatsappAccessToken && serverEnv.metaWhatsappPhoneNumberId);
 
@@ -170,6 +176,7 @@ export default async function StoreSubscribersPage({
         <ul className="mt-6 space-y-3">
           {subscribers.map((row) => {
             const discount = findDiscountFor(row);
+            const consent = marketingConsentStatus({ email: row.email, phone: row.phone }, consentEvidence);
             return (
               <li key={row.key} className="rounded-lg border border-black/10 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -178,6 +185,13 @@ export default async function StoreSubscribersPage({
                       {row.name || "(isim yok)"}{" "}
                       <span className="ml-1 rounded-full border border-black/10 px-2 py-0.5 text-[11px] font-normal text-foreground/60">
                         {row.kind === "registered" ? "Kayıtlı hesap" : "Misafir"}
+                      </span>
+                      <span
+                        className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-normal ${
+                          consent === "granted" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
+                        }`}
+                      >
+                        {MARKETING_CONSENT_LABELS[consent]}
                       </span>
                     </p>
                     <p className="mt-1 text-xs text-foreground/60">
@@ -289,6 +303,12 @@ export default async function StoreSubscribersPage({
                           <input type="hidden" name="to" value={row.email} />
                           <input name="subject" type="text" placeholder="Konu" required className={inputClasses} />
                           <textarea name="message" placeholder="Mesaj" required rows={4} className={inputClasses} />
+                          {consent !== "granted" ? (
+                            <label className="flex items-start gap-1.5 text-foreground/70">
+                              <input type="checkbox" name="nonCommercial" required className="mt-0.5" />
+                              <span>Bu mesaj ticari ileti değildir (yalnız sipariş / hizmet bilgisi). Kampanya ve indirim duyurusu bu kişiye gönderilemez.</span>
+                            </label>
+                          ) : null}
                           <button type="submit" className="rounded-md border border-black/15 px-3 py-1.5 text-foreground/80 hover:border-black/30">
                             Gönder
                           </button>
@@ -308,6 +328,12 @@ export default async function StoreSubscribersPage({
                         <form action={sendWhatsapp} className="mt-3 grid w-72 gap-2 rounded-md border border-black/10 p-3">
                           <input type="hidden" name="to" value={row.phone} />
                           <textarea name="message" placeholder="Mesaj" required rows={4} className={inputClasses} />
+                          {consent !== "granted" ? (
+                            <label className="flex items-start gap-1.5 text-foreground/70">
+                              <input type="checkbox" name="nonCommercial" required className="mt-0.5" />
+                              <span>Bu mesaj ticari ileti değildir (yalnız sipariş / hizmet bilgisi). Kampanya ve indirim duyurusu bu kişiye gönderilemez.</span>
+                            </label>
+                          ) : null}
                           <button type="submit" className="rounded-md border border-black/15 px-3 py-1.5 text-foreground/80 hover:border-black/30">
                             Gönder
                           </button>

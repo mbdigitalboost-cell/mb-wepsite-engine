@@ -28,6 +28,11 @@ const ROWS: Record<string, Array<{ id: string; store_id: string }>> = {
     { id: "return-a1", store_id: STORE_A },
     { id: "return-b1", store_id: STORE_B },
   ],
+  // Faz 33 — yasal metin sürümleri.
+  store_legal_documents: [
+    { id: "legal-a1", store_id: STORE_A },
+    { id: "legal-b1", store_id: STORE_B },
+  ],
 };
 
 /** Supabase'in .from().select().eq().eq().maybeSingle() zincirini taklit eder; RLS yokmuş gibi (platform admin) her satırı görür. */
@@ -117,4 +122,12 @@ test("Faz 31: shipping fee settings action — another customer's URL for this s
   // ayar satırı store_id anahtarlı, RLS yazmayı is_store_admin_member(store_id) ile sınırlar.
   assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-petra"), false);
   assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-taktikalp46"), true);
+});
+
+test("Faz 33: A store + B store's legal document version → rejected (lawyer-review action checks id + store_id)", async () => {
+  const client = fakeClient();
+  assert.equal(await rowBelongsToStore(client, "store_legal_documents", "legal-b1", STORE_A), false);
+  assert.equal(await rowBelongsToStore(client, "store_legal_documents", "legal-a1", STORE_A), true);
+  // Satıcı bilgisi / yayımlama action'ları requireStoreAdminAccess(storeId, customerId) → storeMatchesCustomer.
+  assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-petra"), false);
 });

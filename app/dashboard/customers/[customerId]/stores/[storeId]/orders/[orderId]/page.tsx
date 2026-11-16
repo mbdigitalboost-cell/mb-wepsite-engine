@@ -22,6 +22,7 @@ import {
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 import { setOrderTestFlagAction } from "./test-flag-actions";
+import { LegalMarkdown } from "@/components/commerce/public/legal/legal-markdown";
 
 interface OrderItemRow {
   id: string;
@@ -98,6 +99,14 @@ export default async function StoreOrderDetailPage({
   ]);
 
   if (!store || !order) notFound();
+
+  // Faz 33 — sözleşme kabulü (RLS: editor+ okur; store_id + order_id filtreli). Migration yoksa null.
+  const { data: legalAcceptance } = await supabase
+    .from("order_legal_acceptances")
+    .select("accepted_at, pre_information_version, distance_sales_version, pre_information_snapshot, distance_sales_snapshot, marketing_consent")
+    .eq("order_id", orderId)
+    .eq("store_id", storeId)
+    .maybeSingle();
 
   const { data: itemsData } = await supabase
     .from("order_items")
@@ -415,6 +424,38 @@ export default async function StoreOrderDetailPage({
           </p>
         </section>
       ) : null}
+
+      {/* Faz 33 — müşterinin onayladığı ön bilgilendirme + mesafeli satış sözleşmesi (anlık görüntü). */}
+      <section className="mt-6 rounded-lg border border-black/10 p-4">
+        <h2 className="text-sm font-semibold tracking-tight">Sözleşme ve Onaylar</h2>
+        {legalAcceptance ? (
+          <div className="mt-3 space-y-2 text-sm">
+            <p>
+              Onay zamanı:{" "}
+              {new Date(legalAcceptance.accepted_at).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul", dateStyle: "medium", timeStyle: "short" })} ·
+              Ön Bilgilendirme sürüm {legalAcceptance.pre_information_version} · Mesafeli Satış sürüm {legalAcceptance.distance_sales_version}
+            </p>
+            <p>
+              Ticari elektronik ileti onayı:{" "}
+              {legalAcceptance.marketing_consent ? <Badge variant="success">Verildi</Badge> : <Badge variant="outline">Verilmedi</Badge>}
+            </p>
+            <details className="rounded-md border border-black/10 p-3">
+              <summary className="cursor-pointer text-sm font-medium">Ön Bilgilendirme Formu (onaylanan metin)</summary>
+              <div className="mt-3 max-h-[60vh] overflow-y-auto bg-white">
+                <LegalMarkdown source={legalAcceptance.pre_information_snapshot} tone="light" />
+              </div>
+            </details>
+            <details className="rounded-md border border-black/10 p-3">
+              <summary className="cursor-pointer text-sm font-medium">Mesafeli Satış Sözleşmesi (onaylanan metin)</summary>
+              <div className="mt-3 max-h-[60vh] overflow-y-auto bg-white">
+                <LegalMarkdown source={legalAcceptance.distance_sales_snapshot} tone="light" />
+              </div>
+            </details>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-foreground/60">Bu sipariş için sözleşme kaydı yok (Faz 33 öncesi sipariş ya da yasal metinler henüz yayımlanmamıştı).</p>
+        )}
+      </section>
 
       {/* Faz 22 — Fatura Bilgileri (Faz 23 BirFatura bunları okur). TCKN/VKN admin için gerekli, burada tam gösterilir; müşteri tarafında gösterilmez. */}
       <section className="mt-6 rounded-lg border border-black/10 p-4">
