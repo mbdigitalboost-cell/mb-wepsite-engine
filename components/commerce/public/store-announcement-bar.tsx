@@ -24,7 +24,7 @@ const STATIC_ANNOUNCEMENT_ITEMS = ["Kolay İade", "Güvenli Ödeme", "Kendi Üre
 export function StoreAnnouncementBar({ freeShippingClaim }: { freeShippingClaim: string | null }) {
   const ANNOUNCEMENT_ITEMS = freeShippingClaim ? [freeShippingClaim, ...STATIC_ANNOUNCEMENT_ITEMS] : STATIC_ANNOUNCEMENT_ITEMS;
   return (
-    <div className="border-b border-[#292929] bg-black">
+    <div className="border-b border-[#292929] bg-black print:hidden">
       <div className="mx-auto flex h-[34px] max-w-6xl flex-wrap items-center justify-center gap-x-3 px-4 text-center">
         {ANNOUNCEMENT_ITEMS.map((item, index) => (
           <span key={item} className={`${storefrontMonoClasses} flex items-center gap-3 text-[10.5px] uppercase text-[#A3A3A3]`}>

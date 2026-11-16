@@ -13,6 +13,7 @@ import { storeHref } from "@/lib/sites/store-href";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { createReturnRequestAction, markHandedToCarrierAction, withdrawReturnAction } from "./actions";
 import { ReturnRequestForm } from "./return-request-form";
+import { getOrderLegalAcceptance } from "@/lib/legal/order-acceptance";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,8 @@ export default async function OrderDetailPage({
   const { context, settings, token } = access;
   const { order } = context;
   const eligibility = eligibilityFor(context, settings);
+  // Faz 33 — onaylanan sözleşme anlık görüntüsü (varsa).
+  const acceptance = await getOrderLegalAcceptance(access.storeId, orderId);
   const windowDays = Math.max(MIN_RETURN_WINDOW_DAYS, settings.returnWindowDays);
   const net = orderGrandTotal({ subtotal: order.subtotal, discount_amount: order.discountAmount, shipping_fee: order.shippingFee, cod_fee: order.codFee });
 
@@ -75,6 +78,16 @@ export default async function OrderDetailPage({
         <p className="mt-1 text-sm text-[#A3A3A3]">
           {ORDER_STATUS_LABELS[order.status]} · {PAYMENT_STATUS_LABELS[order.paymentStatus]} · {formatPrice(net)}
         </p>
+        {acceptance ? (
+          <p className="mt-2 text-sm">
+            <Link
+              href={`${storeHref(storeSlug, `/siparislerim/${orderId}/sozlesme`)}${token ? `?t=${encodeURIComponent(token)}` : ""}`}
+              className="text-[#D95F00] underline underline-offset-2 hover:text-[#F26A00]"
+            >
+              Sözleşmeyi görüntüle
+            </Link>
+          </p>
+        ) : null}
 
         {sp.talep ? (
           <div role="status" className="mt-6 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">

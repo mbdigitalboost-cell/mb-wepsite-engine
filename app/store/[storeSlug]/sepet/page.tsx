@@ -10,6 +10,9 @@ import { CartList } from "./cart-list";
 import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
 import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import type { CompletedOrderSummary, InitialCustomer, SavedAddress } from "./checkout-form";
+import { checkoutRequiresLegalAcceptance, getPublishedLegalDocuments } from "@/lib/legal/store-legal";
+import { getOrderLegalAcceptance, orderContractHref } from "@/lib/legal/order-acceptance";
+import { storeBase } from "@/lib/sites/store-href";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,14 +24,14 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * gerçekten böyle olmalı (ödendi / yöntem artık kart değil). Aksi hâlde
  * null → normal sepet görünümü, hiçbir başarı ekranı gösterilmez.
  */
-async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme?: string }): Promise<CompletedOrderSummary | null> {
+async function loadCompletedOrder(storeId: string, storeSlug: string, sp: { siparis?: string; odeme?: string }): Promise<CompletedOrderSummary | null> {
   const orderId = sp.siparis;
   if (!orderId || !UUID_PATTERN.test(orderId) || (sp.odeme !== "basarili" && sp.odeme !== "yontem")) return null;
 
   const admin = createSupabaseAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("order_number, payment_status, payment_method, subtotal, discount_amount, discount_code, shipping_fee, cod_fee")
+    .select("order_number, payment_status, payment_method, subtotal, discount_amount, discount_code, shipping_fee, cod_fee, customer_user_id")
     .eq("id", orderId)
     .eq("store_id", storeId)
     .maybeSingle();
@@ -37,6 +40,14 @@ async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme
   const paidByCard = order.payment_method === CARD_PAYMENT_METHOD && order.payment_status === "paid";
   if (sp.odeme === "basarili" && !paidByCard) return null;
   if (sp.odeme === "yontem" && order.payment_method === CARD_PAYMENT_METHOD) return null;
+
+  // Faz 33 — onaylanan sözleşme bağlantısı (kayıt varsa). Sipariş uuid'si +
+  // mağaza + durum yukarıda sunucuda doğrulandı; misafire 2 saatlik imzalı jeton.
+  const acceptance = await getOrderLegalAcceptance(storeId, orderId);
+  const {
+    data: { user },
+  } = await (await createSupabaseStorefrontServerClient()).auth.getUser();
+  const isMember = Boolean(user && order.customer_user_id === user.id);
 
   return {
     orderNumber: order.order_number,
@@ -47,6 +58,7 @@ async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme
     codFee: Number(order.cod_fee),
     total: orderGrandTotal(order),
     paidByCard,
+    contractUrl: acceptance ? orderContractHref(storeSlug, storeId, orderId, isMember) : null,
   };
 }
 
@@ -170,9 +182,15 @@ export default async function StoreCartPage({
   const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder, shippingSettings] = await Promise.all([
     loadCheckoutPrefill(store.id),
     isCardPaymentEnabled(store.id),
-    loadCompletedOrder(store.id, sp),
+    loadCompletedOrder(store.id, storeSlug, sp),
     getShippingFeeSettings(store.id),
   ]);
+  // Faz 33 — iki metin de yayımlanmışsa ödeme adımında onay zorunlu.
+  const legalDocuments = await getPublishedLegalDocuments(store.id);
+  const legal = {
+    required: checkoutRequiresLegalAcceptance(legalDocuments),
+    kvkkHref: legalDocuments.has("privacy_kvkk") ? `${storeBase(storeSlug)}/kvkk` : null,
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -185,6 +203,7 @@ export default async function StoreCartPage({
           cardPaymentEnabled={cardPaymentEnabled}
           completedOrder={completedOrder}
           shippingSettings={shippingSettings}
+          legal={legal}
         />
       </Container>
     </div>

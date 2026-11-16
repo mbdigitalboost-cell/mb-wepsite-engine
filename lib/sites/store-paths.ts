@@ -31,8 +31,25 @@ export function buildStoreHref(cleanSlug: string | undefined, storeSlug: string,
 }
 
 /** Temiz adres olarak sunulan kök yollar (mağaza sitesinde iç yola rewrite edilir).
- * "/paylasim": paylaşım görselleri (Faz 29 Kısım C, app/store/[storeSlug]/paylasim/**). */
-export const CLEAN_STORE_PREFIXES = ["/urun", "/kategori", "/kategoriler", "/silahini-sec", "/sepet", "/odeme", "/hesap", "/siparislerim", "/paylasim"] as const;
+ * "/paylasim": paylaşım görselleri (Faz 29 Kısım C, app/store/[storeSlug]/paylasim/**).
+ * Faz 33: yasal sayfalar ve mağazanın kendi /iletisim'i (lib/legal/links.ts ile aynı liste). */
+export const CLEAN_STORE_PREFIXES = [
+  "/urun",
+  "/kategori",
+  "/kategoriler",
+  "/silahini-sec",
+  "/sepet",
+  "/odeme",
+  "/hesap",
+  "/siparislerim",
+  "/paylasim",
+  "/sozlesmeler",
+  "/iade-ve-cayma",
+  "/cayma-formu",
+  "/kvkk",
+  "/cerez-politikasi",
+  "/iletisim",
+] as const;
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

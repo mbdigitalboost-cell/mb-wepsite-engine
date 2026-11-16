@@ -20,6 +20,8 @@ export interface StoreSitemapInput {
   products: SitemapRecord[];
   /** Yalnız aktif ürünü olan markalar (çağıran filtreler). */
   brands: SitemapRecord[];
+  /** Faz 33 — yayımlanmış yasal sayfaların temiz yolları (ör. "/kvkk"); çağıran yayımlanmış olanları verir. */
+  legalPaths?: string[];
 }
 
 export interface StoreSitemapEntry {
@@ -78,6 +80,12 @@ export function buildStoreSitemap(input: StoreSitemapInput): StoreSitemapEntry[]
         priority: 0.6,
       });
     }
+  }
+
+  // Faz 33 — yasal sayfalar (sözleşme şablon sayfaları dahil). Yalnız "/" ile başlayan iç yollar.
+  for (const path of new Set(input.legalPaths ?? [])) {
+    if (!/^\/[a-z0-9-]+(\/[a-z0-9-]+)*$/.test(path)) continue;
+    entries.push({ url: `${base}${path}`, changeFrequency: "monthly", priority: 0.3 });
   }
 
   return entries;

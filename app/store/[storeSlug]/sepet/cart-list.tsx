@@ -43,6 +43,7 @@ export function CartList({
   cardPaymentEnabled,
   completedOrder,
   shippingSettings,
+  legal,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
@@ -52,6 +53,8 @@ export function CartList({
   completedOrder: CompletedOrderSummary | null;
   /** Faz 31 — mağazanın kargo ücreti ayarı (sunucudan). */
   shippingSettings: ShippingFeeSettings;
+  /** Faz 33 — bkz. CheckoutForm'un aynı adlı prop'u. */
+  legal: { required: boolean; kvkkHref: string | null };
 }) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
   // Faz 31 — gösterim amaçlı; tutar sipariş anında sunucuda yeniden hesaplanır.
@@ -238,6 +241,7 @@ export function CartList({
         cardPaymentEnabled={cardPaymentEnabled}
         completedOrder={completedOrder}
         shippingSettings={shippingSettings}
+        legal={legal}
       />
     </div>
   );

@@ -18,6 +18,14 @@ import {
 } from "@/lib/commerce/checkout/quote";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { CheckoutFormState } from "./form-state";
+import {
+  checkoutRequiresLegalAcceptance,
+  getPublishedLegalDocuments,
+  loadLegalStoreContext,
+  renderPublishedDocument,
+} from "@/lib/legal/store-legal";
+import { buildAcceptanceRecord, isChecked, legalAcceptanceError, legalOrderFromCheckout } from "@/lib/legal/acceptance";
+import { orderContractHref } from "@/lib/legal/order-acceptance";
 
 /**
  * FAZ 2 (mağaza sepeti/sipariş) — the ONLY function in this file, and the
@@ -91,6 +99,17 @@ export async function createOrderAction(
       paymentRedirectUrl: null,
     };
   }
+
+  // Faz 33 — Ön Bilgilendirme + Mesafeli Satış onayı ZORUNLU (metinler
+  // yayımlanmışsa). İstemcideki "required" kutuya güvenilmez; sunucu reddeder.
+  // Ticari ileti onayı ayrı ve opsiyoneldir (siparişin şartı değildir).
+  const legalDocuments = await getPublishedLegalDocuments(store.id);
+  const legalRequired = checkoutRequiresLegalAcceptance(legalDocuments);
+  const legalError = legalAcceptanceError(legalRequired, formData.get("legalAccepted"));
+  if (legalError) {
+    return { status: "error", error: legalError, orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
+  }
+  const marketingConsent = legalRequired && isChecked(formData.get("marketingConsent"));
 
   const admin = createSupabaseAdminClient();
 
@@ -267,6 +286,64 @@ export async function createOrderAction(
     }
   }
 
+  // Faz 33 — kabul edilen metinlerin sipariş bilgileriyle doldurulmuş ANLIK
+  // GÖRÜNTÜSÜ. Sipariş no artık belli; tutarlar yukarıdaki AYNI quote'tan.
+  let contractSaved = false;
+  if (legalRequired) {
+    const preDocument = legalDocuments.get("pre_information");
+    const salesDocument = legalDocuments.get("distance_sales");
+    if (preDocument && salesDocument) {
+      const acceptedAt = new Date();
+      const legalContext = await loadLegalStoreContext(store);
+      const legalOrder = legalOrderFromCheckout({
+        orderNumber: order.order_number,
+        date: acceptedAt,
+        customerName: parsedCustomer.data.customerName,
+        customerPhone: parsedCustomer.data.customerPhone,
+        customerEmail: parsedCustomer.data.customerEmail || null,
+        address: {
+          neighborhood: parsedCustomer.data.addressNeighborhood,
+          line: parsedCustomer.data.addressLine,
+          district: parsedCustomer.data.addressDistrict,
+          city: parsedCustomer.data.addressCity,
+        },
+        billing: {
+          type: parsedCustomer.data.billingType,
+          name: parsedCustomer.data.billingName || null,
+          taxOffice: parsedCustomer.data.billingTaxOffice || null,
+          sameAsShipping: parsedCustomer.data.billingSameAsShipping,
+          addressLine: parsedCustomer.data.billingAddressLine || null,
+          district: parsedCustomer.data.billingAddressDistrict || null,
+          city: parsedCustomer.data.billingAddressCity || null,
+        },
+        lines: resolvedLines,
+        subtotal,
+        discountAmount: resolvedDiscount?.amount ?? 0,
+        discountCode: resolvedDiscount?.code ?? null,
+        shippingFee: charges.shippingFee,
+        codFee: charges.codFee,
+        total: charges.grandTotal,
+        paymentMethod: parsedCustomer.data.paymentMethod,
+      });
+      const record = buildAcceptanceRecord({
+        storeId: store.id,
+        orderId: order.id,
+        preInformation: renderPublishedDocument(preDocument, legalContext, legalOrder),
+        distanceSales: renderPublishedDocument(salesDocument, legalContext, legalOrder),
+        marketingConsent,
+        acceptedAt,
+      });
+      const { error: acceptanceError } = await admin.from("order_legal_acceptances").insert(record);
+      if (acceptanceError) {
+        // Sipariş oluştu; kayıt hatası müşteriye "başarısız" gösterilmez ama
+        // izlenmeli (yalnız teknik mesaj — kişisel veri loglanmaz).
+        console.error("[store/sepet] failed to save legal acceptance:", acceptanceError.message);
+      } else {
+        contractSaved = true;
+      }
+    }
+  }
+
   await logAuditEvent({
     userId: null,
     customerId: storeRow?.customer_id ?? null,
@@ -284,6 +361,8 @@ export async function createOrderAction(
       codFee: charges.codFee,
       paymentMethod: parsedCustomer.data.paymentMethod,
       billingType: parsedCustomer.data.billingType,
+      legalAccepted: contractSaved,
+      marketingConsent,
     },
   });
 
@@ -308,6 +387,7 @@ export async function createOrderAction(
     shippingFee: charges.shippingFee,
     codFee: charges.codFee,
     total: charges.grandTotal,
+    contractUrl: contractSaved ? orderContractHref(storeSlug, store.id, order.id, Boolean(user)) : null,
   };
 }
 
@@ -394,4 +474,92 @@ export async function previewCheckoutAction(
     appliedCode: quoted.codeResolution?.status === "applied" ? (preview.discount?.code ?? null) : null,
     codeError: quoted.codeError,
   };
+}
+
+/**
+ * Faz 33 — ödeme adımındaki "Ön Bilgilendirme Formu" / "Mesafeli Satış
+ * Sözleşmesi" bağlantıları: o anki sepet, alıcı, adres, kargo ve ödeme
+ * bilgileriyle doldurulmuş metin. Tutarlar previewCheckoutAction ve
+ * createOrderAction ile AYNI quoteCheckout'tan (Faz 32 özetiyle aynı).
+ * Hiçbir şey yazmaz; sipariş anında metin yeniden doldurulup kaydedilir.
+ */
+export type CheckoutContractsResult =
+  | { ok: true; preInformation: { title: string; text: string }; distanceSales: { title: string; text: string } }
+  | { ok: false; error: string };
+
+export async function renderCheckoutContractsAction(
+  storeSlug: string,
+  input: {
+    cartItems: unknown;
+    paymentMethod: string | null;
+    discountCode: string | null;
+    customerName: string | null;
+    customerPhone: string | null;
+    customerEmail: string | null;
+    addressCity: string | null;
+    addressDistrict: string | null;
+    addressNeighborhood: string | null;
+    addressLine: string | null;
+    billingType: string | null;
+    billingName: string | null;
+    billingTaxOffice: string | null;
+    billingSameAsShipping: boolean;
+    billingAddressCity: string | null;
+    billingAddressDistrict: string | null;
+    billingAddressLine: string | null;
+  },
+): Promise<CheckoutContractsResult> {
+  const store = await getStoreBySlug(storeSlug);
+  if (!store) return { ok: false, error: "Mağaza bulunamadı." };
+  const documents = await getPublishedLegalDocuments(store.id);
+  const preDocument = documents.get("pre_information");
+  const salesDocument = documents.get("distance_sales");
+  if (!preDocument || !salesDocument) return { ok: false, error: "Sözleşme metni bulunamadı." };
+
+  const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+  const quoted = await quoteCheckout({
+    admin: createSupabaseAdminClient(),
+    storeId: store.id,
+    cartItems: input.cartItems,
+    paymentMethod: text(input.paymentMethod, 40),
+    enteredCode: text(input.discountCode, 50) || null,
+    contact: { email: text(input.customerEmail, 200) || null, phone: text(input.customerPhone, 40) || null },
+  });
+  if (!quoted.ok) return { ok: false, error: quoted.error };
+
+  const { quote } = quoted;
+  const legalContext = await loadLegalStoreContext(store);
+  const legalOrder = legalOrderFromCheckout({
+    orderNumber: null,
+    date: new Date(),
+    customerName: text(input.customerName, 200),
+    customerPhone: text(input.customerPhone, 40),
+    customerEmail: text(input.customerEmail, 200) || null,
+    address: {
+      neighborhood: text(input.addressNeighborhood, 200),
+      line: text(input.addressLine, 500),
+      district: text(input.addressDistrict, 100),
+      city: text(input.addressCity, 100),
+    },
+    billing: {
+      type: input.billingType === "corporate" ? "corporate" : "individual",
+      name: text(input.billingName, 200) || null,
+      taxOffice: text(input.billingTaxOffice, 120) || null,
+      sameAsShipping: input.billingSameAsShipping !== false,
+      addressLine: text(input.billingAddressLine, 500) || null,
+      district: text(input.billingAddressDistrict, 100) || null,
+      city: text(input.billingAddressCity, 100) || null,
+    },
+    lines: quoted.lines,
+    subtotal: quote.subtotal,
+    discountAmount: quote.discount?.amount ?? 0,
+    discountCode: quote.discount?.code ?? null,
+    shippingFee: quote.charges.shippingFee,
+    codFee: quote.charges.codFee,
+    total: quote.charges.grandTotal,
+    paymentMethod: text(input.paymentMethod, 40),
+  });
+  const pre = renderPublishedDocument(preDocument, legalContext, legalOrder);
+  const sales = renderPublishedDocument(salesDocument, legalContext, legalOrder);
+  return { ok: true, preInformation: { title: pre.title, text: pre.text }, distanceSales: { title: sales.title, text: sales.text } };
 }

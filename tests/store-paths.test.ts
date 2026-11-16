@@ -30,10 +30,10 @@ test("clean <-> internal mapping", () => {
 });
 
 test("only storefront roots are clean paths", () => {
-  for (const p of ["/", "/urun/x", "/kategori/y", "/kategoriler", "/silahini-sec", "/sepet", "/odeme/1", "/hesap", "/siparislerim", "/paylasim", "/paylasim/urun/x"]) {
+  for (const p of ["/", "/urun/x", "/kategori/y", "/kategoriler", "/silahini-sec", "/sepet", "/odeme/1", "/hesap", "/siparislerim", "/paylasim", "/paylasim/urun/x", "/iletisim", "/kvkk", "/sozlesmeler/mesafeli-satis", "/iade-ve-cayma", "/cayma-formu", "/cerez-politikasi"]) {
     assert.ok(isCleanStorePath(p), p);
   }
-  for (const p of ["/iletisim", "/cozumler/a", "/urunler", "/kategorilerx", "/dashboard", "/store/taktikalp46"]) {
+  for (const p of ["/kvkk-aydinlatma-metni", "/cozumler/a", "/urunler", "/kategorilerx", "/dashboard", "/store/taktikalp46"]) {
     assert.ok(!isCleanStorePath(p), p);
   }
 });

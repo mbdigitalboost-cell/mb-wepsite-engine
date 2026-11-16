@@ -21,22 +21,38 @@ const MB_DIGITAL_BOOST_INSTAGRAM_URL = "https://www.instagram.com/mbdigitalboost
  * KURUMSAL linkler BİLEREK yok — o sayfalar Petra'nın app/(public)/**
  * ağacında, Taktikalp46'ya ait karşılığı yok (önceki footer'ın notu aynen geçerli).
  */
+export interface StoreFooterLegal {
+  /** Yayımlanmış yasal sayfalar (lib/legal/links.ts sırasıyla). */
+  links: Array<{ path: string; label: string }>;
+  /** Satıcı kimliği kısa satırı (ETK m.3); kayıt yoksa null. */
+  seller: { legalName: string; address: string | null; phone: string | null; email: string | null } | null;
+  /** ETBİS — yalnız doluysa gösterilir. */
+  etbis: { info: string | null; url: string | null } | null;
+}
+
 export function StoreFooter({
   storeSlug,
   storeName,
   logoUrl,
   categories,
+  legal,
 }: {
   storeSlug: string;
   storeName: string;
   /** lib/commerce/public/store-brand-assets.ts → resolveStoreLogoUrl (DB önce, repo yedeği sonra). */
   logoUrl: string | null;
   categories: PublicCategory[];
+  /** Faz 33 — yasal bağlantılar + satıcı satırı + ETBİS. */
+  legal?: StoreFooterLegal;
 }) {
   const footerCategories = categories.slice(0, 6);
+  const sellerLine = legal?.seller
+    ? [legal.seller.legalName, legal.seller.address, legal.seller.phone, legal.seller.email].filter((part): part is string => Boolean(part && part.trim()))
+    : [];
+  const etbisLabel = legal?.etbis?.info?.trim() || (legal?.etbis?.url ? "ETBİS kaydı" : null);
 
   return (
-    <footer className="border-t border-[#292929] bg-[#0A0A0A] py-11 text-[#A3A3A3]">
+    <footer className="border-t border-[#292929] bg-[#0A0A0A] py-11 text-[#A3A3A3] print:hidden">
       <Container>
         <div className="flex flex-wrap justify-between gap-10">
           <div className="max-w-[260px]">
@@ -81,8 +97,36 @@ export function StoreFooter({
                 </Link>
               </div>
             </div>
+            {legal && legal.links.length > 0 ? (
+              <div>
+                <div className={`${storefrontDisplayClasses} mb-3.5 text-xs font-semibold tracking-wide text-white`}>YASAL</div>
+                <div className="flex flex-col gap-2 text-sm">
+                  {legal.links.map((link) => (
+                    <Link key={link.path} href={`${storeBase(storeSlug)}${link.path}`} className="hover:text-[#F5F5F5] hover:underline">
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
+        {sellerLine.length > 0 || etbisLabel ? (
+          <div className="mt-7 flex flex-col gap-1 text-xs text-[#7A776E]">
+            {sellerLine.length > 0 ? <p>{sellerLine.join(" · ")}</p> : null}
+            {etbisLabel ? (
+              <p>
+                {legal?.etbis?.url ? (
+                  <a href={legal.etbis.url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-[#F5F5F5] hover:underline">
+                    {etbisLabel}
+                  </a>
+                ) : (
+                  etbisLabel
+                )}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-7 flex flex-col items-center justify-between gap-2 border-t border-[#292929] pt-4 text-center text-xs text-[#7A776E] sm:flex-row sm:text-left">
           <p>
             © {new Date().getFullYear()} {storeName} — Güvenle Taşı.

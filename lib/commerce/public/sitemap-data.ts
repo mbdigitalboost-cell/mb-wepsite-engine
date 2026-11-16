@@ -3,6 +3,8 @@ import "server-only";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import type { SitemapRecord } from "@/lib/sites/store-sitemap";
+import { getPublishedLegalDocuments, getSellerIdentity } from "@/lib/legal/store-legal";
+import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
 
 /**
  * Faz 28 — mağaza sitemap'i için ham kayıtlar. Diğer public okumalarla
@@ -15,6 +17,7 @@ export async function getStoreSitemapRecords(storeSlug: string): Promise<{
   categories: SitemapRecord[];
   products: SitemapRecord[];
   brands: SitemapRecord[];
+  legalPaths: string[];
 } | null> {
   const store = await getStoreBySlug(storeSlug);
   if (!store) return null;
@@ -42,7 +45,12 @@ export async function getStoreSitemapRecords(storeSlug: string): Promise<{
     brands = (data ?? []).map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at }));
   }
 
+  // Faz 33 — yalnız yayımlanmış metinlerin sayfaları; /iletisim satıcı kaydı varsa.
+  const [legalDocuments, seller] = await Promise.all([getPublishedLegalDocuments(store.id), getSellerIdentity(store.id)]);
+  const legalPaths = LEGAL_PAGE_LINKS.filter((link) => (link.kind ? legalDocuments.has(link.kind) : Boolean(seller))).map((link) => link.path);
+
   return {
+    legalPaths,
     categories: (categoriesResult.data ?? []).map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at })),
     products: productRows.map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at })),
     brands,

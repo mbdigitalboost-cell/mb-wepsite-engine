@@ -31,6 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       categories: records?.categories ?? [],
       products: records?.products ?? [],
       brands: records?.brands ?? [],
+      legalPaths: records?.legalPaths ?? [],
     });
   }
 

@@ -62,7 +62,7 @@ export function StoreHeader({
   const { itemCount } = useCart();
 
   return (
-    <header className="border-b border-[#292929] bg-[#0A0A0A]">
+    <header className="border-b border-[#292929] bg-[#0A0A0A] print:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <StoreMobileMenu storeSlug={storeSlug} categories={categories} isLoggedIn={isLoggedIn} />

@@ -11,6 +11,10 @@ import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-setti
 import { freeShippingClaim } from "@/lib/commerce/shipping-fee";
 import { StoreFooter } from "@/components/commerce/public/store-footer";
 import { getStoreBrandFallback, resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
+import { getPublishedLegalDocuments, getSellerIdentity } from "@/lib/legal/store-legal";
+import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
+import { ConsentGate } from "@/components/commerce/public/consent/consent-gate";
+import { storeBase } from "@/lib/sites/store-href";
 
 /**
  * Site geneli tasarım sistemi — bu route ağacının TEK font yükleme noktası
@@ -126,7 +130,16 @@ export default async function StoreLayout({
     allCategories,
     profile,
     shippingSettings,
-  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id), getPublicStoreProfile(store.id), getShippingFeeSettings(store.id)]);
+    legalDocuments,
+    seller,
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    getPublicCategories(store.id),
+    getPublicStoreProfile(store.id),
+    getShippingFeeSettings(store.id),
+    getPublishedLegalDocuments(store.id),
+    getSellerIdentity(store.id),
+  ]);
 
   // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
   // simple list per that phase's own "basit bir panel" spec); getPublicCategories
@@ -151,7 +164,24 @@ export default async function StoreLayout({
         />
         {children}
         {/* Faz 24 — site geneli footer (önceden yalnızca ana sayfada vardı). */}
-        <StoreFooter storeSlug={storeSlug} storeName={store.name} logoUrl={logoUrl} categories={topLevelCategories} />
+        <StoreFooter
+          storeSlug={storeSlug}
+          storeName={store.name}
+          logoUrl={logoUrl}
+          categories={topLevelCategories}
+          legal={{
+            // Faz 33 — yalnız yayımlanmış metinler; /iletisim satıcı kaydı varsa.
+            links: LEGAL_PAGE_LINKS.filter((link) => (link.kind ? legalDocuments.has(link.kind) : Boolean(seller))),
+            seller: seller ? { legalName: seller.legalName, address: seller.address, phone: seller.phone, email: seller.email } : null,
+            etbis: seller && (seller.etbisInfo || seller.etbisUrl) ? { info: seller.etbisInfo, url: seller.etbisUrl } : null,
+          }}
+        />
+        {/*
+          Faz 33 — takip betikleri (GTM/GA4/Pixel) YALNIZ bu kapıdan ve çerez
+          onayından sonra yüklenir. Mağazada bugün hiçbiri tanımlı değil →
+          boş liste: banner yok, çerez yazılmaz. Eklenirse buraya verilir.
+        */}
+        <ConsentGate trackers={[]} cookiePolicyHref={legalDocuments.has("cookies") ? `${storeBase(storeSlug)}/cerez-politikasi` : null} />
       </CartProvider>
     </div>
   );

@@ -9,9 +9,9 @@ import { parseLegalInline, parseLegalMarkdown } from "@/lib/legal/markdown";
  */
 export function LegalMarkdown({ source, tone = "dark" }: { source: string; tone?: "dark" | "light" }) {
   const blocks = parseLegalMarkdown(source);
-  const text = tone === "dark" ? "text-[#C9C9C9]" : "text-neutral-800";
-  const heading = tone === "dark" ? "text-[#F5F5F5]" : "text-neutral-950";
-  const strong = tone === "dark" ? "text-[#F5F5F5]" : "text-neutral-950";
+  const text = tone === "dark" ? "text-[#C9C9C9] print:text-black" : "text-neutral-800";
+  const heading = tone === "dark" ? "text-[#F5F5F5] print:text-black" : "text-neutral-950";
+  const strong = tone === "dark" ? "text-[#F5F5F5] print:text-black" : "text-neutral-950";
   const link = tone === "dark" ? "text-[#D95F00] hover:text-[#F26A00]" : "text-[#B34C00]";
   const rule = tone === "dark" ? "border-[#292929]" : "border-neutral-300";
 

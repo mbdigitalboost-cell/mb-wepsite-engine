@@ -18,6 +18,7 @@ import {
 import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
 import { createOrderAction, previewCheckoutAction } from "./actions";
 import { initialCheckoutFormState, type CheckoutFormState } from "./form-state";
+import { CheckoutLegalConsent } from "./checkout-legal";
 
 /** Tasarım kanvası (Odeme.dc.html) — ödeme yöntemi seçimi düz radio yerine ikon+başlık+açıklamalı seçilebilir kart. Gerçek value'lar lib/validation/order.ts'in PAYMENT_METHODS'ı ile BİREBİR (yeni bir ödeme yöntemi İCAT EDİLMEDİ, sadece 3 gerçek seçeneğin görsel sunumu). */
 const PAYMENT_METHOD_DETAILS: Record<CheckoutPaymentMethod, { Icon: typeof Banknote; description: string }> = {
@@ -44,6 +45,8 @@ export interface CompletedOrderSummary {
   shippingFee?: number;
   codFee?: number;
   total?: number;
+  /** Faz 33 — kabul edilen sözleşme anlık görüntüsünün adresi. */
+  contractUrl?: string | null;
 }
 
 /** Faz 32 — uygulanan kod ödeme akışı boyunca (sayfa yenilense de) korunur; erişilemezse sessizce yok sayılır. */
@@ -175,6 +178,7 @@ export function CheckoutForm({
   cardPaymentEnabled,
   completedOrder,
   shippingSettings,
+  legal,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
@@ -185,6 +189,8 @@ export function CheckoutForm({
   completedOrder: CompletedOrderSummary | null;
   /** Faz 31 — kargo/kapıda ödeme ücreti ayarı (gösterim; sunucu yeniden hesaplar). */
   shippingSettings: ShippingFeeSettings;
+  /** Faz 33 — ödeme adımında onay kutusu gerekli mi (metinler yayımlanmışsa) + KVKK bağlantısı. */
+  legal: { required: boolean; kvkkHref: string | null };
 }) {
   const { items, clear } = useCart();
   // Faz 32 — sipariş reddedilirse (tutar değişti, kod geçersizleşti…) özet sunucudan yenilenir.
@@ -414,6 +420,7 @@ export function CheckoutForm({
           shippingFee: state.shippingFee ?? undefined,
           codFee: state.codFee ?? undefined,
           total: state.total ?? undefined,
+          contractUrl: state.contractUrl ?? null,
         }
       : completedOrder;
 
@@ -472,6 +479,14 @@ export function CheckoutForm({
           </dl>
         ) : null}
         {successSummary.paidByCard ? <p className="mt-3 text-sm text-emerald-400">Kart ödemeniz başarıyla alındı.</p> : null}
+        {/* Faz 33 — onaylanan Ön Bilgilendirme Formu ve Mesafeli Satış Sözleşmesi (saklayıp yazdırabilmesi için). */}
+        {successSummary.contractUrl ? (
+          <p className="mt-3 text-sm">
+            <a href={successSummary.contractUrl} target="_blank" rel="noopener" className="text-[#D95F00] underline underline-offset-2 hover:text-[#F26A00]">
+              Onayladığınız sözleşmeyi görüntüle / yazdır
+            </a>
+          </p>
+        ) : null}
         <p className="mt-3 text-sm text-[#A3A3A3]">
           Siparişinizi onaylamak için sizi arayacağız. Sorularınız için mağazayla iletişime geçebilirsiniz.
         </p>
@@ -1098,6 +1113,41 @@ export function CheckoutForm({
                 &quot;Siparişlerim&quot; bölümünden durumunu her zaman takip edebilirsin, üye olman gerekmiyor.
               </p>
             </div>
+
+            {legal.required ? (
+              <CheckoutLegalConsent
+                storeSlug={storeSlug}
+                kvkkHref={legal.kvkkHref}
+                disabled={isPending}
+                getContractsInput={() => ({
+                  cartItems: items.map(toWireCartLine),
+                  paymentMethod,
+                  discountCode: appliedCode,
+                  customerName,
+                  customerPhone,
+                  customerEmail,
+                  addressCity: selectedProvince?.name ?? "",
+                  addressDistrict: selectedDistrict?.name ?? "",
+                  addressNeighborhood,
+                  addressLine,
+                  billingType,
+                  billingName,
+                  billingTaxOffice,
+                  billingSameAsShipping,
+                  billingAddressCity: billingProvince?.name ?? "",
+                  billingAddressDistrict: billingDistrict?.name ?? "",
+                  billingAddressLine,
+                })}
+              />
+            ) : legal.kvkkHref ? (
+              <p className="text-xs text-[#737373]">
+                Kişisel verileriniz{" "}
+                <a href={legal.kvkkHref} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-[#F5F5F5]">
+                  KVKK Aydınlatma Metni
+                </a>{" "}
+                kapsamında işlenir.
+              </p>
+            ) : null}
 
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setStep(1)} disabled={isPending} className={storefrontButtonOutlineClasses}>

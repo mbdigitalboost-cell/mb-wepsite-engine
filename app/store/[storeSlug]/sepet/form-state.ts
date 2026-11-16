@@ -18,6 +18,8 @@ export interface CheckoutFormState {
   /** Faz 32 — ekrandaki toplam sunucununkiyle uyuşmadı; sipariş oluşmadı, özet yenilenmeli. */
   totalChanged?: boolean;
   newTotal?: number | null;
+  /** Faz 33 — kabul edilen sözleşme anlık görüntüsünün adresi (misafirde imzalı jetonlu). */
+  contractUrl?: string | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {
