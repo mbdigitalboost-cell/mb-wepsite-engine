@@ -1532,6 +1532,31 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 31, migration 0046 — kargo ücreti ayarı (vitrin okur, admin-tier yazar). */
+      store_shipping_fee_settings: {
+        Row: {
+          store_id: string;
+          shipping_fee: number;
+          free_shipping_threshold: number | null;
+          threshold_basis: "before_discount" | "after_discount";
+          cod_fee: number;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          shipping_fee?: number;
+          free_shipping_threshold?: number | null;
+          threshold_basis?: "before_discount" | "after_discount";
+          cod_fee?: number;
+        };
+        Update: {
+          shipping_fee?: number;
+          free_shipping_threshold?: number | null;
+          threshold_basis?: "before_discount" | "after_discount";
+          cod_fee?: number;
+        };
+        Relationships: [];
+      };
       product_categories: {
         Row: {
           product_id: string;
@@ -1610,6 +1635,8 @@ export type Database = {
           billing_address_line: string | null;
           delivered_at: string | null;
           is_test: boolean;
+          shipping_fee: number;
+          cod_fee: number;
         };
         Insert: {
           id?: string;
@@ -1654,6 +1681,8 @@ export type Database = {
           billing_address_line?: string | null;
           delivered_at?: string | null;
           is_test?: boolean;
+          shipping_fee?: number;
+          cod_fee?: number;
         };
         Update: {
           id?: string;
@@ -1698,6 +1727,8 @@ export type Database = {
           billing_address_line?: string | null;
           delivered_at?: string | null;
           is_test?: boolean;
+          shipping_fee?: number;
+          cod_fee?: number;
         };
         Relationships: [
           {
@@ -2122,6 +2153,8 @@ export type Database = {
           item_quantity: number;
           refunded_amount: number;
           customer_name: string;
+          shipping_fee: number;
+          cod_fee: number;
         }>;
       };
       set_product_categories: {
