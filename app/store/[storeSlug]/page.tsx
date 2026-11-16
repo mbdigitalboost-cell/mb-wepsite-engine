@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
+import { freeShippingClaim } from "@/lib/commerce/shipping-fee";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
 import { getPublicStoreNavigation } from "@/lib/commerce/public/navigation";
 import { getPublicStoreHomepageSections } from "@/lib/commerce/public/homepage";
@@ -52,7 +54,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [mainNav, sections, allProducts, categories, brandsWithCounts, profile] = await Promise.all([
+  const [mainNav, sections, allProducts, categories, brandsWithCounts, profile, shippingSettings] = await Promise.all([
     getPublicStoreNavigation(store.id, "main"),
     getPublicStoreHomepageSections(store.id),
     getPublicProducts(store.id),
@@ -63,6 +65,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
     // SARSILMAZ/GLOCK gibi 0 ürünlü markaları da dürüstçe göstermesi için.
     getPublicBrandsWithProductCounts(store.id),
     getPublicStoreProfile(store.id),
+    getShippingFeeSettings(store.id),
   ]);
 
   // FAZ 7.3 follow-up — "cta" tipi section (bu mağazanın tek homepage
@@ -233,7 +236,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         duruyordu — buraya, kanvasın kendi konumuna taşındı (bileşenin
         kendisi silinmedi, SADECE çağrı sırası değişti).
       */}
-      <TrustBadgesSection />
+      <TrustBadgesSection freeShippingClaim={freeShippingClaim(shippingSettings)} />
 
       {/*
         FAZ 7.3 follow-up — hero'nun altındaki v2 bölümleri (görevin kendi

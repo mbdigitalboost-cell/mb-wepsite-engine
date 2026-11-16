@@ -440,14 +440,15 @@ export function OtherCategoriesSection({
  * gerektiğinde sarıyor (grid'in zorladığı sabit 2 sütun YOK). Dikey
  * ayraçlar artık ekran genişliğinden bağımsız (sm: öneki kaldırıldı).
  */
-const TRUST_BADGES = [
-  { Icon: Truck, label: "2.000 TL Üzeri Ücretsiz Kargo" },
+const STATIC_TRUST_BADGES = [
   { Icon: ShieldCheck, label: "Güvenli Ödeme" },
   { Icon: RotateCcw, label: "Kolay İade" },
   { Icon: Headphones, label: "Müşteri Desteği" },
 ];
 
-export function TrustBadgesSection() {
+/** Faz 31 — ücretsiz kargo rozeti mağaza ayarından; iddia yoksa rozet gösterilmez. */
+export function TrustBadgesSection({ freeShippingClaim }: { freeShippingClaim: string | null }) {
+  const TRUST_BADGES = freeShippingClaim ? [{ Icon: Truck, label: freeShippingClaim }, ...STATIC_TRUST_BADGES] : STATIC_TRUST_BADGES;
   return (
     <div className="border-b border-[#292929] bg-[#0A0A0A] py-5">
       <Container className="flex flex-wrap items-center justify-center gap-y-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { computeShippingCharges, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Banknote, CreditCard, Landmark, Info } from "lucide-react";
 import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
@@ -38,6 +39,10 @@ export interface CompletedOrderSummary {
   discountAmount: number | null;
   discountCode: string | null;
   paidByCard: boolean;
+  /** Faz 31 — sunucunun kaydettiği ücretler ve toplam (eski siparişlerde yok). */
+  shippingFee?: number;
+  codFee?: number;
+  total?: number;
 }
 
 function toWireCartLine(item: CartItem) {
@@ -142,6 +147,7 @@ export function CheckoutForm({
   savedAddresses,
   cardPaymentEnabled,
   completedOrder,
+  shippingSettings,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
@@ -150,6 +156,8 @@ export function CheckoutForm({
   cardPaymentEnabled: boolean;
   /** Faz 22 — kart ödemesi/yöntem değişikliği sonrası geri dönüşte sunucunun doğruladığı sipariş. */
   completedOrder: CompletedOrderSummary | null;
+  /** Faz 31 — kargo/kapıda ödeme ücreti ayarı (gösterim; sunucu yeniden hesaplar). */
+  shippingSettings: ShippingFeeSettings;
 }) {
   const { items, clear } = useCart();
   const [state, formAction, isPending] = useActionState(createOrderAction.bind(null, storeSlug), initialCheckoutFormState);
@@ -267,7 +275,15 @@ export function CheckoutForm({
   // replaced by "cart is empty" on the very next render.
   const successSummary: CompletedOrderSummary | null =
     state.status === "success" && state.orderNumber !== null && !state.paymentRedirectUrl
-      ? { orderNumber: state.orderNumber, discountAmount: state.discountAmount, discountCode: state.discountCode, paidByCard: false }
+      ? {
+          orderNumber: state.orderNumber,
+          discountAmount: state.discountAmount,
+          discountCode: state.discountCode,
+          paidByCard: false,
+          shippingFee: state.shippingFee ?? undefined,
+          codFee: state.codFee ?? undefined,
+          total: state.total ?? undefined,
+        }
       : completedOrder;
 
   if (successSummary) {
@@ -304,6 +320,25 @@ export function CheckoutForm({
             {successSummary.discountCode ? `"${successSummary.discountCode}" kodu ile ` : ""}
             {formatPrice(successSummary.discountAmount)} indirim uygulandı.
           </p>
+        ) : null}
+        {/* Faz 31 — sunucunun kaydettiği kargo / kapıda ödeme ücreti ve toplam. */}
+        {successSummary.total !== undefined ? (
+          <dl className="mt-3 space-y-1 text-sm text-[#A3A3A3]">
+            <div className="flex justify-between">
+              <dt>Kargo</dt>
+              <dd className={storefrontMonoClasses}>{successSummary.shippingFee ? formatPrice(successSummary.shippingFee) : "Ücretsiz"}</dd>
+            </div>
+            {successSummary.codFee ? (
+              <div className="flex justify-between">
+                <dt>Kapıda ödeme ücreti</dt>
+                <dd className={storefrontMonoClasses}>{formatPrice(successSummary.codFee)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between font-semibold text-[#F5F5F5]">
+              <dt>Toplam</dt>
+              <dd className={storefrontMonoClasses}>{formatPrice(successSummary.total)}</dd>
+            </div>
+          </dl>
         ) : null}
         {successSummary.paidByCard ? <p className="mt-3 text-sm text-emerald-400">Kart ödemeniz başarıyla alındı.</p> : null}
         <p className="mt-3 text-sm text-[#A3A3A3]">
@@ -360,6 +395,7 @@ export function CheckoutForm({
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const liveCharges = computeShippingCharges({ itemsTotal: subtotal, discountAmount: 0, paymentMethod, settings: shippingSettings });
 
   // Adım 1 tamamlanıp daraltıldığında gösterilen özet — sadece dolu
   // parçalar birleştiriliyor, "undefined"/bomboş virgül artığı yok.
@@ -817,10 +853,28 @@ export function CheckoutForm({
                   </li>
                 ))}
               </ul>
+              {/* Faz 31 — kargo ve (kapıda ödemede) kapıda ödeme ücreti; yöntem değişince canlı güncellenir. */}
+              <div className="mt-2 space-y-1 border-t border-[#292929] pt-2 text-sm text-[#A3A3A3]">
+                <div className="flex justify-between">
+                  <span>Ürünler</span>
+                  <span className={storefrontMonoClasses}>{formatPrice(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Kargo</span>
+                  <span className={storefrontMonoClasses}>{liveCharges.freeShipping ? "Ücretsiz" : formatPrice(liveCharges.shippingFee)}</span>
+                </div>
+                {liveCharges.codFee > 0 ? (
+                  <div className="flex justify-between">
+                    <span>Kapıda ödeme ücreti</span>
+                    <span className={storefrontMonoClasses}>{formatPrice(liveCharges.codFee)}</span>
+                  </div>
+                ) : null}
+              </div>
               <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
                 <span>Toplam</span>
-                <span className={storefrontMonoClasses}>{formatPrice(subtotal)}</span>
+                <span className={storefrontMonoClasses}>{formatPrice(liveCharges.grandTotal)}</span>
               </div>
+              <p className="mt-1 text-xs text-[#737373]">İndirim kodu girerseniz indirim siparişte düşülür.</p>
             </div>
 
             {/*

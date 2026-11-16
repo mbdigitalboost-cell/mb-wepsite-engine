@@ -11,6 +11,10 @@ export interface CheckoutFormState {
    * sepeti BOŞALTMAZ. Diğer yöntemlerde null (eski davranış aynen).
    */
   paymentRedirectUrl: string | null;
+  /** Faz 31 — sunucunun hesapladığı kargo ve kapıda ödeme ücreti ile toplam (yalnız başarıda). */
+  shippingFee?: number | null;
+  codFee?: number | null;
+  total?: number | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {

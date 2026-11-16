@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
+import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
 import {
   getPublicProductBySlug,
   getPublicProductImages,
@@ -142,13 +143,14 @@ export default async function StoreProductPage({
 
   // Faz 25 — TÜM görseller (her varyantınki dahil) burada, sunucuda imzalanır;
   // galeri seçimi client'ta yapılır ama client asla imza üretmez.
-  const [images, optionGroups, variants, addons, categories, inventory] = await Promise.all([
+  const [images, optionGroups, variants, addons, categories, inventory, shippingSettings] = await Promise.all([
     getPublicProductImages(store.id, product.id),
     getPublicProductOptions(store.id, product.id),
     getPublicProductVariants(store.id, product.id),
     getPublicProductAddons(store.id, product.id),
     getPublicCategories(store.id),
     getPublicProductInventory(store.id, product.id),
+    getShippingFeeSettings(store.id),
   ]);
   const category = categories.find((c) => c.id === product.categoryId) ?? null;
   const { paragraphs, features } = splitDescription(product.description);
@@ -209,6 +211,7 @@ export default async function StoreProductPage({
           inventory={inventory}
           models={models}
           showOwnProductionBadge={OWN_PRODUCTION_STORE_SLUGS.has(storeSlug)}
+          shippingSettings={shippingSettings}
         />
 
         {/* Faz 25 — açıklama + özellik kartları (sol), Teknik Bilgi (sağ). Yalnız gerçek alanlar; puan/yorum/teslim süresi YOK. */}

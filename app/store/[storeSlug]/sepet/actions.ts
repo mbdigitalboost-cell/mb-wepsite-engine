@@ -16,6 +16,8 @@ import { formatVariantLabel } from "@/lib/commerce/variant-label";
 import { resolveApplicableDiscount } from "@/lib/commerce/discounts";
 import { CARD_PAYMENT_METHOD, checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
+import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
+import { computeShippingCharges } from "@/lib/commerce/shipping-fee";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -287,6 +289,15 @@ export async function createOrderAction(
   }
   const resolvedDiscount = discountResolution.status === "applied" ? discountResolution.discount : null;
 
+  // Faz 31 — kargo ve kapıda ödeme ücreti SUNUCUDA, mağaza ayarından
+  // (lib/commerce/shipping-fee.ts). İstemcinin gösterdiği tutara güvenilmez.
+  const charges = computeShippingCharges({
+    itemsTotal: subtotal,
+    discountAmount: resolvedDiscount?.amount ?? 0,
+    paymentMethod: parsedCustomer.data.paymentMethod,
+    settings: await getShippingFeeSettings(store.id),
+  });
+
   const { data: order, error: orderError } = await admin
     .from("orders")
     .insert({
@@ -305,6 +316,8 @@ export async function createOrderAction(
       discount_amount: resolvedDiscount?.amount ?? 0,
       discount_code: resolvedDiscount?.code ?? null,
       applied_discount_id: resolvedDiscount?.id ?? null,
+      shipping_fee: charges.shippingFee,
+      cod_fee: charges.codFee,
       // Faz 22 — kart: provider izi burada açılır, ödeme odeme/[orderId]
       // sayfasında alınır; sipariş o ana kadar unpaid/pending kalır.
       payment_provider: isCardPayment ? "iyzico" : null,
@@ -430,6 +443,8 @@ export async function createOrderAction(
       lineCount: resolvedLines.length,
       discountAmount: resolvedDiscount?.amount ?? 0,
       discountId: resolvedDiscount?.id ?? null,
+      shippingFee: charges.shippingFee,
+      codFee: charges.codFee,
       paymentMethod: parsedCustomer.data.paymentMethod,
       billingType: parsedCustomer.data.billingType,
     },
@@ -453,6 +468,9 @@ export async function createOrderAction(
     // kadar BOŞALTILMAZ (checkout-form.tsx). Sipariş uuid'si tahmin
     // edilemez; sayfa ayrıca mağaza eşleşmesini kontrol eder.
     paymentRedirectUrl: isCardPayment ? `${storeBase(storeSlug)}/odeme/${order.id}` : null,
+    shippingFee: charges.shippingFee,
+    codFee: charges.codFee,
+    total: charges.grandTotal,
   };
 }
 

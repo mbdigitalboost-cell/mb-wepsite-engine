@@ -7,6 +7,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 import { CartList } from "./cart-list";
+import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import type { CompletedOrderSummary, InitialCustomer, SavedAddress } from "./checkout-form";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,7 +28,7 @@ async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme
   const admin = createSupabaseAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("order_number, payment_status, payment_method, discount_amount, discount_code")
+    .select("order_number, payment_status, payment_method, subtotal, discount_amount, discount_code, shipping_fee, cod_fee")
     .eq("id", orderId)
     .eq("store_id", storeId)
     .maybeSingle();
@@ -40,6 +42,10 @@ async function loadCompletedOrder(storeId: string, sp: { siparis?: string; odeme
     orderNumber: order.order_number,
     discountAmount: Number(order.discount_amount) > 0 ? Number(order.discount_amount) : null,
     discountCode: order.discount_code,
+    // Faz 31 — başarı ekranında kalem kalem tutar.
+    shippingFee: Number(order.shipping_fee),
+    codFee: Number(order.cod_fee),
+    total: orderGrandTotal(order),
     paidByCard,
   };
 }
@@ -161,10 +167,11 @@ export default async function StoreCartPage({
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder] = await Promise.all([
+  const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder, shippingSettings] = await Promise.all([
     loadCheckoutPrefill(store.id),
     isCardPaymentEnabled(store.id),
     loadCompletedOrder(store.id, sp),
+    getShippingFeeSettings(store.id),
   ]);
 
   return (
@@ -177,6 +184,7 @@ export default async function StoreCartPage({
           savedAddresses={savedAddresses}
           cardPaymentEnabled={cardPaymentEnabled}
           completedOrder={completedOrder}
+          shippingSettings={shippingSettings}
         />
       </Container>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { computeShippingCharges, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
 import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -41,6 +42,7 @@ export function CartList({
   savedAddresses,
   cardPaymentEnabled,
   completedOrder,
+  shippingSettings,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
@@ -48,8 +50,12 @@ export function CartList({
   /** Faz 22 — bkz. CheckoutForm'un aynı adlı prop'ları; burada sadece geçiriliyor. */
   cardPaymentEnabled: boolean;
   completedOrder: CompletedOrderSummary | null;
+  /** Faz 31 — mağazanın kargo ücreti ayarı (sunucudan). */
+  shippingSettings: ShippingFeeSettings;
 }) {
   const { items, subtotal, removeItem, setQuantity } = useCart();
+  // Faz 31 — gösterim amaçlı; tutar sipariş anında sunucuda yeniden hesaplanır.
+  const charges = computeShippingCharges({ itemsTotal: subtotal, discountAmount: 0, paymentMethod: null, settings: shippingSettings });
 
   const [freshImageUrls, setFreshImageUrls] = useState<Record<string, string | null>>({});
   const productIdsKey = [...new Set(items.map((item) => item.productId))].sort().join(",");
@@ -188,12 +194,11 @@ export function CartList({
           </ul>
 
           {/*
-           * Sağ sütun — sticky "Sipariş Özeti". Kargo satırı "Ücretsiz" —
-           * bu uydurma değil: createOrderAction'ın kendi fiyat hesaplaması
-           * (subtotal - discount_amount) hiçbir zaman ayrı bir kargo bedeli
-           * EKLEMİYOR, yani sistem bugün gerçekten hiçbir sipariş için kargo
-           * ücreti almıyor — "2.000 TL üzeri ücretsiz kargo" mesajıyla
-           * çelişmiyor, ondan daha da geniş (şu an TAMAMEN ücretsiz).
+           * Sağ sütun — sticky "Sipariş Özeti". Faz 31: kargo satırı mağaza
+           * ayarından (lib/commerce/shipping-fee.ts) — sipariş anında
+           * createOrderAction AYNI fonksiyonla sunucuda yeniden hesaplar.
+           * Kapıda ödeme ücreti ödeme yöntemine bağlı olduğu için ödeme
+           * adımındaki özette gösterilir.
            */}
           <div className="rounded-[14px] border border-[#292929] bg-[#171717] p-6 lg:sticky lg:top-6">
             <p className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Sipariş Özeti</p>
@@ -203,12 +208,19 @@ export function CartList({
             </div>
             <div className="mt-3 flex justify-between text-sm text-[#A3A3A3]">
               <span>Kargo</span>
-              <span className={`${storefrontMonoClasses} text-[#3FA34D]`}>Ücretsiz</span>
+              {charges.freeShipping ? (
+                <span className={`${storefrontMonoClasses} text-[#3FA34D]`}>Ücretsiz</span>
+              ) : (
+                <span className={storefrontMonoClasses}>{formatPrice(charges.shippingFee)}</span>
+              )}
             </div>
+            {charges.amountToFreeShipping !== null ? (
+              <p className="mt-2 text-xs text-[#A3A3A3]">Ücretsiz kargo için {formatPrice(charges.amountToFreeShipping)} daha ekleyin.</p>
+            ) : null}
             <hr className="my-4 border-[#292929]" />
             <div className="flex items-center justify-between">
               <span className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Genel Toplam</span>
-              <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#D95F00]`}>{formatPrice(subtotal)}</span>
+              <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#D95F00]`}>{formatPrice(charges.grandTotal)}</span>
             </div>
             <a href="#checkout-form" className={`${storefrontButtonClasses} mt-5 w-full`}>
               Ödemeye Geç
@@ -223,6 +235,7 @@ export function CartList({
         savedAddresses={savedAddresses}
         cardPaymentEnabled={cardPaymentEnabled}
         completedOrder={completedOrder}
+        shippingSettings={shippingSettings}
       />
     </div>
   );

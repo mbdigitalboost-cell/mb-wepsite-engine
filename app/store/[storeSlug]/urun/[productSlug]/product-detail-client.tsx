@@ -1,5 +1,6 @@
 "use client";
 
+import { freeShippingClaim, productQualifiesForFreeShipping, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Check, ImageOff, Minus, Plus, ShoppingCart } from "lucide-react";
@@ -17,8 +18,6 @@ import type {
   PublicProductVariant,
 } from "@/lib/commerce/public/products";
 
-/** Mağazanın gerçek kargo politikası (duyuru şeridi + güven rozetleriyle aynı ifade). */
-const FREE_SHIPPING_THRESHOLD = 2000;
 
 interface ProductDetailClientProps {
   productId: string;
@@ -38,6 +37,8 @@ interface ProductDetailClientProps {
   models: string[];
   /** "Kendi Üretimimiz" rozeti yalnızca bu iddiayı doğrulanmış olarak kullanan mağazada gösterilir. */
   showOwnProductionBadge: boolean;
+  /** Faz 31 — mağazanın kargo ücreti ayarı (sabit 2.000 TL yerine). */
+  shippingSettings: ShippingFeeSettings;
 }
 
 function sortImages(images: PublicProductImage[]): PublicProductImage[] {
@@ -87,6 +88,7 @@ export function ProductDetailClient({
   inventory,
   models,
   showOwnProductionBadge,
+  shippingSettings,
 }: ProductDetailClientProps) {
   const { addItem } = useCart();
 
@@ -133,7 +135,8 @@ export function ProductDetailClient({
       ? Math.round(((priced.baseCompareAtPrice - priced.basePrice) / priced.baseCompareAtPrice) * 100)
       : null;
   const savings = priced.baseCompareAtPrice && priced.baseCompareAtPrice > priced.basePrice ? priced.baseCompareAtPrice - priced.basePrice : null;
-  const qualifiesFreeShipping = priced.totalPrice >= FREE_SHIPPING_THRESHOLD;
+  const qualifiesFreeShipping = productQualifiesForFreeShipping(priced.totalPrice, shippingSettings);
+  const shippingClaim = freeShippingClaim(shippingSettings);
   const lineTotal = priced.totalPrice * quantity;
 
   const selectionLabel = formatVariantLabel(
@@ -438,7 +441,9 @@ export function ProductDetailClient({
           >
             {[
               ...(showOwnProductionBadge ? [{ title: "Kendi Üretimimiz", sub: "Kydex işçiliği" }] : []),
-              { title: "Ücretsiz Kargo", sub: "2.000 TL üzeri" },
+              ...(shippingClaim && shippingSettings.freeShippingThreshold !== null
+                ? [{ title: "Ücretsiz Kargo", sub: `${shippingSettings.freeShippingThreshold.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} TL üzeri` }]
+                : []),
               { title: "Güvenli Ödeme", sub: "Korumalı alışveriş" },
             ].map((item) => (
               <li key={item.title} className="px-2 py-3">

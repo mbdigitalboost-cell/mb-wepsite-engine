@@ -7,6 +7,8 @@ import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-
 import { CartProvider } from "@/components/commerce/public/cart/cart-context";
 import { StoreHeader } from "@/components/commerce/public/cart/store-header";
 import { StoreAnnouncementBar } from "@/components/commerce/public/store-announcement-bar";
+import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
+import { freeShippingClaim } from "@/lib/commerce/shipping-fee";
 import { StoreFooter } from "@/components/commerce/public/store-footer";
 import { getStoreBrandFallback, resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
 
@@ -123,7 +125,8 @@ export default async function StoreLayout({
     },
     allCategories,
     profile,
-  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id), getPublicStoreProfile(store.id)]);
+    shippingSettings,
+  ] = await Promise.all([supabase.auth.getUser(), getPublicCategories(store.id), getPublicStoreProfile(store.id), getShippingFeeSettings(store.id)]);
 
   // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
   // simple list per that phase's own "basit bir panel" spec); getPublicCategories
@@ -138,7 +141,7 @@ export default async function StoreLayout({
     <div className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable} font-store-body`}>
       <CartProvider storeSlug={storeSlug}>
         {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
-        <StoreAnnouncementBar />
+        <StoreAnnouncementBar freeShippingClaim={freeShippingClaim(shippingSettings)} />
         <StoreHeader
           storeSlug={storeSlug}
           storeName={store.name}
