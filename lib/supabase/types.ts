@@ -1557,6 +1557,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 32, migration 0047 — başarısız indirim kodu denemeleri (yalnız service-role; anahtar = HMAC(mağaza+IP)). */
+      discount_code_attempts: {
+        Row: {
+          id: number;
+          store_id: string;
+          key_hash: string;
+          created_at: string;
+        };
+        Insert: {
+          store_id: string;
+          key_hash: string;
+          created_at?: string;
+        };
+        Update: {
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       product_categories: {
         Row: {
           product_id: string;
