@@ -63,6 +63,8 @@ export async function loadReportRows(storeId: string, range: DateRange): Promise
     discount_amount: Number(row.discount_amount),
     item_quantity: Number(row.item_quantity),
     refunded_amount: Number(row.refunded_amount),
+    shipping_fee: Number(row.shipping_fee ?? 0),
+    cod_fee: Number(row.cod_fee ?? 0),
   }));
 }
 

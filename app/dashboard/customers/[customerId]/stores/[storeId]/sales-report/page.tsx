@@ -71,6 +71,9 @@ export default async function SalesReportPage({
     { key: "itemsSold", label: "Satılan ürün", money: false, definition: METRIC_DEFINITIONS.itemsSold },
     { key: "cancelledCount", label: "İptal", money: false, definition: METRIC_DEFINITIONS.cancelledAmount, extra: formatPrice(metrics.cancelledAmount) },
     { key: "refundedOrderCount", label: "İade", money: false, definition: METRIC_DEFINITIONS.refunds, extra: formatPrice(metrics.refunds) },
+    // Faz 31 — ayrı kartlar; net satışa eklenmez.
+    { key: "shippingIncome", label: "Kargo geliri", money: true, definition: METRIC_DEFINITIONS.shippingIncome },
+    { key: "codFeeIncome", label: "Kapıda ödeme ücreti", money: true, definition: METRIC_DEFINITIONS.codFeeIncome },
   ];
 
   const maxNet = Math.max(1, ...series.map((point) => point.net));
@@ -153,7 +156,10 @@ export default async function SalesReportPage({
           Kart ödemesi bekleyen: {metrics.awaitingCardCount} sipariş · {formatPrice(metrics.awaitingCardAmount)} (ödeme alınınca rapora girer)
         </p>
       ) : null}
-      <p className="mt-1 text-xs text-foreground/50">Kargo ücreti siparişte tutulmadığı için (sistem kargo ücreti almıyor) raporda kargo geliri yoktur. Test olarak işaretlenen siparişler sayılmaz.</p>
+      <p className="mt-1 text-xs text-foreground/50">
+        Kargo geliri ve kapıda ödeme ücreti ayrı kartlarda; net satış ürün bazlıdır. Kargo ücreti Faz 31&apos;den (Kasım 2026) önceki siparişlerde
+        alınmadığı için onlarda 0&apos;dır. Test olarak işaretlenen siparişler sayılmaz.
+      </p>
 
       <section className="mt-6 rounded-lg border border-black/10 p-4">
         <h2 className="text-sm font-semibold">Net satış — {GROUPING_LABELS[report.grouping].toLocaleLowerCase("tr")} bazında</h2>

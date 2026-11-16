@@ -111,3 +111,10 @@ test("Faz 30: A store + B store's return request → rejected (admin actions que
   assert.equal(await rowBelongsToStore(client, "order_returns", "return-a1", STORE_A), true);
   assert.equal(await rowBelongsToStore(client, "orders", "order-b1", STORE_A), false); // talep açılacak sipariş de mağazaya ait olmalı
 });
+
+test("Faz 31: shipping fee settings action — another customer's URL for this store is rejected", () => {
+  // updateShippingFeeSettingsAction → requireStoreAdminAccess(storeId, customerId) → storeMatchesCustomer;
+  // ayar satırı store_id anahtarlı, RLS yazmayı is_store_admin_member(store_id) ile sınırlar.
+  assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-petra"), false);
+  assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-taktikalp46"), true);
+});

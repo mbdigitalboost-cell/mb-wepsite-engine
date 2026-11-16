@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ShippingFeeCard } from "./shipping-fee-card";
 import Link from "next/link";
 import { requireStoreAdminAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,10 +26,13 @@ import { ShippingSettingsForm, ShippingTestForm, ShippingTokenForm, WebhookUrlCo
  */
 export default async function StoreShippingIntegrationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string }>;
+  searchParams: Promise<{ ucret?: string }>;
 }) {
   const { customerId, storeId } = await params;
+  const { ucret } = await searchParams;
   await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -51,6 +55,9 @@ export default async function StoreShippingIntegrationPage({
   const removeAction = removeShippingTokenAction.bind(null, customerId, storeId);
   const testAction = testShippingConnectionAction.bind(null, customerId, storeId);
   const settingsAction = updateShippingSettingsAction.bind(null, customerId, storeId);
+
+  // Faz 29 — onay metninde müşteri adı.
+  const { data: scopeCustomer } = await supabase.from("customers").select("name").eq("id", customerId).maybeSingle();
 
   return (
     <div>
@@ -120,6 +127,9 @@ export default async function StoreShippingIntegrationPage({
           />
         </div>
       </section>
+
+      {/* Faz 31 — kargo ücreti / ücretsiz kargo sınırı / kapıda ödeme ücreti. */}
+      <ShippingFeeCard customerId={customerId} storeId={storeId} scopeLabel={`${scopeCustomer?.name ?? "?"} · ${store.name}`} status={ucret} />
 
       <p className="mt-6 text-xs text-foreground/50">
         Basit Kargo panelinde varsayılan bir gönderici adresi tanımlı olmalı — API çağrıları adres belirtmez, Basit Kargo

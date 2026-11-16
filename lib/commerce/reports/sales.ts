@@ -11,8 +11,10 @@
  *   - kartla ödenecek olup henüz ÖDENMEMİŞ değil (bunlar "ödeme bekleyen"
  *     satırında ayrı gösterilir),
  *   - test siparişi değil (is_test — RPC zaten hariç tutar).
- * Tarih = sipariş oluşturma tarihi. Kargo ücreti siparişte tutulmadığı için
- * (sistem bugün kargo ücreti almıyor) raporda kargo geliri yoktur.
+ * Tarih = sipariş oluşturma tarihi.
+ * Faz 31 — kargo geliri ve kapıda ödeme ücreti AYRI metrikler; net satış
+ * ürün bazlı kalır (kargo/kapıda ödeme ücreti nete eklenmez). Faz 31 öncesi
+ * siparişlerde bu ücretler 0'dır.
  */
 import type { OrderStatus, PaymentStatus } from "../../supabase/types.ts";
 
@@ -172,6 +174,9 @@ export interface ReportOrderRow {
   item_quantity: number;
   refunded_amount: number;
   customer_name?: string;
+  /** Faz 31 (eski RPC satırlarında yok → 0). */
+  shipping_fee?: number;
+  cod_fee?: number;
 }
 
 export type OrderClass = "counted" | "cancelled" | "awaiting_card_payment";
@@ -198,13 +203,18 @@ export interface SalesMetrics {
   refundedOrderCount: number;
   awaitingCardCount: number;
   awaitingCardAmount: number;
+  /** Faz 31 — sayılan siparişlerden alınan kargo ücreti ve kapıda ödeme ücreti (net satışa dahil DEĞİL). */
+  shippingIncome: number;
+  codFeeIncome: number;
 }
 
 export const METRIC_DEFINITIONS: Record<keyof Omit<SalesMetrics, "awaitingCardCount" | "awaitingCardAmount">, string> = {
+  shippingIncome: "Sayılan siparişlerde müşteriden alınan kargo ücreti (net satışa dahil değil).",
+  codFeeIncome: "Sayılan siparişlerde alınan kapıda ödeme ek ücreti (net satışa dahil değil).",
   gross: "Sayılan siparişlerin kalem + ek ürün tutarı, indirim öncesi (orders.subtotal).",
   discount: "Sayılan siparişlere uygulanan indirimlerin toplamı.",
   refunds: "Sayılan siparişlerde tamamlanmış (ödemesi iade edilmiş) iade tutarları.",
-  net: "Brüt − indirim − tamamlanmış iadeler.",
+  net: "Brüt − indirim − tamamlanmış iadeler (ürün bazlı; kargo ve kapıda ödeme ücreti dahil değil).",
   orderCount: "İptal edilmemiş, kart ödemesi bekleyen olmayan, test olmayan siparişler.",
   averageBasket: "Net satış ÷ sipariş sayısı.",
   itemsSold: "Sayılan siparişlerdeki toplam ürün adedi.",
@@ -223,7 +233,9 @@ export function computeSalesMetrics(rows: ReportOrderRow[]): SalesMetrics {
     cancelledAmount = 0,
     refundedOrderCount = 0,
     awaitingCardCount = 0,
-    awaitingCardAmount = 0;
+    awaitingCardAmount = 0,
+    shippingIncome = 0,
+    codFeeIncome = 0;
   for (const row of rows) {
     const cls = classifyOrder(row);
     const subtotal = k(row.subtotal);
@@ -245,6 +257,8 @@ export function computeSalesMetrics(rows: ReportOrderRow[]): SalesMetrics {
     refunds += refunded;
     if (refunded > 0) refundedOrderCount += 1;
     itemsSold += Number(row.item_quantity) || 0;
+    shippingIncome += k(row.shipping_fee ?? 0);
+    codFeeIncome += k(row.cod_fee ?? 0);
   }
   const net = gross - discount - refunds;
   return {
@@ -260,6 +274,8 @@ export function computeSalesMetrics(rows: ReportOrderRow[]): SalesMetrics {
     refundedOrderCount,
     awaitingCardCount,
     awaitingCardAmount: tl(awaitingCardAmount),
+    shippingIncome: tl(shippingIncome),
+    codFeeIncome: tl(codFeeIncome),
   };
 }
 

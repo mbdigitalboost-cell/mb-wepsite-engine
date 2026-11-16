@@ -32,7 +32,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ cust
     ["İadeli sipariş (adet)", metrics.refundedOrderCount, METRIC_DEFINITIONS.refundedOrderCount],
     ["Kart ödemesi bekleyen (adet)", metrics.awaitingCardCount, "Sayılmaz; ödeme alınınca sayılır."],
     ["Kart ödemesi bekleyen (TL)", metrics.awaitingCardAmount, ""],
-    ["Kargo geliri", "—", "Siparişte kargo ücreti tutulmuyor (sistem kargo ücreti almıyor)."],
+    ["Kargo geliri (TL)", metrics.shippingIncome, METRIC_DEFINITIONS.shippingIncome],
+    ["Kapıda ödeme ücreti (TL)", metrics.codFeeIncome, METRIC_DEFINITIONS.codFeeIncome],
   ];
 
   const classLabel = { counted: "Sayıldı", cancelled: "İptal", awaiting_card_payment: "Kart ödemesi bekliyor" } as const;
@@ -47,6 +48,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ cust
     row.discount_amount,
     row.refunded_amount,
     Math.round((row.subtotal - row.discount_amount - row.refunded_amount) * 100) / 100,
+    row.shipping_fee ?? 0,
+    row.cod_fee ?? 0,
     row.item_quantity,
     classLabel[classifyOrder(row)],
   ]);
@@ -56,7 +59,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ cust
   XLSX.utils.book_append_sheet(
     workbook,
     XLSX.utils.aoa_to_sheet([
-      ["Sipariş no", "Tarih", "Müşteri", "Durum", "Ödeme durumu", "Ödeme yöntemi", "Brüt", "İndirim", "İade", "Net", "Adet", "Raporda"],
+      ["Sipariş no", "Tarih", "Müşteri", "Durum", "Ödeme durumu", "Ödeme yöntemi", "Brüt", "İndirim", "İade", "Net (ürün)", "Kargo", "Kapıda ödeme ücreti", "Adet", "Raporda"],
       ...orderRows,
     ]),
     "Siparişler",

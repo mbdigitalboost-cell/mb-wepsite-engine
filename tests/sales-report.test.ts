@@ -142,3 +142,15 @@ test("top products split by variant", () => {
   assert.deepEqual(top[0], { name: "Kılıf", variant: "Siyah", quantity: 4, revenue: 800 });
   assert.equal(top.length, 2);
 });
+
+test("Faz 31: shipping income and COD fee are separate; net stays product-based", () => {
+  const metrics = computeSalesMetrics([
+    row({ subtotal: 1900, shipping_fee: 250, cod_fee: 30 }),
+    row({ subtotal: 2100, discount_amount: 200, shipping_fee: 0 }),
+    row({ status: "cancelled", subtotal: 1000, shipping_fee: 250 }), // iptal: sayılmaz
+    row({ subtotal: 500 }), // Faz 31 öncesi satır: ücret alanı yok → 0
+  ]);
+  assert.equal(metrics.shippingIncome, 250);
+  assert.equal(metrics.codFeeIncome, 30);
+  assert.equal(metrics.net, 4300); // 1900 + 1900 + 500 — ücretler nete eklenmez
+});
