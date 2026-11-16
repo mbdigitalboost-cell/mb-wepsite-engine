@@ -3,23 +3,19 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { revalidatePath } from "next/cache";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
-import {
-  getPublicProductBySlug,
-  getPublicProductOptions,
-  getPublicProductVariants,
-  getPublicProductAddons,
-  getPublicProductImages,
-} from "@/lib/commerce/public/products";
-import type { PublicOptionGroup, PublicProductVariant } from "@/lib/commerce/public/products";
-import { computeConfiguredPrice } from "@/lib/commerce/pricing";
-import { formatVariantLabel } from "@/lib/commerce/variant-label";
-import { resolveApplicableDiscount } from "@/lib/commerce/discounts";
-import { CARD_PAYMENT_METHOD, checkoutFormSchema, orderCartLinesSchema } from "@/lib/validation/order";
+import { getPublicProductImages } from "@/lib/commerce/public/products";
+import { CARD_PAYMENT_METHOD, checkoutFormSchema } from "@/lib/validation/order";
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
-import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
-import { computeShippingCharges } from "@/lib/commerce/shipping-fee";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
+import { quoteCheckout } from "@/lib/commerce/checkout/quote-server";
+import {
+  orderAmountsFromQuote,
+  parseExpectedTotal,
+  previewFromQuote,
+  totalChangedMessage,
+  totalsMatch,
+  type CheckoutPreview,
+} from "@/lib/commerce/checkout/quote";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import type { CheckoutFormState } from "./form-state";
 
@@ -96,207 +92,53 @@ export async function createOrderAction(
     };
   }
 
-  let rawLines: unknown;
-  try {
-    rawLines = JSON.parse(String(formData.get("cartItems") ?? "[]"));
-  } catch {
-    return { status: "error", error: "Sepet verisi okunamadı, lütfen sayfayı yenileyip tekrar deneyin.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
-  }
-  const parsedLines = orderCartLinesSchema.safeParse(rawLines);
-  if (!parsedLines.success) {
-    return { status: "error", error: parsedLines.error.issues[0]?.message ?? "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
-  }
-
-  // Fetch each DISTINCT product's fresh data ONCE (never once per cart
-  // LINE — a cart can have multiple lines for the same product with
-  // different variants/addons) — same fetch-once-then-lookup discipline
-  // as every other N+1-avoidance in lib/commerce/public/products.ts.
-  const uniqueSlugs = [...new Set(parsedLines.data.map((line) => line.productSlug))];
-  const productDataBySlug = new Map<
-    string,
-    {
-      product: Awaited<ReturnType<typeof getPublicProductBySlug>>;
-      optionGroups: PublicOptionGroup[];
-      variants: PublicProductVariant[];
-      addons: Awaited<ReturnType<typeof getPublicProductAddons>>;
-    }
-  >();
-
-  for (const slug of uniqueSlugs) {
-    const product = await getPublicProductBySlug(store.id, slug);
-    if (!product) continue; // surfaces as a per-line error below, not thrown here
-    const [optionGroups, variants, addons] = await Promise.all([
-      getPublicProductOptions(store.id, product.id),
-      getPublicProductVariants(store.id, product.id),
-      getPublicProductAddons(store.id, product.id),
-    ]);
-    productDataBySlug.set(slug, { product, optionGroups, variants, addons });
-  }
-
-  interface ResolvedLine {
-    productId: string;
-    variantId: string | null;
-    productName: string;
-    variantLabel: string | null;
-    unitPrice: number;
-    quantity: number;
-    lineTotal: number;
-    addons: Array<{ addonId: string; addonName: string; priceDelta: number }>;
-  }
-
-  const resolvedLines: ResolvedLine[] = [];
-  const lineErrors: string[] = [];
-
-  for (const line of parsedLines.data) {
-    const data = productDataBySlug.get(line.productSlug);
-    if (!data || !data.product) {
-      lineErrors.push("Sepetinizdeki bir ürün artık mevcut değil.");
-      continue;
-    }
-    const { product, optionGroups, variants, addons } = data;
-
-    // Faz 25 — varyantı OLAN üründe varyantsız satır kabul edilmez: aksi
-    // hâlde sipariş "hangi renk?" bilgisi olmadan yazılıyordu (Canik'in 10
-    // satırının tamamında variant_id/variant_label NULL'dı). Seçenek grubu
-    // olup HİÇ varyantı olmayan (henüz admin'de oluşturulmamış) ürün eski
-    // davranışla satılmaya devam eder — canlı mağaza kırılmasın diye.
-    if (!line.variantId && optionGroups.length > 0 && variants.length > 0) {
-      lineErrors.push(`${product.name}: lütfen ${optionGroups.map((g) => g.name.toLocaleLowerCase("tr")).join(" / ")} seçin.`);
-      continue;
-    }
-
-    let matchedVariant: PublicProductVariant | null = null;
-    if (line.variantId) {
-      matchedVariant = variants.find((v) => v.id === line.variantId) ?? null;
-      if (!matchedVariant) {
-        lineErrors.push(`${product.name}: seçtiğiniz seçenek artık mevcut değil.`);
-        continue;
-      }
-    }
-
-    const resolvedAddons: Array<{ addonId: string; addonName: string; priceDelta: number }> = [];
-    let addonMissing = false;
-    for (const addonId of line.addonIds) {
-      const addon = addons.find((a) => a.id === addonId);
-      if (!addon) {
-        addonMissing = true;
-        break;
-      }
-      resolvedAddons.push({ addonId: addon.id, addonName: addon.name, priceDelta: addon.priceDelta });
-    }
-    if (addonMissing) {
-      lineErrors.push(`${product.name}: seçtiğiniz bir ek ürün alanı artık mevcut değil.`);
-      continue;
-    }
-
-    // Reconstructs the same group->value selection the client's
-    // configurator held when it produced `matchedVariant` — the ONE
-    // extra step needed to feed computeConfiguredPrice unchanged (it
-    // takes raw selections + resolves the matching variant itself; the
-    // client already resolved it once, so this just re-derives the same
-    // input from the id the client sent, not a second independent guess).
-    const selectedOptionValueIdByGroup: Record<string, string> = {};
-    if (matchedVariant) {
-      for (const valueId of matchedVariant.optionValueIds) {
-        const group = optionGroups.find((g) => g.values.some((v) => v.id === valueId));
-        if (group) selectedOptionValueIdByGroup[group.id] = valueId;
-      }
-    }
-
-    const priced = computeConfiguredPrice({
-      productPrice: product.price,
-      productCompareAtPrice: product.compareAtPrice,
-      optionGroups,
-      variants,
-      addons,
-      selectedOptionValueIdByGroup,
-      selectedAddonIds: line.addonIds,
-    });
-
-    // Faz 25 — okunabilir etiket ("Coyote (Çöl)"), SUNUCUDA taze option
-    // değerlerinden türetilir (client'ın gönderdiği etikete güvenilmez).
-    const variantLabel =
-      matchedVariant && optionGroups.length > 0
-        ? formatVariantLabel(
-            optionGroups
-              .map((g) => g.values.find((v) => v.id === selectedOptionValueIdByGroup[g.id])?.value ?? null)
-              .filter((value): value is string => value !== null),
-          )
-        : null;
-
-    resolvedLines.push({
-      productId: product.id,
-      variantId: matchedVariant?.id ?? null,
-      productName: product.name,
-      variantLabel,
-      unitPrice: priced.totalPrice,
-      quantity: line.quantity,
-      lineTotal: priced.totalPrice * line.quantity,
-      addons: resolvedAddons,
-    });
-  }
-
-  if (lineErrors.length > 0) {
-    return { status: "error", error: [...new Set(lineErrors)].join(" "), orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
-  }
-  if (resolvedLines.length === 0) {
-    return { status: "error", error: "Sepetiniz boş.", orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
-  }
-
-  const subtotal = resolvedLines.reduce((sum, line) => sum + line.lineTotal, 0);
-
-  // FAZ 5.1 — read via the request's own cookie-bound session (NOT the
-  // admin client below, which has no session at all), never trusted from
-  // client input. Anonymous/guest checkout is unaffected: `user` is simply
-  // null when there's no session, and customer_user_id stays null on the
-  // insert below — identical to Faz 2's original behavior.
-  const supabase = await createSupabaseStorefrontServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const admin = createSupabaseAdminClient();
 
-  // store_public_stores (the anon-safe view getStoreBySlug reads) never
-  // exposes customer_id (see that view's own comment) — the real `stores`
-  // row is looked up here, through the admin client, ONLY for the audit
-  // log's own "which customer does this concern" field.
-  const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.id).maybeSingle();
-
-  // "Aboneler" indirim sistemi — migration 0036/0037, lib/commerce/discounts.ts.
-  // Girilen bir kod varsa ve herhangi bir sebeple GEÇERSİZSE (yok/süresi
-  // geçmiş/minimum tutar karşılanmıyor/kullanım hakkı dolmuş), indirimsiz
-  // devam etmek yerine sipariş hiç oluşturulmadan burada hata dönülüyor —
-  // müşteri özellikle bir kod girdiyse, onu sessizce yok saymak yerine NEDEN
-  // geçersiz olduğunu söylemek daha dürüst bir davranış. Kod hiç girilmediyse
-  // (boş) tek olasılık 'auto'dur, o yol zaten sessiz (bkz. resolveApplicableDiscount).
-  const enteredCode = parsedCustomer.data.discountCode || null;
-  const discountResolution = await resolveApplicableDiscount({
+  // Faz 32 — satırlar, indirim ve kargo/kapıda ödeme/toplam ÖNİZLEME ile
+  // AYNI fonksiyondan (lib/commerce/checkout/quote-server.ts) gelir.
+  const quoted = await quoteCheckout({
     admin,
     storeId: store.id,
-    subtotal,
-    userId: user?.id ?? null,
-    enteredCode,
-  });
-  if (enteredCode && discountResolution.status !== "applied") {
-    let discountError = "Girdiğiniz indirim kodu geçersiz veya süresi dolmuş.";
-    if (discountResolution.status === "min_order_not_met") {
-      discountError = `Bu kod en az ${discountResolution.minOrderAmount.toLocaleString("tr-TR")} TL'lik alışverişte geçerli.`;
-    } else if (discountResolution.status === "usage_limit_reached") {
-      discountError = "Bu kodun kullanım hakkı dolmuş.";
-    }
-    return { status: "error", error: discountError, orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
-  }
-  const resolvedDiscount = discountResolution.status === "applied" ? discountResolution.discount : null;
-
-  // Faz 31 — kargo ve kapıda ödeme ücreti SUNUCUDA, mağaza ayarından
-  // (lib/commerce/shipping-fee.ts). İstemcinin gösterdiği tutara güvenilmez.
-  const charges = computeShippingCharges({
-    itemsTotal: subtotal,
-    discountAmount: resolvedDiscount?.amount ?? 0,
+    cartItems: String(formData.get("cartItems") ?? "[]"),
     paymentMethod: parsedCustomer.data.paymentMethod,
-    settings: await getShippingFeeSettings(store.id),
+    enteredCode: parsedCustomer.data.discountCode || null,
+    contact: { email: parsedCustomer.data.customerEmail || null, phone: parsedCustomer.data.customerPhone },
   });
+  if (!quoted.ok) {
+    return { status: "error", error: quoted.error, orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
+  }
+  // Girilen kod geçersizse (yok/süresi dolmuş/şart tutmuyor/deneme sınırı)
+  // sipariş OLUŞTURULMAZ — kodu sessizce yok saymak yanıltıcı olurdu.
+  if (quoted.codeError) {
+    return { status: "error", error: quoted.codeError, orderNumber: null, discountAmount: null, discountCode: null, paymentRedirectUrl: null };
+  }
+  const { lines: resolvedLines, quote, user } = quoted;
+  const amounts = orderAmountsFromQuote(quote);
+  const resolvedDiscount = quote.discount;
+  const charges = quote.charges;
+  const subtotal = quote.subtotal;
+
+  // Faz 32 — müşteri ekranda gördüğü toplamı onaylar. Sunucunun hesabı
+  // farklıysa (kod bu arada sona erdi, kullanım hakkı doldu, fiyat değişti)
+  // sipariş oluşmaz; kart akışında da paidPrice bu siparişin toplamından
+  // (orderGrandTotal) hesaplandığı için aynı kontrol kartı da kapsar.
+  if (!totalsMatch(parseExpectedTotal(formData.get("expectedTotal")), charges.grandTotal)) {
+    return {
+      status: "error",
+      error: totalChangedMessage(charges.grandTotal),
+      orderNumber: null,
+      discountAmount: null,
+      discountCode: null,
+      paymentRedirectUrl: null,
+      totalChanged: true,
+      newTotal: charges.grandTotal,
+    };
+  }
+
+  // store_public_stores (getStoreBySlug'ın okuduğu anon view) customer_id
+  // vermez — gerçek stores satırı yalnız audit log'un "hangi müşteri"
+  // alanı için admin client'la okunur.
+  const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.id).maybeSingle();
 
   const { data: order, error: orderError } = await admin
     .from("orders")
@@ -312,12 +154,7 @@ export async function createOrderAction(
       address_line: parsedCustomer.data.addressLine,
       note: parsedCustomer.data.note || null,
       payment_method: parsedCustomer.data.paymentMethod,
-      subtotal,
-      discount_amount: resolvedDiscount?.amount ?? 0,
-      discount_code: resolvedDiscount?.code ?? null,
-      applied_discount_id: resolvedDiscount?.id ?? null,
-      shipping_fee: charges.shippingFee,
-      cod_fee: charges.codFee,
+      ...amounts,
       // Faz 22 — kart: provider izi burada açılır, ödeme odeme/[orderId]
       // sayfasında alınır; sipariş o ana kadar unpaid/pending kalır.
       payment_provider: isCardPayment ? "iyzico" : null,
@@ -514,4 +351,47 @@ export async function resolveCartProductImages(
   );
 
   return Object.fromEntries(entries);
+}
+
+/**
+ * Faz 32 — İNDİRİM/TOPLAM ÖNİZLEMESİ ("Uygula" ve sepet/ödeme yöntemi
+ * değişince). createOrderAction ile AYNI quoteCheckout'u çağırır; yalnız
+ * bilgi verir, hiçbir şey yazmaz (deneme sınırı kaydı hariç). Sipariş
+ * anında her şey yeniden doğrulanır ve ekrandaki toplam (expectedTotal)
+ * sunucununkiyle karşılaştırılır.
+ *
+ * Kod hatası olsa bile `preview` döner (kodsuz hesap; varsa hesaba tanımlı
+ * otomatik indirimle) — istemci "Uygula" başarısızsa eski özeti korur,
+ * uygulanmış bir kod sonradan geçersizleşirse bu özete geçer.
+ */
+export type CheckoutPreviewResult =
+  | { ok: true; preview: CheckoutPreview; appliedCode: string | null; codeError: string | null }
+  | { ok: false; error: string };
+
+export async function previewCheckoutAction(
+  storeSlug: string,
+  input: { cartItems: unknown; paymentMethod: string | null; discountCode: string | null; customerEmail: string | null; customerPhone: string | null },
+): Promise<CheckoutPreviewResult> {
+  const store = await getStoreBySlug(storeSlug);
+  if (!store) return { ok: false, error: "Mağaza bulunamadı." };
+
+  const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : null);
+
+  const quoted = await quoteCheckout({
+    admin: createSupabaseAdminClient(),
+    storeId: store.id,
+    cartItems: input.cartItems,
+    paymentMethod: text(input.paymentMethod, 40),
+    enteredCode: text(input.discountCode, 50),
+    contact: { email: text(input.customerEmail, 200), phone: text(input.customerPhone, 40) },
+  });
+  if (!quoted.ok) return { ok: false, error: quoted.error };
+
+  const preview = previewFromQuote(quoted.quote);
+  return {
+    ok: true,
+    preview,
+    appliedCode: quoted.codeResolution?.status === "applied" ? (preview.discount?.code ?? null) : null,
+    codeError: quoted.codeError,
+  };
 }

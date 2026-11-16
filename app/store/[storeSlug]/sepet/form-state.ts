@@ -15,6 +15,9 @@ export interface CheckoutFormState {
   shippingFee?: number | null;
   codFee?: number | null;
   total?: number | null;
+  /** Faz 32 — ekrandaki toplam sunucununkiyle uyuşmadı; sipariş oluşmadı, özet yenilenmeli. */
+  totalChanged?: boolean;
+  newTotal?: number | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {
