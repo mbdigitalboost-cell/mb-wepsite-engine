@@ -1,4 +1,5 @@
 import { storeBase } from "@/lib/sites/store-href";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import { Space_Grotesk } from "next/font/google";
 import { Truck } from "lucide-react";
 import type { PublicOrderWithItems } from "@/lib/commerce/public/order-lookup";
@@ -43,7 +44,8 @@ const PAYMENT_STATUS_TEXT_CLASSES: Record<PaymentStatus, string> = {
 
 /** Faz 30 — `detailHref`: sipariş detayı + iptal/iade sayfası (üye: düz adres; misafir: imzalı jetonlu adres). */
 export function OrderStatusCard({ order, storeSlug, detailHref }: { order: PublicOrderWithItems; storeSlug?: string; detailHref?: string }) {
-  const total = order.subtotal - order.discountAmount;
+  // Faz 31 — tek tanım: ürünler − indirim + kargo + kapıda ödeme ücreti.
+  const total = orderGrandTotal({ subtotal: order.subtotal, discount_amount: order.discountAmount, shipping_fee: order.shippingFee, cod_fee: order.codFee });
   // Faz 22 — kart seçilmiş ama ödenmemiş: müşteri aynı siparişin ödeme sayfasına dönebilir.
   const cardPaymentPending =
     storeSlug !== undefined && order.paymentMethod === "Kredi Kartı" && order.paymentStatus === "unpaid" && order.status === "pending";
@@ -99,6 +101,18 @@ export function OrderStatusCard({ order, storeSlug, detailHref }: { order: Publi
           <div className="flex justify-between text-emerald-400">
             <span>İndirim{order.discountCode ? ` (${order.discountCode})` : ""}</span>
             <span>-{formatPrice(order.discountAmount)}</span>
+          </div>
+        ) : null}
+        {order.shippingFee > 0 ? (
+          <div className="flex justify-between text-[#A3A3A3]">
+            <span>Kargo</span>
+            <span>{formatPrice(order.shippingFee)}</span>
+          </div>
+        ) : null}
+        {order.codFee > 0 ? (
+          <div className="flex justify-between text-[#A3A3A3]">
+            <span>Kapıda ödeme ücreti</span>
+            <span>{formatPrice(order.codFee)}</span>
           </div>
         ) : null}
         <div className="flex justify-between text-base font-semibold text-[#F5F5F5]">

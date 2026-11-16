@@ -29,6 +29,8 @@ const ERRORS: Record<string, string> = {
   referans: "İadeyi işaretlemek için dekont/işlem referansı girin.",
   yontem: "Bu talep iyzico ile iade edilemez (kartla ödenmemiş ya da ödeme kimliği yok).",
   "iyzico-kapali": "iyzico entegrasyonu aktif değil. İadeyi iyzico panelinden yapıp referansla elle işaretleyebilirsiniz.",
+  tutar: "Geçersiz iade tutarı (0'dan büyük ve müşterinin ödediği toplamdan − önceki iadelerden fazla olamaz).",
+  "tutar-gerekce": "İade tutarını değiştirdiyseniz gerekçesini yazın.",
   iyzico: "iyzico iadesi tamamlanamadı; talebin durumu değişmedi.",
 };
 const OKS: Record<string, string> = {
@@ -149,6 +151,16 @@ export default async function ReturnDetailPage({
               <dd>{record.refund_method === "iyzico" ? "Karta (iyzico)" : record.refund_method === "iban" ? "IBAN'a havale" : "İade edilecek ödeme yok"}</dd>
               <dt className="text-foreground/60">İade tutarı</dt>
               <dd className="font-semibold">{formatPrice(amount)}</dd>
+              {context.order.shippingFee > 0 || context.order.codFee > 0 ? (
+                <>
+                  <dt className="text-foreground/60">Siparişte ücretler</dt>
+                  <dd className="text-xs">
+                    Kargo {formatPrice(context.order.shippingFee)}
+                    {context.order.codFee > 0 ? ` · Kapıda ödeme ${formatPrice(context.order.codFee)}` : ""} — tam iadede tutara dahil, kısmi iadede
+                    değil (aşağıdan gerekçeyle artırılabilir; hukuki danışmanınıza teyit ettirin).
+                  </dd>
+                </>
+              ) : null}
               <dt className="text-foreground/60">Teslim tarihi</dt>
               <dd>{dt(context.order.deliveredAt)}</dd>
             </dl>
@@ -252,6 +264,7 @@ export default async function ReturnDetailPage({
                   {record.refund_method === "iyzico" ? (
                     <form action={refundReturnAction.bind(null, customerId, storeId, returnId)}>
                       <input type="hidden" name="mode" value="iyzico" />
+                      <RefundAmountFields amount={amount} />
                       <ConfirmSubmitButton
                         label="iyzico ile karta iade et"
                         confirmText={`${scope}\n\n${label}: ${formatPrice(amount)} müşterinin kartına iyzico üzerinden iade edilecek. Devam edilsin mi?`}
@@ -267,6 +280,7 @@ export default async function ReturnDetailPage({
                   ) : null}
                   <form action={refundReturnAction.bind(null, customerId, storeId, returnId)} className="grid gap-2 border-t border-black/10 pt-3">
                     <input type="hidden" name="mode" value="manual" />
+                    <RefundAmountFields amount={amount} />
                     <label>
                       {record.refund_method === "iban" ? "Havale dekont / işlem referansı" : "iyzico panelinden yapıldıysa işlem referansı"}
                       <input name="reference" required maxLength={200} className={inputClasses} />
@@ -330,5 +344,24 @@ export default async function ReturnDetailPage({
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Faz 31 — iade tutarını gerekçeyle artırma (ör. kısmi iadede kargo ücreti). Boş bırakılırsa hesaplanan tutar kullanılır. */
+function RefundAmountFields({ amount }: { amount: number }) {
+  return (
+    <details className="mb-2 text-xs">
+      <summary className="cursor-pointer text-foreground/60">Tutarı değiştir (gerekçeli)</summary>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <label>
+          İade tutarı (TL)
+          <input name="amountOverride" inputMode="decimal" placeholder={amount.toFixed(2)} className={inputClasses} />
+        </label>
+        <label>
+          Gerekçe
+          <input name="overrideNote" maxLength={500} placeholder="Ör. kargo ücreti de iade edildi" className={inputClasses} />
+        </label>
+      </div>
+    </details>
   );
 }

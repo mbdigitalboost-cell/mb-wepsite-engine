@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -154,7 +155,7 @@ export default async function StoreOrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, customer_name, customer_phone, subtotal, created_at, tracking_number, shipping_sync_status, shipping_sync_error, payment_method",
+      "id, order_number, status, payment_status, customer_name, customer_phone, subtotal, discount_amount, shipping_fee, cod_fee, created_at, tracking_number, shipping_sync_status, shipping_sync_error, payment_method",
       { count: "exact" },
     )
     .eq("store_id", storeId);
@@ -501,7 +502,7 @@ export default async function StoreOrdersPage({
                     <span className="text-xs text-foreground/50">{order.customer_phone}</span>
                   </span>
                   <span className="flex flex-wrap items-center gap-3 text-xs text-foreground/50">
-                    {formatPrice(Number(order.subtotal))}
+                    {formatPrice(orderGrandTotal(order))}
                     <span>{new Date(order.created_at).toLocaleDateString("tr-TR")}</span>
                     {/* Faz 21 — Basit Kargo senkron durumu: failed → kırmızı rozet (+ sağda Tekrar Gönder), barkod varsa takip no, barkodsuz sent → "Basit Kargo'da". */}
                     {order.shipping_sync_status === "failed" ? (

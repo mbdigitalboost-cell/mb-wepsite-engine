@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
@@ -46,7 +47,7 @@ export default async function OrderDetailPage({
   const { order } = context;
   const eligibility = eligibilityFor(context, settings);
   const windowDays = Math.max(MIN_RETURN_WINDOW_DAYS, settings.returnWindowDays);
-  const net = order.subtotal - order.discountAmount;
+  const net = orderGrandTotal({ subtotal: order.subtotal, discount_amount: order.discountAmount, shipping_fee: order.shippingFee, cod_fee: order.codFee });
 
   const steps: Array<{ label: string; done: boolean; at: string | null }> = [
     { label: "Sipariş alındı", done: true, at: order.createdAt },

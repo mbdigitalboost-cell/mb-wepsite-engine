@@ -13,6 +13,11 @@
  *  - Siparişin kalan son parçası iade ediliyorsa tutar, yuvarlama farkı
  *    kalmasın diye "ödenen net − daha önce iade edilen" olarak alınır.
  *  - Hiçbir zaman ödenen netten fazla iade edilmez.
+ *  - Faz 31 — kargo ve kapıda ödeme ücreti: siparişin TAMAMI (kalan her
+ *    şey) iade/iptal ediliyorsa bunlar da iade tutarına eklenir (MSY:
+ *    "varsa malın tüketiciye teslim masrafları da dahil tüm ödemeler" —
+ *    Cowork yorumu, hukuki danışmana teyit ettirin). Kısmi iadede eklenmez;
+ *    admin iade ekranında tutarı gerekçeyle elle artırabilir.
  */
 
 export interface RefundOrderInput {
@@ -20,6 +25,9 @@ export interface RefundOrderInput {
   discountAmount: number;
   /** Bu siparişte daha önce gerçekten iade edilmiş para toplamı (refunded talepler). */
   alreadyRefunded: number;
+  /** Faz 31 — siparişte alınan kargo ve kapıda ödeme ücreti (yoksa 0). */
+  shippingFee?: number;
+  codFee?: number;
 }
 
 export interface RefundLineInput {
@@ -46,7 +54,7 @@ const fromKurus = (value: number) => value / 100;
 export function computeReturnRefund(order: RefundOrderInput, lines: RefundLineInput[]): RefundResult {
   const subtotal = toKurus(order.subtotal);
   const discount = Math.min(toKurus(order.discountAmount), subtotal);
-  const netPaid = subtotal - discount;
+  const netPaid = subtotal - discount + toKurus(order.shippingFee ?? 0) + toKurus(order.codFee ?? 0);
   const remainingRefundable = Math.max(0, netPaid - toKurus(order.alreadyRefunded));
 
   let coversRemainder = lines.length > 0;
@@ -71,8 +79,10 @@ export function computeReturnRefund(order: RefundOrderInput, lines: RefundLineIn
 export function computeFinalRefund(order: RefundOrderInput, lines: RefundLineInput[], allItemsCovered: boolean): RefundResult {
   const result = computeReturnRefund(order, lines);
   if (!allItemsCovered) return result;
-  const netPaid = toKurus(order.subtotal) - Math.min(toKurus(order.discountAmount), toKurus(order.subtotal));
-  const remaining = Math.max(0, netPaid - toKurus(order.alreadyRefunded));
+  // Tamamı iade: ürünler − indirim + kargo + kapıda ödeme ücreti − daha önce iade edilen.
+  const totalPaid =
+    toKurus(order.subtotal) - Math.min(toKurus(order.discountAmount), toKurus(order.subtotal)) + toKurus(order.shippingFee ?? 0) + toKurus(order.codFee ?? 0);
+  const remaining = Math.max(0, totalPaid - toKurus(order.alreadyRefunded));
   return { ...result, total: fromKurus(remaining), coversRemainder: true };
 }
 

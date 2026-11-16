@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -290,10 +291,23 @@ export default async function StoreOrderDetailPage({
               <span>-{formatPrice(Number(order.discount_amount))}</span>
             </div>
           ) : null}
+          {/* Faz 31 — sipariş anında alınan kargo / kapıda ödeme ücreti (eski siparişlerde 0 → gizli). */}
+          {Number(order.shipping_fee) > 0 ? (
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-foreground/60">Kargo</span>
+              <span>{formatPrice(Number(order.shipping_fee))}</span>
+            </div>
+          ) : null}
+          {Number(order.cod_fee) > 0 ? (
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-foreground/60">Kapıda ödeme ücreti</span>
+              <span>{formatPrice(Number(order.cod_fee))}</span>
+            </div>
+          ) : null}
           <div className="mt-2 flex items-center justify-between border-t border-black/10 pt-2">
             <span className="text-sm text-foreground/60">Genel Toplam</span>
             <span className="text-xl font-semibold text-foreground">
-              {formatPrice(Number(order.subtotal) - Number(order.discount_amount))}
+              {formatPrice(orderGrandTotal(order))}
             </span>
           </div>
         </div>

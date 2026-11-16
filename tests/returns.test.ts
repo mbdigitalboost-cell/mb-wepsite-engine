@@ -145,3 +145,22 @@ test("cancel of an order without line items refunds the net (order-level cancel)
   assert.equal(result.total, 10);
   assert.deepEqual(result.lines, []);
 });
+
+test("Faz 31: full return/cancel includes shipping + COD fee; partial does not", () => {
+  const order = { subtotal: 1900, discountAmount: 0, alreadyRefunded: 0, shippingFee: 250, codFee: 30 };
+  const full = computeFinalRefund(order, [{ orderItemId: "A", lineTotal: 1900, quantity: 1, returnQuantity: 1, previouslyReturnedQuantity: 0 }], true);
+  assert.equal(full.total, 2180);
+  const partial = computeFinalRefund(
+    { ...order, subtotal: 1900 },
+    [{ orderItemId: "A", lineTotal: 1000, quantity: 2, returnQuantity: 1, previouslyReturnedQuantity: 0 }],
+    false,
+  );
+  assert.equal(partial.total, 500); // ürün payı; kargo yok
+  // İkinci (kalan) parça iade edilince kargo dahil kalan ödenen tutar iade edilir.
+  const rest = computeFinalRefund(
+    { ...order, alreadyRefunded: 500 },
+    [{ orderItemId: "A", lineTotal: 1000, quantity: 2, returnQuantity: 1, previouslyReturnedQuantity: 1 }],
+    true,
+  );
+  assert.equal(rest.total, 1680);
+});

@@ -1,4 +1,5 @@
 import "server-only";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 
 /**
  * Basit Kargo (basitkargo.com) API istemcisi — Faz 20'de yazıldı, Faz 21'de
@@ -134,6 +135,9 @@ export interface ShippableOrder {
   address_line: string;
   subtotal: number;
   discount_amount: number;
+  /** Faz 31 — kapıda tahsilat bu ücretleri de içerir. */
+  shipping_fee?: number | null;
+  cod_fee?: number | null;
   payment_method: string | null;
   payment_status: string;
   /** Faz 25 — ürün + renk özeti ("Kılıf (Coyote (Çöl)) ×1"); varsa içerik adına eklenir. */
@@ -184,7 +188,8 @@ function roundMoney(value: number): number {
  * ise gönderilir. Zaten `paid` olan siparişte `collect` HİÇ gönderilmez.
  */
 function buildOrderBody(order: ShippableOrder, desiKg: number): Record<string, unknown> {
-  const total = roundMoney(Number(order.subtotal) - Number(order.discount_amount ?? 0));
+  // Faz 31 — müşterinin kapıda ödeyeceği toplam = ürünler − indirim + kargo + kapıda ödeme ücreti.
+  const total = roundMoney(orderGrandTotal(order));
   const codType = order.payment_method ? COD_PAYMENT_METHODS[order.payment_method] : undefined;
   const isCashOnDelivery = order.payment_status === "unpaid" && Boolean(codType);
 

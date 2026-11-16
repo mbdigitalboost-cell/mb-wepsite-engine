@@ -1,4 +1,6 @@
 import "server-only";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
+import { buildIyzicoBasket } from "@/lib/commerce/payments/iyzico-basket";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAuditEvent } from "@/lib/auth/audit-log";
@@ -64,6 +66,9 @@ export interface CardPaymentOrder {
   address_line: string;
   subtotal: number;
   discount_amount: number;
+  /** Faz 31 */
+  shipping_fee: number;
+  cod_fee: number;
   billing_type: string;
   billing_name: string | null;
   billing_identity_number: string | null;
@@ -74,7 +79,7 @@ export interface CardPaymentOrder {
 }
 
 const CARD_ORDER_COLUMNS =
-  "id, store_id, order_number, status, payment_status, payment_method, payment_provider_token, payment_provider_payment_id, payment_error, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, billing_type, billing_name, billing_identity_number, billing_same_as_shipping, billing_address_city, billing_address_district, billing_address_line";
+  "id, store_id, order_number, status, payment_status, payment_method, payment_provider_token, payment_provider_payment_id, payment_error, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, shipping_fee, cod_fee, billing_type, billing_name, billing_identity_number, billing_same_as_shipping, billing_address_city, billing_address_district, billing_address_line";
 
 export async function getCardPaymentOrder(storeId: string, orderId: string): Promise<CardPaymentOrder | null> {
   const admin = createSupabaseAdminClient();
@@ -82,8 +87,9 @@ export async function getCardPaymentOrder(storeId: string, orderId: string): Pro
   return (data as CardPaymentOrder | null) ?? null;
 }
 
-export function orderTotal(order: Pick<CardPaymentOrder, "subtotal" | "discount_amount">): number {
-  return Math.round((Number(order.subtotal) - Number(order.discount_amount)) * 100) / 100;
+/** Faz 31 — müşterinin ödeyeceği toplam: ürünler − indirim + kargo + kapıda ödeme ücreti (tek tanım: lib/commerce/shipping-fee.ts). */
+export function orderTotal(order: Pick<CardPaymentOrder, "subtotal" | "discount_amount" | "shipping_fee" | "cod_fee">): number {
+  return orderGrandTotal(order);
 }
 
 /** Ad / soyad ayrımı: iyzico buyer.name + buyer.surname zorunlu; tek kelimelik isimde soyad "." (boş kabul edilmiyor). */
@@ -102,37 +108,8 @@ function normalizeGsm(phone: string): string | undefined {
   return undefined;
 }
 
-/**
- * İndirimi satırlara orantılı dağıtır; sonuç satırlarının 2-ondalık toplamı
- * `total`a TAM eşit (son satır kuruş farkını alır). total ≤ 0 olamaz —
- * createOrderAction zaten boş sepeti reddediyor.
- */
-export function distributeTotalAcrossLines(
-  lines: Array<{ id: string; name: string; lineTotal: number }>,
-  total: number,
-): IyzicoBasketItem[] {
-  const gross = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-  const totalCents = Math.round(total * 100);
-  let allocated = 0;
-  return lines.map((line, index) => {
-    let cents: number;
-    if (index === lines.length - 1) {
-      cents = totalCents - allocated;
-    } else {
-      cents = gross > 0 ? Math.floor((line.lineTotal / gross) * totalCents) : Math.floor(totalCents / lines.length);
-      allocated += cents;
-    }
-    // iyzico satır fiyatı 0 olamaz — tamamen indirimli satır olursa 0.01'e
-    // çekilmez (toplam bozulur); pratikte indirim toplamı aşamaz, güvenlik için max(…,1).
-    return {
-      id: line.id,
-      name: line.name.slice(0, 200),
-      category1: "Ürün",
-      itemType: "PHYSICAL",
-      price: formatIyzicoPrice(Math.max(cents, 1) / 100),
-    };
-  });
-}
+// Faz 31 — sepet kurulumu saf modülde (lib/commerce/payments/iyzico-basket.ts).
+export { distributeTotalAcrossLines } from "@/lib/commerce/payments/iyzico-basket";
 
 export interface StartCardPaymentResult {
   checkoutFormContent: string;
@@ -175,8 +152,10 @@ export async function startCardPayment(params: {
   const total = orderTotal(order);
   if (total <= 0) throw new CardPaymentUnavailableError("Sipariş tutarı sıfır — kart ödemesi gerekmiyor.");
 
-  const basketItems = distributeTotalAcrossLines(lines, total);
-  const priceText = formatIyzicoPrice(total);
+  // Faz 31 — ürün satırları + ayrı "Kargo ücreti" (VIRTUAL) satırı; toplam = price (iyzico 5062 kuralı).
+  const basket = buildIyzicoBasket(lines, order);
+  const basketItems = basket.items;
+  const priceText = basket.price;
   const { name, surname } = splitName(order.customer_name);
   const shippingAddressText = [order.address_line, order.address_neighborhood, order.address_district, order.address_city]
     .filter(Boolean)

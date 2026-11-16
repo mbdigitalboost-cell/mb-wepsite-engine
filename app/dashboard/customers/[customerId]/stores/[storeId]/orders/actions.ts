@@ -460,7 +460,7 @@ export async function bulkPrepareForShipmentAction(
   const { data: eligible } = await supabase
     .from("orders")
     .select(
-      "id, order_number, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, payment_method, payment_status, shipping_provider_order_id",
+      "id, order_number, customer_name, customer_phone, customer_email, address_city, address_district, address_neighborhood, address_line, subtotal, discount_amount, shipping_fee, cod_fee, payment_method, payment_status, shipping_provider_order_id",
     )
     .in("id", orderIds)
     .eq("store_id", storeId)

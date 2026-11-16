@@ -92,6 +92,9 @@ export interface ReturnOrderContext {
     customerPhone: string;
     subtotal: number;
     discountAmount: number;
+    /** Faz 31 */
+    shippingFee: number;
+    codFee: number;
     trackingNumber: string | null;
     carrier: string | null;
     shippingProviderOrderId: string | null;
@@ -112,7 +115,7 @@ export async function loadReturnOrderContext(storeId: string, orderId: string): 
     admin
       .from("orders")
       .select(
-        "id, order_number, status, payment_status, payment_method, payment_provider_payment_id, customer_user_id, customer_name, customer_email, customer_phone, subtotal, discount_amount, tracking_number, carrier, shipping_provider_order_id, created_at, shipped_at, delivered_at",
+        "id, order_number, status, payment_status, payment_method, payment_provider_payment_id, customer_user_id, customer_name, customer_email, customer_phone, subtotal, discount_amount, shipping_fee, cod_fee, tracking_number, carrier, shipping_provider_order_id, created_at, shipped_at, delivered_at",
       )
       .eq("id", orderId)
       .eq("store_id", storeId)
@@ -225,6 +228,8 @@ export async function loadReturnOrderContext(storeId: string, orderId: string): 
       customerPhone: order.customer_phone,
       subtotal: Number(order.subtotal),
       discountAmount: Number(order.discount_amount ?? 0),
+      shippingFee: Number(order.shipping_fee ?? 0),
+      codFee: Number(order.cod_fee ?? 0),
       trackingNumber: order.tracking_number,
       carrier: order.carrier,
       shippingProviderOrderId: order.shipping_provider_order_id,
@@ -312,7 +317,13 @@ export async function createReturnRequest(input: CreateReturnInput): Promise<Cre
 
   const refundMethod = kind === "cancel" ? eligibility.refundMethod.cancel : eligibility.refundMethod.return;
   const amounts = computeFinalRefund(
-    { subtotal: context.order.subtotal, discountAmount: context.order.discountAmount, alreadyRefunded: context.alreadyRefunded },
+    {
+      subtotal: context.order.subtotal,
+      discountAmount: context.order.discountAmount,
+      alreadyRefunded: context.alreadyRefunded,
+      shippingFee: context.order.shippingFee,
+      codFee: context.order.codFee,
+    },
     selected,
     allCovered,
   );

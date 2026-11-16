@@ -9,7 +9,7 @@ import { logAuditEvent } from "@/lib/auth/audit-log";
 import { canTransition } from "@/lib/commerce/returns/state";
 import { getReturnSettings, loadReturnOrderContext } from "@/lib/commerce/returns/service";
 import { sendReturnEmail } from "@/lib/commerce/returns/notify";
-import { orderNetAmount } from "@/lib/commerce/returns/amounts";
+import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
 import { formatIban } from "@/lib/commerce/returns/iban";
 import { cancelShippingProviderOrders } from "@/lib/integrations/shipping-push";
 import { getPaymentIntegrationCredentials } from "@/lib/integrations/store-payment-integration";
@@ -215,7 +215,37 @@ export async function refundReturnAction(customerId: string, storeId: string, re
   const context = await loadReturnOrderContext(storeId, record.order_id);
   if (!context) redirect(detailPath(customerId, storeId, returnId, "hata=siparis"));
 
-  const amount = Number(record.refund_amount);
+  // Faz 31 — admin tutarı gerekçeyle ARTIRABİLİR (ör. kısmi iadede kargo
+  // ücretini de iade etmek). Üst sınır: müşterinin ödediği toplam − daha önce iade edilen.
+  const maxRefundable = Math.max(0, Math.round((orderGrandTotal({
+    subtotal: context.order.subtotal,
+    discount_amount: context.order.discountAmount,
+    shipping_fee: context.order.shippingFee,
+    cod_fee: context.order.codFee,
+  }) - context.alreadyRefunded) * 100) / 100);
+  let amount = Number(record.refund_amount);
+  const overrideRaw = String(formData.get("amountOverride") ?? "").trim().replace(",", ".");
+  if (overrideRaw) {
+    const override = Math.round(Number(overrideRaw) * 100) / 100;
+    if (!Number.isFinite(override) || override <= 0 || override > maxRefundable + 0.001) {
+      redirect(detailPath(customerId, storeId, returnId, "hata=tutar"));
+    }
+    if (Math.abs(override - amount) >= 0.01) {
+      const note = String(formData.get("overrideNote") ?? "").trim().slice(0, 500);
+      if (!note) redirect(detailPath(customerId, storeId, returnId, "hata=tutar-gerekce"));
+      const supabase = await createSupabaseServerClient();
+      await supabase
+        .from("order_returns")
+        .update({
+          refund_amount: override,
+          admin_note: `${record.admin_note ? `${record.admin_note}\n` : ""}İade tutarı ${amount.toFixed(2)} → ${override.toFixed(2)} TL: ${note}`.slice(0, 2000),
+        })
+        .eq("id", returnId)
+        .eq("store_id", storeId)
+        .eq("status", from);
+      amount = override;
+    }
+  }
   const mode = String(formData.get("mode") ?? "manual");
   let reference = String(formData.get("reference") ?? "").trim().slice(0, 200);
 
@@ -243,9 +273,14 @@ export async function refundReturnAction(customerId: string, storeId: string, re
   const ok = await transition(storeId, returnId, from, { status: "refunded", refunded_at: new Date().toISOString(), refund_reference: reference });
   if (!ok) redirect(detailPath(customerId, storeId, returnId, "hata=durum"));
 
-  // Siparişin ödeme durumu: toplam iade ≥ net → "İade Edildi", değilse "Kısmi İade".
+  // Siparişin ödeme durumu: toplam iade ≥ ödenen toplam (kargo dahil) → "İade Edildi", değilse "Kısmi İade".
   const totalRefunded = context.alreadyRefunded + amount;
-  const net = orderNetAmount(context.order.subtotal, context.order.discountAmount);
+  const net = orderGrandTotal({
+    subtotal: context.order.subtotal,
+    discount_amount: context.order.discountAmount,
+    shipping_fee: context.order.shippingFee,
+    cod_fee: context.order.codFee,
+  });
   const supabase = await createSupabaseServerClient();
   await supabase
     .from("orders")

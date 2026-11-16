@@ -164,6 +164,19 @@ export default async function StoreCardPaymentPage({
                   <span className={storefrontMonoClasses}>-{formatPrice(Number(order.discount_amount))}</span>
                 </div>
               ) : null}
+              {/* Faz 31 */}
+              {Number(order.shipping_fee) > 0 ? (
+                <div className="mt-2 flex justify-between text-sm text-[#A3A3A3]">
+                  <span>Kargo</span>
+                  <span className={storefrontMonoClasses}>{formatPrice(Number(order.shipping_fee))}</span>
+                </div>
+              ) : null}
+              {Number(order.cod_fee) > 0 ? (
+                <div className="mt-2 flex justify-between text-sm text-[#A3A3A3]">
+                  <span>Kapıda ödeme ücreti</span>
+                  <span className={storefrontMonoClasses}>{formatPrice(Number(order.cod_fee))}</span>
+                </div>
+              ) : null}
               <hr className="my-3 border-[#292929]" />
               <div className="flex items-center justify-between">
                 <span className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Genel Toplam</span>

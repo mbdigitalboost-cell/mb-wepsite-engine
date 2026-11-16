@@ -50,6 +50,9 @@ export interface PublicOrderWithItems {
   createdAt: string;
   subtotal: number;
   discountAmount: number;
+  /** Faz 31 */
+  shippingFee: number;
+  codFee: number;
   discountCode: string | null;
   addressCity: string;
   addressDistrict: string;
@@ -70,6 +73,8 @@ interface OrderRow {
   subtotal: number;
   discount_amount: number;
   discount_code: string | null;
+  shipping_fee: number | null;
+  cod_fee: number | null;
   address_city: string;
   address_district: string;
   address_neighborhood: string | null;
@@ -79,7 +84,7 @@ interface OrderRow {
 }
 
 const ORDER_COLUMNS =
-  "id, order_number, status, payment_status, payment_method, created_at, subtotal, discount_amount, discount_code, address_city, address_district, address_neighborhood, address_line, carrier, tracking_number";
+  "id, order_number, status, payment_status, payment_method, created_at, subtotal, discount_amount, discount_code, shipping_fee, cod_fee, address_city, address_district, address_neighborhood, address_line, carrier, tracking_number";
 
 /** Birden fazla sipariş için TEK bir order_items + order_item_addons sorgusu (N+1 değil) — sipariş başına ayrı sorgu yok. */
 async function attachItemsToOrders(
@@ -148,6 +153,8 @@ async function attachItemsToOrders(
     createdAt: order.created_at,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discount_amount),
+    shippingFee: Number(order.shipping_fee ?? 0),
+    codFee: Number(order.cod_fee ?? 0),
     discountCode: order.discount_code,
     addressCity: order.address_city,
     addressDistrict: order.address_district,
@@ -228,7 +235,7 @@ export async function getGuestOrderByNumberAndPhone(
   const { data, error } = await admin
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, payment_method, created_at, subtotal, discount_amount, discount_code, address_city, address_district, address_neighborhood, address_line, carrier, tracking_number, customer_phone",
+      "id, order_number, status, payment_status, payment_method, created_at, subtotal, discount_amount, discount_code, shipping_fee, cod_fee, address_city, address_district, address_neighborhood, address_line, carrier, tracking_number, customer_phone",
     )
     .eq("store_id", storeId)
     .eq("order_number", orderNumber)
