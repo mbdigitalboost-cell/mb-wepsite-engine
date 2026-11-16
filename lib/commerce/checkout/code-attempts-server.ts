@@ -38,8 +38,11 @@ function tableStore(admin: SupabaseClient<Database>, storeId: string): AttemptSt
         .select("id", { count: "exact", head: true })
         .eq("key_hash", key)
         .gt("created_at", since.toISOString());
-      if (error) return null;
-      return count ?? 0;
+      // Tablo yokken HEAD sayımı postgrest-js'te HATA DEĞİL "count: null"
+      // döner (404 + boş gövde başarı sayılır) — bu da "depo yok" demektir;
+      // 0 kabul edilirse bellek yedeğine hiç düşülmez (preview testinde görüldü).
+      if (error || count === null || count === undefined) return null;
+      return count;
     },
     async record(key, at) {
       const { error } = await admin.from("discount_code_attempts").insert({ store_id: storeId, key_hash: key, created_at: at.toISOString() });
