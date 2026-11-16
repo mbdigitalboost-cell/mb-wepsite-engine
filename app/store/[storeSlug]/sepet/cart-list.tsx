@@ -222,6 +222,8 @@ export function CartList({
               <span className={`${storefrontMonoClasses} text-sm font-semibold text-[#F5F5F5]`}>Genel Toplam</span>
               <span className={`${storefrontMonoClasses} text-xl font-semibold text-[#D95F00]`}>{formatPrice(charges.grandTotal)}</span>
             </div>
+            {/* Faz 32 — kod/hesaba tanımlı indirim ödeme adımında sunucuda doğrulanıp özette gösterilir. */}
+            <p className="mt-3 text-xs text-[#737373]">İndirim kodunuzu ödeme adımında uygulayabilirsiniz.</p>
             <a href="#checkout-form" className={`${storefrontButtonClasses} mt-5 w-full`}>
               Ödemeye Geç
             </a>

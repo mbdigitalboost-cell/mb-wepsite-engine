@@ -1,8 +1,9 @@
 "use client";
 
 import { computeShippingCharges, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
+import type { CheckoutPreview } from "@/lib/commerce/checkout/quote";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Banknote, CreditCard, Landmark, Info } from "lucide-react";
+import { Check, Banknote, CreditCard, Landmark, Info, X } from "lucide-react";
 import { storefrontInputClasses, storefrontRadioClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses, storefrontButtonOutlineClasses } from "@/lib/utils/storefront-button-classes";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -15,8 +16,8 @@ import {
   type CheckoutPaymentMethod,
 } from "@/lib/validation/order";
 import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/components/commerce/public/location-select";
-import { createOrderAction } from "./actions";
-import { initialCheckoutFormState } from "./form-state";
+import { createOrderAction, previewCheckoutAction } from "./actions";
+import { initialCheckoutFormState, type CheckoutFormState } from "./form-state";
 
 /** Tasarım kanvası (Odeme.dc.html) — ödeme yöntemi seçimi düz radio yerine ikon+başlık+açıklamalı seçilebilir kart. Gerçek value'lar lib/validation/order.ts'in PAYMENT_METHODS'ı ile BİREBİR (yeni bir ödeme yöntemi İCAT EDİLMEDİ, sadece 3 gerçek seçeneğin görsel sunumu). */
 const PAYMENT_METHOD_DETAILS: Record<CheckoutPaymentMethod, { Icon: typeof Banknote; description: string }> = {
@@ -43,6 +44,32 @@ export interface CompletedOrderSummary {
   shippingFee?: number;
   codFee?: number;
   total?: number;
+}
+
+/** Faz 32 — uygulanan kod ödeme akışı boyunca (sayfa yenilense de) korunur; erişilemezse sessizce yok sayılır. */
+function discountStorageKey(storeSlug: string) {
+  return `mb-checkout-discount:${storeSlug}`;
+}
+function readStoredCode(storeSlug: string): string | null {
+  try {
+    return window.sessionStorage.getItem(discountStorageKey(storeSlug)) || null;
+  } catch {
+    return null;
+  }
+}
+function writeStoredCode(storeSlug: string, code: string | null) {
+  try {
+    if (code) window.sessionStorage.setItem(discountStorageKey(storeSlug), code);
+    else window.sessionStorage.removeItem(discountStorageKey(storeSlug));
+  } catch {
+    // sessionStorage kapalı (gizli pencere vb.) — kod yalnız bu sayfa ömründe kalır.
+  }
+}
+
+function discountChipValue(discount: NonNullable<CheckoutPreview["discount"]>): string {
+  return discount.valueType === "percentage"
+    ? `%${discount.value.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`
+    : formatPrice(discount.value);
 }
 
 function toWireCartLine(item: CartItem) {
@@ -160,7 +187,13 @@ export function CheckoutForm({
   shippingSettings: ShippingFeeSettings;
 }) {
   const { items, clear } = useCart();
-  const [state, formAction, isPending] = useActionState(createOrderAction.bind(null, storeSlug), initialCheckoutFormState);
+  // Faz 32 — sipariş reddedilirse (tutar değişti, kod geçersizleşti…) özet sunucudan yenilenir.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [state, formAction, isPending] = useActionState(async (prev: CheckoutFormState, formData: FormData) => {
+    const result = await createOrderAction(storeSlug, prev, formData);
+    if (result.status === "error") setRefreshNonce((n) => n + 1);
+    return result;
+  }, initialCheckoutFormState);
   const clearedForOrderNumber = useRef<number | null>(null);
   const redirectedTo = useRef<string | null>(null);
 
@@ -217,6 +250,102 @@ export function CheckoutForm({
   );
   const availablePaymentMethods: readonly CheckoutPaymentMethod[] = cardPaymentEnabled ? CHECKOUT_PAYMENT_METHODS : PAYMENT_METHODS;
 
+  // Faz 32 — indirim kodu + sunucu önizlemesi. Toplam HER ZAMAN sunucunun
+  // (previewCheckoutAction → createOrderAction ile aynı hesap) döndürdüğü
+  // değerdir; sipariş gönderilirken expectedTotal olarak geri yollanır.
+  // Sayfa yenilendiyse ödeme akışında uygulanmış kod geri yüklenir (önizlemede yeniden doğrulanır).
+  // Adım 1'de render edilmediği için SSR/hydration farkı oluşmaz.
+  const [appliedCode, setAppliedCode] = useState<string | null>(() => (typeof window === "undefined" ? null : readStoredCode(storeSlug)));
+  const [codeInput, setCodeInput] = useState("");
+  const [codeMessage, setCodeMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  const [isApplyingCode, setIsApplyingCode] = useState(false);
+  // Önizleme, hangi girdilerle (requestKey) hesaplandığıyla birlikte tutulur;
+  // ekrandaki girdilerle uyuşmuyorsa "yenileniyor" sayılır ve sipariş gönderilemez.
+  const [previewState, setPreviewState] = useState<{ key: string; preview: CheckoutPreview | null; error: string | null } | null>(null);
+  const cartKey = JSON.stringify(items.map(toWireCartLine));
+  const requestKey = JSON.stringify([cartKey, paymentMethod, appliedCode, customerEmail, customerPhone, refreshNonce]);
+
+  useEffect(() => {
+    if (step !== 2 || items.length === 0) return;
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      previewCheckoutAction(storeSlug, {
+        cartItems: JSON.parse(cartKey),
+        paymentMethod,
+        discountCode: appliedCode,
+        customerEmail,
+        customerPhone,
+      })
+        .then((result) => {
+          if (cancelled) return;
+          if (!result.ok) {
+            setPreviewState({ key: requestKey, preview: null, error: result.error });
+            return;
+          }
+          setPreviewState({ key: requestKey, preview: result.preview, error: null });
+          if (appliedCode && result.codeError) {
+            // Uygulanmış kod artık geçmiyor (min tutar bozuldu, süresi doldu…) — kaldır ve söyle.
+            setAppliedCode(null);
+            writeStoredCode(storeSlug, null);
+            setCodeMessage({ kind: "error", text: result.codeError });
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setPreviewState({ key: requestKey, preview: null, error: "Sipariş özeti hesaplanamadı. Lütfen tekrar deneyin." });
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+    // requestKey tüm girdileri (sepet, yöntem, kod, iletişim, yenileme sayacı) kapsar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, requestKey]);
+
+  const isRefreshing = step === 2 && items.length > 0 && previewState?.key !== requestKey;
+  const preview = previewState?.preview ?? null;
+  const previewError = isRefreshing ? null : (previewState?.error ?? null);
+
+  async function handleApplyCode() {
+    const code = codeInput.trim();
+    if (!code) {
+      setCodeMessage({ kind: "error", text: "Lütfen bir indirim kodu girin." });
+      return;
+    }
+    setIsApplyingCode(true);
+    setCodeMessage(null);
+    try {
+      const result = await previewCheckoutAction(storeSlug, {
+        cartItems: items.map(toWireCartLine),
+        paymentMethod,
+        discountCode: code,
+        customerEmail,
+        customerPhone,
+      });
+      if (!result.ok) {
+        setCodeMessage({ kind: "error", text: result.error });
+      } else if (result.appliedCode) {
+        setAppliedCode(result.appliedCode);
+        writeStoredCode(storeSlug, result.appliedCode);
+        setCodeInput("");
+        setCodeMessage({ kind: "success", text: `"${result.appliedCode}" kodu uygulandı.` });
+      } else {
+        // Başarısız: mesaj göster, mevcut özet / uygulanmış kod olduğu gibi kalır.
+        setCodeMessage({ kind: "error", text: result.codeError ?? "Bu kod geçersiz veya süresi dolmuş." });
+      }
+    } catch {
+      setCodeMessage({ kind: "error", text: "Kod şu an kontrol edilemedi. Lütfen tekrar deneyin." });
+    } finally {
+      setIsApplyingCode(false);
+    }
+  }
+
+  function handleRemoveCode() {
+    setAppliedCode(null);
+    writeStoredCode(storeSlug, null);
+    setCodeMessage(null);
+  }
+
   const selectedProvince = useMemo(() => PROVINCES.find((p) => String(p.id) === provinceId) ?? null, [provinceId]);
   const districts = useMemo(
     () => (selectedProvince ? [...selectedProvince.districts].sort((a, b) => a.name.localeCompare(b.name, "tr")) : []),
@@ -241,8 +370,9 @@ export function CheckoutForm({
     if (state.status === "success" && state.orderNumber !== null && clearedForOrderNumber.current !== state.orderNumber) {
       clearedForOrderNumber.current = state.orderNumber;
       clear();
+      writeStoredCode(storeSlug, null);
     }
-  }, [state.status, state.orderNumber, state.paymentRedirectUrl, clear]);
+  }, [state.status, state.orderNumber, state.paymentRedirectUrl, clear, storeSlug]);
 
   // Faz 22 — ödeme sayfasından geri dönüş: sunucu doğruladı (sepet/page.tsx),
   // sepet ANCAK ŞİMDİ boşaltılır (ödeme doğrulanmadan asla).
@@ -250,8 +380,9 @@ export function CheckoutForm({
     if (completedOrder && clearedForOrderNumber.current !== completedOrder.orderNumber) {
       clearedForOrderNumber.current = completedOrder.orderNumber;
       clear();
+      writeStoredCode(storeSlug, null);
     }
-  }, [completedOrder, clear]);
+  }, [completedOrder, clear, storeSlug]);
 
   if (state.status === "success" && state.paymentRedirectUrl) {
     return (
@@ -394,8 +525,11 @@ export function CheckoutForm({
     setStep(2);
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const liveCharges = computeShippingCharges({ itemsTotal: subtotal, discountAmount: 0, paymentMethod, settings: shippingSettings });
+  // Önizleme gelene kadar yalnız yerel ürün tutarı/kargo gösterilir; TOPLAM yalnız sunucudan.
+  const localSubtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const localCharges = computeShippingCharges({ itemsTotal: localSubtotal, discountAmount: 0, paymentMethod, settings: shippingSettings });
+  const summary = preview;
+  const canSubmit = !isPending && !isRefreshing && !isApplyingCode && summary !== null;
 
   // Adım 1 tamamlanıp daraltıldığında gösterilen özet — sadece dolu
   // parçalar birleştiriliyor, "undefined"/bomboş virgül artığı yok.
@@ -637,6 +771,9 @@ export function CheckoutForm({
             <input type="hidden" name="billingSameAsShipping" value={billingSameAsShipping ? "on" : "off"} />
             <input type="hidden" name="billingAddressCity" value={billingSameAsShipping ? "" : (billingProvince?.name ?? "")} />
             <input type="hidden" name="billingAddressDistrict" value={billingSameAsShipping ? "" : (billingDistrict?.name ?? "")} />
+            {/* Faz 32 — uygulanan kod ve ekranda gösterilen toplam; sunucu yeniden hesaplar, farklıysa siparişi oluşturmaz. */}
+            <input type="hidden" name="discountCode" value={appliedCode ?? ""} />
+            <input type="hidden" name="expectedTotal" value={summary ? String(summary.total) : ""} />
 
             {state.status === "error" && state.error ? (
               <p role="alert" className="text-sm text-red-400">
@@ -853,28 +990,99 @@ export function CheckoutForm({
                   </li>
                 ))}
               </ul>
-              {/* Faz 31 — kargo ve (kapıda ödemede) kapıda ödeme ücreti; yöntem değişince canlı güncellenir. */}
-              <div className="mt-2 space-y-1 border-t border-[#292929] pt-2 text-sm text-[#A3A3A3]">
+              {/* Faz 32 — indirim kodu: "Uygula" (ya da Enter) sunucuda doğrular; toplam yalnız sunucu önizlemesinden gelir. */}
+              <div className="mt-3 border-t border-[#292929] pt-3">
+                <label htmlFor="discountCodeInput" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
+                  İndirim Kodu <span className="font-normal text-[#A3A3A3]">(varsa)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="discountCodeInput"
+                    type="text"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Enter siparişi göndermesin, kodu uygulasın.
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (!isApplyingCode) void handleApplyCode();
+                      }
+                    }}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    maxLength={50}
+                    className={storefrontInputClasses}
+                    placeholder="Kodunuzu girin"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyCode()}
+                    disabled={isApplyingCode || isPending}
+                    className={`${storefrontButtonOutlineClasses} shrink-0 whitespace-nowrap`}
+                  >
+                    {isApplyingCode ? "Kontrol ediliyor…" : "Uygula"}
+                  </button>
+                </div>
+                <p aria-live="polite" className={`mt-1.5 min-h-[1rem] text-xs ${codeMessage?.kind === "error" ? "text-red-400" : "text-emerald-400"}`}>
+                  {codeMessage?.text ?? ""}
+                </p>
+                {appliedCode && summary?.discount?.source === "code" ? (
+                  <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#3FA34D]/50 bg-[#3FA34D]/10 px-3 py-1 text-xs text-[#F5F5F5]">
+                    <span className={storefrontMonoClasses}>
+                      {summary.discount.code} · {discountChipValue(summary.discount)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCode}
+                      disabled={isPending}
+                      aria-label={`${summary.discount.code} kodunu kaldır`}
+                      className="inline-flex items-center gap-1 text-[#A3A3A3] hover:text-red-400"
+                    >
+                      <X size={12} aria-hidden="true" /> Kaldır
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Faz 31/32 — Ürünler → İndirim → Kargo → Kapıda ödeme ücreti (0 ise gizli) → Toplam. */}
+              <div className="mt-2 space-y-1 border-t border-[#292929] pt-2 text-sm text-[#A3A3A3]" aria-busy={isRefreshing}>
                 <div className="flex justify-between">
                   <span>Ürünler</span>
-                  <span className={storefrontMonoClasses}>{formatPrice(subtotal)}</span>
+                  <span className={storefrontMonoClasses}>{formatPrice(summary?.subtotal ?? localSubtotal)}</span>
                 </div>
+                {summary?.discount ? (
+                  <div className="flex justify-between text-emerald-400">
+                    <span>{summary.discount.source === "code" ? `İndirim (${summary.discount.code})` : "Hesabınıza tanımlı indirim"}</span>
+                    <span className={storefrontMonoClasses}>−{formatPrice(summary.discount.amount)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <span>Kargo</span>
-                  <span className={storefrontMonoClasses}>{liveCharges.freeShipping ? "Ücretsiz" : formatPrice(liveCharges.shippingFee)}</span>
+                  <span className={storefrontMonoClasses}>
+                    {(summary ? summary.freeShipping : localCharges.freeShipping)
+                      ? "Ücretsiz"
+                      : formatPrice(summary ? summary.shippingFee : localCharges.shippingFee)}
+                  </span>
                 </div>
-                {liveCharges.codFee > 0 ? (
+                {summary && summary.codFee > 0 ? (
                   <div className="flex justify-between">
                     <span>Kapıda ödeme ücreti</span>
-                    <span className={storefrontMonoClasses}>{formatPrice(liveCharges.codFee)}</span>
+                    <span className={storefrontMonoClasses}>{formatPrice(summary.codFee)}</span>
                   </div>
                 ) : null}
               </div>
               <div className="mt-2 flex justify-between border-t border-[#292929] pt-2 text-sm font-semibold text-[#F5F5F5]">
                 <span>Toplam</span>
-                <span className={storefrontMonoClasses}>{formatPrice(liveCharges.grandTotal)}</span>
+                <span className={storefrontMonoClasses}>{summary && !isRefreshing ? formatPrice(summary.total) : previewError ? "—" : "Hesaplanıyor…"}</span>
               </div>
-              <p className="mt-1 text-xs text-[#737373]">İndirim kodu girerseniz indirim siparişte düşülür.</p>
+              {previewError ? (
+                <div role="alert" className="mt-2 text-xs text-red-400">
+                  {previewError}{" "}
+                  <button type="button" onClick={() => setRefreshNonce((n) => n + 1)} className="underline underline-offset-2">
+                    Tekrar dene
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {/*
@@ -891,27 +1099,11 @@ export function CheckoutForm({
               </p>
             </div>
 
-            {/*
-              "Aboneler" indirim sistemi — kod GERÇEKTEN geçerli mi/aktif mi/
-              bu mağazaya mı ait, sadece siparişi tamamen gönderip
-              createOrderAction çalıştığında server-side doğrulanıyor (burada
-              ayrı bir "kodu uygula" ön-kontrolü YOK — ek bir Server Action
-              round-trip'i bu fazın kapsamı dışında). Geçersiz bir kod, formu
-              tekrar hatayla (yukarıdaki state.error) döndürür, sipariş
-              OLUŞTURULMAZ — indirimsiz sessizce devam etmez.
-            */}
-            <div>
-              <label htmlFor="discountCode" className="mb-1.5 block text-sm font-medium text-[#F5F5F5]">
-                İndirim Kodu <span className="font-normal text-[#A3A3A3]">(varsa)</span>
-              </label>
-              <input id="discountCode" name="discountCode" type="text" className={storefrontInputClasses} placeholder="Örn. HOSGELDIN10" />
-            </div>
-
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setStep(1)} disabled={isPending} className={storefrontButtonOutlineClasses}>
                 Geri
               </button>
-              <button type="submit" disabled={isPending} className={storefrontButtonClasses}>
+              <button type="submit" disabled={!canSubmit} className={storefrontButtonClasses}>
                 {isPending ? "Gönderiliyor..." : paymentMethod === CARD_PAYMENT_METHOD ? "Ödemeye Geç" : "Siparişi Onayla"}
               </button>
             </div>
