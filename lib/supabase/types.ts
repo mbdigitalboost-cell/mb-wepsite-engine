@@ -86,6 +86,8 @@ export type PaymentIntegrationMode = "sandbox" | "live";
 /** Faz 22 — orders.billing_type (migration 0040). */
 export type BillingType = "individual" | "corporate";
 /** "Aboneler" — migration 0036_customer_discounts.sql. 'auto' requires store_customer_id NOT NULL (DB CHECK) — see that migration's own security-decision comment. */
+/** Faz 33 — yasal metin türleri (migration 0048 CHECK ile birebir). */
+export type LegalDocumentKind = "distance_sales" | "pre_information" | "returns" | "privacy_kvkk" | "cookies" | "withdrawal_form";
 export type CustomerDiscountType = "code" | "auto";
 export type CustomerDiscountValueType = "percentage" | "fixed";
 export type StoreColorMode = "light" | "dark" | "system";
@@ -1575,6 +1577,125 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 33, migration 0048 — satıcı kimliği (vitrin okur, admin yazar). */
+      store_seller_profiles: {
+        Row: {
+          store_id: string;
+          legal_name: string;
+          owner_name: string | null;
+          tax_number: string | null;
+          tax_office: string | null;
+          mersis_number: string | null;
+          address: string | null;
+          phone: string | null;
+          email: string | null;
+          kep_address: string | null;
+          etbis_info: string | null;
+          etbis_url: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          store_id: string;
+          legal_name: string;
+          owner_name?: string | null;
+          tax_number?: string | null;
+          tax_office?: string | null;
+          mersis_number?: string | null;
+          address?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          kep_address?: string | null;
+          etbis_info?: string | null;
+          etbis_url?: string | null;
+          updated_by?: string | null;
+        };
+        Update: {
+          legal_name?: string;
+          owner_name?: string | null;
+          tax_number?: string | null;
+          tax_office?: string | null;
+          mersis_number?: string | null;
+          address?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          kep_address?: string | null;
+          etbis_info?: string | null;
+          etbis_url?: string | null;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      /** Faz 33, migration 0048 — yasal metin sürümleri (yayımlanmış satır değişmez; yalnız reviewed_*). */
+      store_legal_documents: {
+        Row: {
+          id: string;
+          store_id: string;
+          kind: LegalDocumentKind;
+          title: string;
+          body: string;
+          version: number;
+          status: "published";
+          reviewed_by_lawyer: boolean;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          created_at: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          store_id: string;
+          kind: LegalDocumentKind;
+          title: string;
+          body: string;
+          version: number;
+          status?: "published";
+          reviewed_by_lawyer?: boolean;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: {
+          reviewed_by_lawyer?: boolean;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      /** Faz 33, migration 0048 — siparişte sözleşme kabulü + anlık görüntü (yalnız service-role yazar). */
+      order_legal_acceptances: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_id: string;
+          pre_information_document_id: string;
+          distance_sales_document_id: string;
+          pre_information_version: number;
+          distance_sales_version: number;
+          pre_information_snapshot: string;
+          distance_sales_snapshot: string;
+          accepted_at: string;
+          marketing_consent: boolean;
+          marketing_consent_text: string | null;
+          created_at: string;
+        };
+        Insert: {
+          store_id: string;
+          order_id: string;
+          pre_information_document_id: string;
+          distance_sales_document_id: string;
+          pre_information_version: number;
+          distance_sales_version: number;
+          pre_information_snapshot: string;
+          distance_sales_snapshot: string;
+          accepted_at?: string;
+          marketing_consent?: boolean;
+          marketing_consent_text?: string | null;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       product_categories: {
         Row: {
           product_id: string;
@@ -2121,6 +2242,19 @@ export type Database = {
       };
     };
     Views: {
+      /** Faz 33, migration 0048 — aktif mağazaların her yasal metin türünün SON sürümü. */
+      store_public_legal_documents: {
+        Row: {
+          id: string;
+          store_id: string;
+          kind: LegalDocumentKind;
+          title: string;
+          body: string;
+          version: number;
+          created_at: string;
+        };
+        Relationships: [];
+      };
       /** Phase 2, migration 0009_store_profile_settings.sql. Henüz production'a uygulanmadı. Read-only projeksiyon — Insert/Update yok. */
       store_public_settings: {
         Row: {
