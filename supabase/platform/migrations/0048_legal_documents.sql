@@ -157,7 +157,7 @@ grant select on public.store_public_legal_documents to anon, authenticated;
 create table if not exists public.order_legal_acceptances (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores (id) on delete cascade,
-  order_id uuid not null references public.orders (id) on delete cascade,
+  order_id uuid not null,
   pre_information_document_id uuid not null,
   distance_sales_document_id uuid not null,
   pre_information_version integer not null,
@@ -169,6 +169,10 @@ create table if not exists public.order_legal_acceptances (
   marketing_consent_text text,
   created_at timestamptz not null default now(),
   constraint order_legal_acceptances_order_unique unique (order_id),
+  -- Cowork düzeltmesi: Faz 28/29 deseni — sipariş bağı bileşik FK (order_id, store_id) ile;
+  -- başka mağazanın siparişine bağlanamaz.
+  constraint order_legal_acceptances_order_store_fkey
+    foreign key (order_id, store_id) references public.orders (id, store_id) on delete cascade,
   constraint order_legal_acceptances_pre_info_fkey
     foreign key (pre_information_document_id, store_id) references public.store_legal_documents (id, store_id),
   constraint order_legal_acceptances_distance_sales_fkey
