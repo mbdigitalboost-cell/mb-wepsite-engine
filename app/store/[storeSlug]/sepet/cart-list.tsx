@@ -9,7 +9,9 @@ import { formatPrice } from "@/lib/utils/format-price";
 import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { useCart } from "@/components/commerce/public/cart/cart-context";
-import { resolveCartProductImages } from "./actions";
+import { refreshCartPricesAction, resolveCartProductImages } from "./actions";
+import { planCartRefresh, priceChangeNote, removalNote } from "@/lib/commerce/cart-refresh";
+import { FreeShippingProgress } from "@/components/commerce/public/cart/free-shipping-progress";
 import { CheckoutForm, type CompletedOrderSummary, type InitialCustomer, type SavedAddress } from "./checkout-form";
 
 /**
@@ -56,11 +58,51 @@ export function CartList({
   /** Faz 33 — bkz. CheckoutForm'un aynı adlı prop'u. */
   legal: { required: boolean; kvkkHref: string | null };
 }) {
-  const { items, subtotal, removeItem, setQuantity } = useCart();
+  const { items, subtotal, removeItem, setQuantity, applyServerRefresh } = useCart();
   // Faz 31 — gösterim amaçlı; tutar sipariş anında sunucuda yeniden hesaplanır.
   const charges = computeShippingCharges({ itemsTotal: subtotal, discountAmount: 0, paymentMethod: null, settings: shippingSettings });
 
   const [freshImageUrls, setFreshImageUrls] = useState<Record<string, string | null>>({});
+
+  // Faz 34 Kısım B — sepet fiyatı ekleme anındaki değerle saklanır; sayfa
+  // açılınca her satır sunucuda (sipariş ile aynı kurallar) yeniden
+  // fiyatlanır. Fiyatı değişen satırda not, satılamayan satır sebebiyle çıkar.
+  const [priceNotes, setPriceNotes] = useState<Record<string, string>>({});
+  const [removedNotes, setRemovedNotes] = useState<string[]>([]);
+  const refreshKey = JSON.stringify(items.map((item) => [item.lineId, item.productSlug, item.variantId, item.addonIds, item.unitPrice, item.productName]));
+
+  useEffect(() => {
+    const snapshot = JSON.parse(refreshKey) as Array<[string, string, string | null, string[], number, string]>;
+    if (snapshot.length === 0) return;
+    let cancelled = false;
+    refreshCartPricesAction(
+      storeSlug,
+      snapshot.map(([lineId, productSlug, variantId, addonIds]) => ({ lineId, productSlug, variantId, addonIds })),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        const plan = planCartRefresh(
+          snapshot.map(([lineId, , , , unitPrice, productName]) => ({ lineId, unitPrice, productName })),
+          results,
+        );
+        if (plan.priceUpdates.length === 0 && plan.removals.length === 0) return;
+        setPriceNotes((previous) => ({
+          ...previous,
+          ...Object.fromEntries(plan.priceUpdates.map((update) => [update.lineId, priceChangeNote(update.previousPrice, update.unitPrice, formatPrice)])),
+        }));
+        setRemovedNotes((previous) => [...previous, ...plan.removals.map((removal) => removalNote(removal.productName, removal.reason))]);
+        applyServerRefresh(
+          new Map(plan.priceUpdates.map((update) => [update.lineId, update.unitPrice])),
+          new Set(plan.removals.map((removal) => removal.lineId)),
+        );
+      })
+      .catch(() => {
+        // Ağ hatası: sepet olduğu gibi kalır; ödeme adımı tutarı yine sunucudan alır (Faz 32).
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [storeSlug, refreshKey, applyServerRefresh]);
   const productIdsKey = [...new Set(items.map((item) => item.productId))].sort().join(",");
 
   useEffect(() => {
@@ -109,6 +151,15 @@ export function CartList({
    */
   return (
     <div className="mt-6">
+      {removedNotes.length > 0 ? (
+        <div role="status" className="mb-4 space-y-1 rounded-[12px] border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+          {removedNotes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
+        </div>
+      ) : null}
+      {/* Faz 34 Kısım C — ücretsiz kargoya kalan (Faz 31 kuralı; sınır yoksa görünmez). */}
+      {items.length > 0 ? <FreeShippingProgress itemsTotal={subtotal} settings={shippingSettings} className="mb-4" /> : null}
       {items.length === 0 ? (
         <div>
           <p className="text-sm text-[#A3A3A3]">Sepetiniz boş.</p>
@@ -157,6 +208,7 @@ export function CartList({
                   {item.addonLabels.length > 0 ? (
                     <p className="mt-0.5 text-xs text-[#A3A3A3]">{item.addonLabels.join(", ")}</p>
                   ) : null}
+                  {priceNotes[item.lineId] ? <p className="mt-1 text-xs text-amber-300">{priceNotes[item.lineId]}</p> : null}
 
                   <div className="mt-2 flex items-center gap-3">
                     <div className="flex items-center rounded-full border-[1.5px] border-[#3A3A3A]">

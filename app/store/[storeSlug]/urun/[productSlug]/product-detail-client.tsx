@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Check, ImageOff, Minus, Plus, ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/lib/utils/format-price";
 import { computeConfiguredPrice, displayPriceFor, resolveRequiredAddonIds } from "@/lib/commerce/pricing";
+import { FreeShippingProgress } from "@/components/commerce/public/cart/free-shipping-progress";
 import { formatOptionValue, formatVariantLabel } from "@/lib/commerce/variant-label";
 import { useCart, makeCartLineId } from "@/components/commerce/public/cart/cart-context";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -90,7 +91,7 @@ export function ProductDetailClient({
   showOwnProductionBadge,
   shippingSettings,
 }: ProductDetailClientProps) {
-  const { addItem } = useCart();
+  const { addItem, subtotal: cartSubtotal } = useCart();
 
   const [selectedOptionValueIdByGroup, setSelectedOptionValueIdByGroup] = useState<Record<string, string>>({});
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(() => resolveRequiredAddonIds(addons));
@@ -438,6 +439,8 @@ export function ProductDetailClient({
               {addToCartLabel}
             </button>
           </div>
+          {/* Faz 34 Kısım C — sepete ekledikten sonra: ücretsiz kargoya kalan (sepetin tamamına göre). */}
+          {justAdded ? <FreeShippingProgress itemsTotal={cartSubtotal} settings={shippingSettings} className="mt-3" /> : null}
 
           <ul
             className="mt-6 grid divide-x divide-[#292929] rounded-[12px] border border-[#292929] bg-[#171717] text-center"

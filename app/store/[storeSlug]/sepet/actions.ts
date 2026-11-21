@@ -8,6 +8,8 @@ import { CARD_PAYMENT_METHOD, checkoutFormSchema } from "@/lib/validation/order"
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { quoteCheckout } from "@/lib/commerce/checkout/quote-server";
+import { resolveCartLines } from "@/lib/commerce/checkout/resolve-cart";
+import type { ServerLinePrice } from "@/lib/commerce/cart-refresh";
 import {
   orderAmountsFromQuote,
   parseExpectedTotal,
@@ -562,4 +564,29 @@ export async function renderCheckoutContractsAction(
   const pre = renderPublishedDocument(preDocument, legalContext, legalOrder);
   const sales = renderPublishedDocument(salesDocument, legalContext, legalOrder);
   return { ok: true, preInformation: { title: pre.title, text: pre.text }, distanceSales: { title: sales.title, text: sales.text } };
+}
+
+/**
+ * Faz 34 — sepet sayfası açılınca satırların GÜNCEL birim fiyatı (sipariş
+ * ile aynı kurallar: resolveCartLines → computeConfiguredPrice; varyant
+ * fiyatı NULL ise ürün fiyatı). Satılamayan satır (ürün/varyant/ek pasif ya
+ * da silinmiş) `ok:false` + müşteriye gösterilecek sebep döner. Hiçbir şey
+ * yazmaz; sipariş tutarı yine createOrderAction'da hesaplanır.
+ */
+export async function refreshCartPricesAction(
+  storeSlug: string,
+  lines: Array<{ lineId: string; productSlug: string; variantId: string | null; addonIds: string[] }>,
+): Promise<ServerLinePrice[]> {
+  const store = await getStoreBySlug(storeSlug);
+  if (!store || !Array.isArray(lines)) return [];
+  const results: ServerLinePrice[] = [];
+  for (const line of lines.slice(0, 100)) {
+    const lineId = typeof line?.lineId === "string" ? line.lineId.slice(0, 400) : "";
+    if (!lineId) continue;
+    const resolved = await resolveCartLines(store.id, [
+      { productSlug: line.productSlug, variantId: line.variantId ?? null, addonIds: Array.isArray(line.addonIds) ? line.addonIds : [], quantity: 1 },
+    ]);
+    results.push(resolved.ok ? { lineId, ok: true, unitPrice: resolved.lines[0].unitPrice } : { lineId, ok: false, reason: resolved.error });
+  }
+  return results;
 }

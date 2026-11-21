@@ -110,3 +110,37 @@ export function freeShippingClaim(settings: ShippingFeeSettings): string | null 
 export function productQualifiesForFreeShipping(unitPrice: number, settings: ShippingFeeSettings): boolean {
   return hasFreeShippingOffer(settings) && settings.freeShippingThreshold !== null && k(unitPrice) >= k(settings.freeShippingThreshold);
 }
+
+/**
+ * Faz 34 — "Ücretsiz kargoya ₺X kaldı" teşviki (sepet, sepete ekleme geri
+ * bildirimi). computeShippingCharges ile AYNI hesap (eşik varsayılan olarak
+ * indirim ÖNCESİ ürün tutarına bakar). Sınır yoksa ya da ücret alınmıyorsa
+ * `show: false` — hiçbir teşvik metni gösterilmez. Sepette indirim henüz
+ * bilinmez; "indirim sonrası" bazlı mağazada gösterilen kalan tutar indirim
+ * öncesine göredir (ödeme adımındaki sunucu özeti kesin olanı gösterir).
+ */
+export interface FreeShippingProgress {
+  show: boolean;
+  reached: boolean;
+  /** Kalan tutar (TL); ulaşıldıysa 0. */
+  remaining: number;
+  /** 0–1 arası doluluk. */
+  ratio: number;
+  threshold: number;
+}
+
+export function freeShippingProgress(itemsTotal: number, settings: ShippingFeeSettings): FreeShippingProgress {
+  if (!hasFreeShippingOffer(settings) || settings.freeShippingThreshold === null || settings.freeShippingThreshold <= 0) {
+    return { show: false, reached: false, remaining: 0, ratio: 0, threshold: 0 };
+  }
+  const charges = computeShippingCharges({ itemsTotal, discountAmount: 0, paymentMethod: null, settings });
+  const threshold = settings.freeShippingThreshold;
+  const remaining = charges.amountToFreeShipping ?? 0;
+  return {
+    show: true,
+    reached: charges.freeShipping,
+    remaining,
+    ratio: charges.freeShipping ? 1 : Math.max(0, Math.min(1, itemsTotal / threshold)),
+    threshold,
+  };
+}

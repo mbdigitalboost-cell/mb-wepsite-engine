@@ -147,6 +147,15 @@ class CartStore {
   clear(): void {
     this.commit([]);
   }
+
+  /** Faz 34 — sunucudaki güncel fiyatları uygula, artık satılamayan satırları çıkar (lib/commerce/cart-refresh.ts). */
+  applyServerRefresh(priceByLineId: Map<string, number>, removeLineIds: Set<string>): void {
+    if (priceByLineId.size === 0 && removeLineIds.size === 0) return;
+    const next = this.getSnapshot()
+      .filter((i) => !removeLineIds.has(i.lineId))
+      .map((i) => (priceByLineId.has(i.lineId) ? { ...i, unitPrice: priceByLineId.get(i.lineId)! } : i));
+    this.commit(next);
+  }
 }
 
 const stores = new Map<string, CartStore>();
@@ -178,16 +187,26 @@ export function useCart() {
 
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
 
+  // Faz 34 — eylemler yalnız store'a bağlı (sabit kimlik): efekt bağımlılıklarında
+  // her sepet değişikliğinde yeniden tetiklenmesinler.
+  const actions = useMemo(
+    () => ({
+      addItem: (item: Omit<CartItem, "quantity">, quantity: number) => store.addItem(item, quantity),
+      removeItem: (lineId: string) => store.removeItem(lineId),
+      setQuantity: (lineId: string, quantity: number) => store.setQuantity(lineId, quantity),
+      clear: () => store.clear(),
+      applyServerRefresh: (priceByLineId: Map<string, number>, removeLineIds: Set<string>) => store.applyServerRefresh(priceByLineId, removeLineIds),
+    }),
+    [store],
+  );
+
   return useMemo(
     () => ({
       items,
       itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
       subtotal: items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
-      addItem: (item: Omit<CartItem, "quantity">, quantity: number) => store.addItem(item, quantity),
-      removeItem: (lineId: string) => store.removeItem(lineId),
-      setQuantity: (lineId: string, quantity: number) => store.setQuantity(lineId, quantity),
-      clear: () => store.clear(),
+      ...actions,
     }),
-    [items, store],
+    [items, actions],
   );
 }
