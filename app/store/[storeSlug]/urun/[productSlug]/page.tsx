@@ -94,7 +94,7 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
     storeName: store.name,
     title: product.seoTitle ?? product.name,
     description: product.seoDescription ?? product.shortDescription,
-    imagePath: `/paylasim/urun/${product.slug}?v=${shareImageVersion(product.name, product.price, product.compareAtPrice)}`,
+    imagePath: `/paylasim/urun/${product.slug}?v=${shareImageVersion(product.name, product.display.price, product.display.compareAtPrice)}`,
   });
 }
 

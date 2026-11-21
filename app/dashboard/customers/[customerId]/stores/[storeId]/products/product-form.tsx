@@ -499,7 +499,7 @@ export function ProductSaveBar({ label }: { label: string }) {
             {state.error}
           </p>
         ) : saved ? (
-          <p className="mr-auto text-sm text-green-700">Kaydedildi.</p>
+          <p className="mr-auto text-sm text-green-700">Kaydedildi.{state.notice ? ` ${state.notice}` : ""}</p>
         ) : (
           <p className="mr-auto text-xs text-[#71717A]">Görsel, renk ve ek alan değişiklikleri kendi bölümlerinde anında kaydedilir.</p>
         )}

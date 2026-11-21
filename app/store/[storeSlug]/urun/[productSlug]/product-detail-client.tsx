@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Check, ImageOff, Minus, Plus, ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/lib/utils/format-price";
-import { computeConfiguredPrice, resolveRequiredAddonIds } from "@/lib/commerce/pricing";
+import { computeConfiguredPrice, displayPriceFor, resolveRequiredAddonIds } from "@/lib/commerce/pricing";
 import { formatOptionValue, formatVariantLabel } from "@/lib/commerce/variant-label";
 import { useCart, makeCartLineId } from "@/components/commerce/public/cart/cart-context";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -130,12 +130,15 @@ export function ProductDetailClient({
     : trackInventory && !hasVariants && (inventory?.stock ?? 0) <= 0;
   const canAddToCart = !needsSelection && !selectionUnavailable && !outOfStock;
 
-  const discountPercent =
-    priced.baseCompareAtPrice && priced.baseCompareAtPrice > priced.basePrice
-      ? Math.round(((priced.baseCompareAtPrice - priced.basePrice) / priced.baseCompareAtPrice) * 100)
-      : null;
-  const savings = priced.baseCompareAtPrice && priced.baseCompareAtPrice > priced.basePrice ? priced.baseCompareAtPrice - priced.basePrice : null;
-  const qualifiesFreeShipping = productQualifiesForFreeShipping(priced.totalPrice, shippingSettings);
+  // Faz 34 — seçim tamamlanmadan ürün kartıyla AYNI vitrin fiyatı (displayPriceFor):
+  // önceden ürünün taban fiyatı görünüp renk seçilince varyant fiyatına zıplıyordu.
+  const unselectedDisplay = !matchedVariant && hasVariants ? displayPriceFor(productPrice, productCompareAtPrice, variants) : null;
+  const shownBase = unselectedDisplay ? unselectedDisplay.price : priced.basePrice;
+  const shownCompare = unselectedDisplay ? unselectedDisplay.compareAtPrice : priced.baseCompareAtPrice;
+  const shownTotal = shownBase + priced.addonsTotal;
+  const discountPercent = shownCompare && shownCompare > shownBase ? Math.round(((shownCompare - shownBase) / shownCompare) * 100) : null;
+  const savings = shownCompare && shownCompare > shownBase ? shownCompare - shownBase : null;
+  const qualifiesFreeShipping = productQualifiesForFreeShipping(shownTotal, shippingSettings);
   const shippingClaim = freeShippingClaim(shippingSettings);
   const lineTotal = priced.totalPrice * quantity;
 
@@ -273,10 +276,11 @@ export function ProductDetailClient({
 
           <div className="mt-5 border-y border-[#292929] py-4">
             <div className="flex flex-wrap items-baseline gap-3">
-              <span className={`${storefrontMonoClasses} text-3xl font-bold text-[#F5F5F5] sm:text-4xl`}>{formatPrice(priced.totalPrice)}</span>
-              {priced.baseCompareAtPrice && savings ? (
-                <span className={`${storefrontMonoClasses} text-base text-[#6B6B6B] line-through`}>{formatPrice(priced.baseCompareAtPrice)}</span>
+              <span className={`${storefrontMonoClasses} text-3xl font-bold text-[#F5F5F5] sm:text-4xl`}>{formatPrice(shownTotal)}</span>
+              {shownCompare && savings ? (
+                <span className={`${storefrontMonoClasses} text-base text-[#6B6B6B] line-through`}>{formatPrice(shownCompare)}</span>
               ) : null}
+              {unselectedDisplay?.from ? <span className="text-xs text-[#A3A3A3]">seçeneğe göre değişir</span> : null}
             </div>
             {savings || qualifiesFreeShipping ? (
               <p className="mt-1.5 text-sm font-medium text-[#3FA34D]">

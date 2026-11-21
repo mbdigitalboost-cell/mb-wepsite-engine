@@ -190,6 +190,8 @@ export async function VariantColorPanel({
                   </div>
                   <div className="min-w-[280px] flex-1">
                     <VariantInlineForm
+                      // Faz 34 — kayıt sonrası (ör. ürün fiyatına eşit → NULL) sunucudaki değerle yeniden kur.
+                      key={`${variant.id}:${variant.price ?? "izler"}:${variant.compare_at_price ?? "-"}`}
                       action={updateVariantInlineAction.bind(null, customerId, storeId, productId, variant.id)}
                       initial={{
                         sku: variant.sku ?? "",
@@ -198,7 +200,7 @@ export async function VariantColorPanel({
                         stock: String(variant.stock),
                         isActive: variant.is_active,
                       }}
-                      productPriceLabel={`Ürün: ${formatTry(Number(product.price))}`}
+                      productPriceLabel={`${formatTry(Number(product.price))} (ürün fiyatı)`}
                     />
                   </div>
                 </div>

@@ -57,7 +57,7 @@ export function ProductImageCardGrid({
               </div>
               <div className="p-3">
                 <p className="truncate text-xs font-medium text-[#F5F5F5]">{product.name}</p>
-                <p className={`${storefrontMonoClasses} mt-1 text-xs font-semibold text-[#D95F00]`}>{formatPrice(product.price)}</p>
+                <p className={`${storefrontMonoClasses} mt-1 text-xs font-semibold text-[#D95F00]`}>{formatPrice(product.display.price)} {product.display.from ? <span className="text-[10px] font-normal text-[#A3A3A3]">seçeneğe göre değişir</span> : null}</p>
               </div>
             </Link>
           </li>

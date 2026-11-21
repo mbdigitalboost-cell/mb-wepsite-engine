@@ -27,8 +27,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ stor
   // İmzalama başarısız olursa (ör. anahtar yok) görsel yine üretilir, fotoğrafsız.
   const images = await getPublicProductImages(context.store.id, product.id).catch(() => []);
   const cover = images.find((image) => image.isPrimary && !image.variantId) ?? images.find((image) => image.isPrimary) ?? images[0];
-  const price = Number(product.price);
-  const previous = product.compareAtPrice !== null && Number(product.compareAtPrice) > price ? Number(product.compareAtPrice) : null;
+  // Faz 34 — kart ve ürün sayfasıyla aynı vitrin fiyatı (varyantlardan).
+  const price = product.display.price;
+  const previous = product.display.compareAtPrice;
 
   return renderShareImage({
     origin: context.origin,

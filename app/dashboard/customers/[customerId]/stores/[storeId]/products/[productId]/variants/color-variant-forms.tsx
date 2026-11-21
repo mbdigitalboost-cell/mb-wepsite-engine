@@ -84,6 +84,9 @@ export function VariantInlineForm({
   productPriceLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initialColorVariantFormState);
+  // Faz 34 — boş fiyat = ürün fiyatını izler; dolu fiyat "Ürün fiyatına dön" ile boşaltılabilir.
+  const [price, setPrice] = useState(initial.price);
+  const [compareAtPrice, setCompareAtPrice] = useState(initial.compareAtPrice);
   return (
     <form action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-[1.2fr_1fr_1fr_0.8fr_auto_auto] sm:items-end">
       <input type="hidden" name="isActiveField" value="1" />
@@ -93,11 +96,39 @@ export function VariantInlineForm({
       </label>
       <label className="text-[11px] text-[#71717A]">
         Fiyat
-        <input name="price" inputMode="decimal" defaultValue={initial.price} placeholder={productPriceLabel} className={`${cellInput} mt-1`} />
+        <input
+          name="price"
+          inputMode="decimal"
+          value={price}
+          onChange={(event) => setPrice(event.target.value)}
+          placeholder={productPriceLabel}
+          className={`${cellInput} mt-1`}
+        />
+        {price.trim() ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPrice("");
+              setCompareAtPrice("");
+            }}
+            className="mt-0.5 text-[10px] text-[#B34C00] underline-offset-2 hover:underline"
+          >
+            Ürün fiyatına dön
+          </button>
+        ) : (
+          <span className="mt-0.5 block text-[10px] text-[#A1A1AA]">ürün fiyatını izliyor</span>
+        )}
       </label>
       <label className="text-[11px] text-[#71717A]">
         Eski fiyat
-        <input name="compareAtPrice" inputMode="decimal" defaultValue={initial.compareAtPrice} className={`${cellInput} mt-1`} />
+        <input
+          name="compareAtPrice"
+          inputMode="decimal"
+          value={compareAtPrice}
+          onChange={(event) => setCompareAtPrice(event.target.value)}
+          placeholder={price.trim() ? "" : "ürününki"}
+          className={`${cellInput} mt-1`}
+        />
       </label>
       <label className="text-[11px] text-[#71717A]">
         Stok

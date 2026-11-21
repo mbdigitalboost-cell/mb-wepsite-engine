@@ -19,6 +19,7 @@ import { comboKey, formatVariantLabel, variantSkuSuffix } from "@/lib/commerce/v
  */
 
 import type { ColorVariantFormState } from "./color-variant-form-state";
+import { normalizeVariantCompareAt, normalizeVariantPrice } from "@/lib/commerce/variant-pricing";
 
 const MAX_COMBINATIONS = 50;
 
@@ -140,8 +141,9 @@ export async function createMissingVariantsAction(
         product_id: productId,
         sku,
         name,
-        price: product.price,
-        compare_at_price: product.compare_at_price,
+        // Faz 34 — fiyat KOPYALANMAZ: NULL = ürün fiyatını izler (ürün fiyatı değişince renkler de değişir).
+        price: null,
+        compare_at_price: null,
         stock: stocks.get(key) ?? 0,
         is_active: true,
         sort_order: existingIds.length + index,
@@ -343,8 +345,9 @@ export async function createOptionSetupAction(
       id: crypto.randomUUID(),
       sku,
       name: formatVariantLabel(combo.map((v) => v.value)) ?? sku,
-      price: product.price,
-      compare_at_price: product.compare_at_price,
+      // Faz 34 — fiyat KOPYALANMAZ (NULL = ürün fiyatını izler).
+      price: null,
+      compare_at_price: null,
       sort_order: existingVariants.length + index,
       value_ids: combo.map((v) => v.id),
     };
@@ -422,9 +425,14 @@ export async function updateVariantInlineAction(
   if (stockRaw === "" || !Number.isInteger(stock) || stock < 0) return { error: "Stok 0 veya üstü tam sayı olmalı.", success: null };
 
   const supabase = await createSupabaseServerClient();
+  // Faz 34 — ürün fiyatına EŞİT girilen fiyat NULL kaydedilir (ürün fiyatını izlemeye devam eder).
+  const { data: productRow } = await supabase.from("products").select("price").eq("id", productId).eq("store_id", storeId).maybeSingle();
+  if (!productRow) return { error: "Geçersiz ürün.", success: null };
+  const savedPrice = normalizeVariantPrice(price, Number(productRow.price));
+  const savedCompareAt = normalizeVariantCompareAt(compareAtPrice, savedPrice);
   const { data: updated, error } = await supabase
     .from("product_variants")
-    .update({ sku, price, compare_at_price: compareAtPrice, stock, ...(isActive === undefined ? {} : { is_active: isActive }) })
+    .update({ sku, price: savedPrice, compare_at_price: savedCompareAt, stock, ...(isActive === undefined ? {} : { is_active: isActive }) })
     .eq("id", variantId)
     .eq("product_id", productId)
     .eq("store_id", storeId)
@@ -440,11 +448,11 @@ export async function updateVariantInlineAction(
     action: "product.variant_update",
     entityType: "product_variant",
     entityId: variantId,
-    metadata: { productId, sku, price, compareAtPrice, stock, ...(isActive === undefined ? {} : { isActive }) },
+    metadata: { productId, sku, price: savedPrice, compareAtPrice: savedCompareAt, stock, ...(isActive === undefined ? {} : { isActive }) },
   });
 
   revalidateProductSurface(customerId, storeId, productId);
-  return { error: null, success: "Kaydedildi." };
+  return { error: null, success: savedPrice === null ? "Kaydedildi — fiyat ürün fiyatını izliyor." : "Kaydedildi." };
 }
 
 /**

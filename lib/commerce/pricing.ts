@@ -70,14 +70,10 @@ export function computeConfiguredPrice(params: {
   let baseCompareAtPrice = productCompareAtPrice;
 
   if (matchedVariant) {
-    basePrice = matchedVariant.price ?? productPrice;
-    // Only inherit the base product's compareAtPrice when the variant's
-    // own price ALSO came from the base (both null) — a variant with its
-    // OWN price but no compareAtPrice should show no "was" price at all,
-    // never the base product's (which was set relative to a different
-    // price point and could otherwise render a nonsensical "was less,
-    // now more" display).
-    baseCompareAtPrice = matchedVariant.price !== null ? matchedVariant.compareAtPrice : productCompareAtPrice;
+    // Faz 34 — tek kural: variantEffectivePrice (aşağıda; kart/ürün sayfası da bunu kullanır).
+    const effective = variantEffectivePrice(productPrice, productCompareAtPrice, matchedVariant);
+    basePrice = effective.price;
+    baseCompareAtPrice = effective.compareAtPrice;
   }
 
   const selectedAddonIdSet = new Set(params.selectedAddonIds);
@@ -117,4 +113,49 @@ function findMatchingVariant(
 /** Addons the customer can never deselect — the caller merges these into its own selection state on mount/change of `addons`. */
 export function resolveRequiredAddonIds(addons: PublicProductAddon[]): string[] {
   return addons.filter((a) => a.isRequired).map((a) => a.id);
+}
+
+/**
+ * Faz 34 — VARYANTIN ETKİLİ FİYATI (tek kural). product_variants.price NULL
+ * = ürün fiyatını izler (migration 0018). Karşılaştırma ("eski") fiyatı
+ * yalnız varyantın fiyatı da üründen geliyorsa üründen miras alınır — kendi
+ * fiyatı olup eski fiyatı olmayan varyantta "eski fiyat" gösterilmez.
+ */
+export interface PriceSource {
+  price: number | null;
+  compareAtPrice: number | null;
+}
+
+export function variantEffectivePrice(
+  productPrice: number,
+  productCompareAtPrice: number | null,
+  variant: PriceSource,
+): { price: number; compareAtPrice: number | null } {
+  return variant.price !== null
+    ? { price: variant.price, compareAtPrice: variant.compareAtPrice }
+    : { price: productPrice, compareAtPrice: productCompareAtPrice };
+}
+
+/**
+ * Faz 34 — KART, ÜRÜN SAYFASI (seçim yapılmadan), PAYLAŞIM GÖRSELİ: aynı
+ * fiyat. Varyant yoksa ürün fiyatı; varsa varyantların etkili fiyatlarının
+ * en düşüğü, farklı fiyatlar varsa `from: true` ("₺X'den başlayan").
+ * Eski fiyat yalnız gösterilen fiyattan yüksekse döner.
+ */
+export interface DisplayPrice {
+  price: number;
+  compareAtPrice: number | null;
+  /** Varyantların fiyatları farklı → "'den başlayan". */
+  from: boolean;
+}
+
+const kurus = (value: number) => Math.round(value * 100);
+
+export function displayPriceFor(productPrice: number, productCompareAtPrice: number | null, variants: readonly PriceSource[]): DisplayPrice {
+  const candidates = variants.length > 0 ? variants.map((v) => variantEffectivePrice(productPrice, productCompareAtPrice, v)) : [{ price: productPrice, compareAtPrice: productCompareAtPrice }];
+  let lowest = candidates[0];
+  for (const candidate of candidates) if (kurus(candidate.price) < kurus(lowest.price)) lowest = candidate;
+  const from = new Set(candidates.map((c) => kurus(c.price))).size > 1;
+  const compareAtPrice = lowest.compareAtPrice !== null && kurus(lowest.compareAtPrice) > kurus(lowest.price) ? lowest.compareAtPrice : null;
+  return { price: lowest.price, compareAtPrice, from };
 }

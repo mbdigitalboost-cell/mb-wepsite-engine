@@ -342,7 +342,7 @@ export function FeaturedProductsSection({
               <div className="p-3.5">
                 <div className="text-[13px] font-semibold text-[#F5F5F5]">{product.name}</div>
                 <div className={`${storefrontMonoClasses} mt-2 text-[15px] font-bold text-[#D95F00]`}>
-                  {formatPrice(product.price)}
+                  {formatPrice(product.display.price)} {product.display.from ? <span className="text-[10px] font-normal text-[#A3A3A3]">seçeneğe göre değişir</span> : null}
                 </div>
                 <div className="mt-2.5 rounded-full border-[1.5px] border-[#3A3A3A] py-2 text-center text-xs font-medium text-[#F5F5F5] transition-colors group-hover:border-[#D95F00]">
                   İncele

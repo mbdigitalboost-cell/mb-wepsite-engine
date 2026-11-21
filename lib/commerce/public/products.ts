@@ -4,6 +4,7 @@ import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/commerce/product-image-constants";
 import type { PublicBrand } from "./brands";
+import { displayPriceFor, type DisplayPrice } from "@/lib/commerce/pricing";
 
 /**
  * FAZ 2C-3 — public product/image read model.
@@ -39,8 +40,15 @@ export interface PublicProduct {
   slug: string;
   shortDescription: string | null;
   description: string | null;
+  /** Ürünün KENDİ (taban) fiyatı — fiyat hesabı (computeConfiguredPrice) için; vitrinde doğrudan gösterme, `display` kullan. */
   price: number;
   compareAtPrice: number | null;
+  /**
+   * Faz 34 — vitrinde gösterilecek fiyat (kart, ürün sayfası seçim yapılmadan,
+   * paylaşım görseli). Varyantların etkili fiyatlarından (displayPriceFor):
+   * kart ile ürün sayfası asla farklı fiyat göstermez.
+   */
+  display: DisplayPrice;
   isActive: boolean;
   sortOrder: number;
   seoTitle: string | null;
@@ -112,7 +120,7 @@ export interface PublicProductImage {
 const PRODUCT_COLUMNS =
   "id, store_id, category_id, brand_id, models, name, slug, short_description, description, price, compare_at_price, is_active, sort_order, seo_title, seo_description";
 
-type MappedProduct = Omit<PublicProduct, "brand">;
+type MappedProduct = Omit<PublicProduct, "brand" | "display">;
 
 function mapProduct(row: {
   id: string;
@@ -161,9 +169,10 @@ function mapProduct(row: {
  * as the rest of this file).
  */
 async function attachBrandsToProducts(products: MappedProduct[], storeId: string): Promise<PublicProduct[]> {
+  const withDisplay = await attachDisplayPrices(products, storeId);
   const brandIds = [...new Set(products.map((p) => p.brandId).filter((id): id is string => id !== null))];
   if (brandIds.length === 0) {
-    return products.map((p) => ({ ...p, brand: null }));
+    return withDisplay.map((p) => ({ ...p, brand: null }));
   }
 
   const client = createSupabasePublicClient();
@@ -171,11 +180,39 @@ async function attachBrandsToProducts(products: MappedProduct[], storeId: string
 
   if (error) {
     console.error("[commerce/public] attachBrandsToProducts failed:", error.message);
-    return products.map((p) => ({ ...p, brand: null }));
+    return withDisplay.map((p) => ({ ...p, brand: null }));
   }
 
   const brandById = new Map((data ?? []).map((b) => [b.id, { id: b.id, name: b.name, slug: b.slug, logoUrl: b.logo_url }]));
-  return products.map((p) => ({ ...p, brand: p.brandId ? (brandById.get(p.brandId) ?? null) : null }));
+  return withDisplay.map((p) => ({ ...p, brand: p.brandId ? (brandById.get(p.brandId) ?? null) : null }));
+}
+
+/**
+ * Faz 34 — her ürünün vitrin fiyatı (displayPriceFor), TEK store-scoped
+ * varyant sorgusuyla (N+1 yok). RLS yalnız aktif varyantları döndürür —
+ * ürün sayfasının getPublicProductVariants'ı ile aynı kaynak, dolayısıyla
+ * kart ve ürün sayfası aynı fiyatı gösterir. Sorgu hata verirse ürün
+ * fiyatına düşer (fail-soft).
+ */
+async function attachDisplayPrices(products: MappedProduct[], storeId: string): Promise<Array<MappedProduct & { display: DisplayPrice }>> {
+  if (products.length === 0) return [];
+  const client = createSupabasePublicClient();
+  const { data, error } = await client
+    .from("product_variants")
+    .select("product_id, price, compare_at_price")
+    .eq("store_id", storeId)
+    .in(
+      "product_id",
+      products.map((p) => p.id),
+    );
+  if (error) console.error("[commerce/public] attachDisplayPrices failed:", error.message);
+  const byProduct = new Map<string, Array<{ price: number | null; compareAtPrice: number | null }>>();
+  for (const row of error ? [] : (data ?? [])) {
+    const list = byProduct.get(row.product_id) ?? [];
+    list.push({ price: row.price === null ? null : Number(row.price), compareAtPrice: row.compare_at_price === null ? null : Number(row.compare_at_price) });
+    byProduct.set(row.product_id, list);
+  }
+  return products.map((p) => ({ ...p, display: displayPriceFor(p.price, p.compareAtPrice, byProduct.get(p.id) ?? []) }));
 }
 
 /**

@@ -7,6 +7,7 @@ import { requireStoreEditorAccess, requireStoreAdminAccess } from "@/lib/auth/re
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { productFormSchema } from "@/lib/validation/product";
 import { storeProductsTag } from "@/lib/commerce/cache-tags";
+import { followPlanSummary, planVariantsAfterProductPriceChange, samePrice } from "@/lib/commerce/variant-pricing";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { toFriendlyError } from "@/lib/commerce/product-errors";
 import { ensureBrandModelsExist } from "@/lib/commerce/brand-models";
@@ -293,6 +294,8 @@ export async function updateProductAction(
   if (!(await assertCategoriesBelongToStore(categorySelection.ids, storeId))) return { error: INVALID_CATEGORY_MESSAGE };
 
   const supabase = await createSupabaseServerClient();
+  // Faz 34 — eski fiyat: değişirse, fiyatı eski ürün fiyatına eşit (kopyalanmış) varyantlar izlemeye alınır.
+  const { data: before } = await supabase.from("products").select("price").eq("id", productId).eq("store_id", storeId).maybeSingle();
   const { error } = await supabase
     .from("products")
     .update({
@@ -360,10 +363,58 @@ export async function updateProductAction(
     metadata: { name: parsed.data.name, slug: parsed.data.slug, isActive: parsed.data.isActive },
   });
 
+  const notice = before ? await followProductPriceInVariants(supabase, { customerId, storeId, productId, userId: user.id, oldPrice: Number(before.price), newPrice: parsed.data.price }) : null;
+
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products`);
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/products/${productId}`);
   revalidateTag(storeProductsTag(storeId), "max");
-  return { error: null };
+  return { error: null, notice };
+}
+
+/**
+ * Faz 34 — ürün fiyatı değişince: fiyatı ESKİ ürün fiyatına eşit olan
+ * varyantlar (oluşturulurken kopyalanmış, "izliyor" sayılanlar) NULL'a
+ * çekilir → yeni ürün fiyatını izler; farklı fiyatlı varyantlar korunur.
+ * Fiyat değişmediyse dokunulmaz. Denetim kaydı yazılır.
+ */
+async function followProductPriceInVariants(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  params: { customerId: string; storeId: string; productId: string; userId: string; oldPrice: number; newPrice: number },
+): Promise<string | null> {
+  if (samePrice(params.oldPrice, params.newPrice)) return null;
+  const { data: rows } = await supabase
+    .from("product_variants")
+    .select("id, price, compare_at_price")
+    .eq("product_id", params.productId)
+    .eq("store_id", params.storeId);
+  const variants = (rows ?? []).map((row) => ({
+    id: row.id,
+    price: row.price === null ? null : Number(row.price),
+    compareAtPrice: row.compare_at_price === null ? null : Number(row.compare_at_price),
+  }));
+  if (variants.length === 0) return null;
+  const plan = planVariantsAfterProductPriceChange(params.oldPrice, variants);
+  if (plan.toFollow.length > 0) {
+    const { error } = await supabase
+      .from("product_variants")
+      .update({ price: null, compare_at_price: null })
+      .in("id", plan.toFollow)
+      .eq("product_id", params.productId)
+      .eq("store_id", params.storeId);
+    if (error) {
+      console.error("[products] variant follow update failed:", error.message);
+      return "Ürün kaydedildi ancak seçenek fiyatları güncellenemedi; Renk ve seçenekler bölümünden kontrol edin.";
+    }
+    await logAuditEvent({
+      userId: params.userId,
+      customerId: params.customerId,
+      action: "product.variant_prices_follow",
+      entityType: "product",
+      entityId: params.productId,
+      metadata: { oldPrice: params.oldPrice, newPrice: params.newPrice, followed: plan.toFollow, kept: plan.kept },
+    });
+  }
+  return followPlanSummary(plan, (value) => value.toLocaleString("tr-TR", { style: "currency", currency: "TRY" }));
 }
 
 /** Bound per-page via `.bind(null, customerId, storeId, productId, nextActive)` — store_editor+ (deactivating/reactivating is reversible, not the critical "kalıcı silme" tier). Same lighter-weight-toggle shape as navigation's toggleNavigationItemActiveAction. */

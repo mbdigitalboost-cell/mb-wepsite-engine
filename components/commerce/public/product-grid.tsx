@@ -66,9 +66,12 @@ export function ProductGrid({ storeSlug, products }: ProductGridProps) {
               <p className={`${storefrontMonoClasses} text-[11px] uppercase text-[#6B6B6B]`}>{product.brand.name}</p>
             ) : null}
             <p className="mt-1 font-medium text-[#F5F5F5]">{product.name}</p>
-            <p className={`${storefrontMonoClasses} mt-1.5 font-semibold text-[#D95F00]`}>{formatPrice(product.price)}</p>
-            {product.compareAtPrice ? (
-              <p className={`${storefrontMonoClasses} text-xs text-[#6B6B6B] line-through`}>{formatPrice(product.compareAtPrice)}</p>
+            {/* Faz 34 — vitrin fiyatı (varyantlardan; ürün sayfasıyla aynı kaynak). */}
+            <p className={`${storefrontMonoClasses} mt-1.5 font-semibold text-[#D95F00]`}>
+              {formatPrice(product.display.price)} {product.display.from ? <span className="text-[10px] font-normal text-[#A3A3A3]">seçeneğe göre değişir</span> : null}
+            </p>
+            {product.display.compareAtPrice ? (
+              <p className={`${storefrontMonoClasses} text-xs text-[#6B6B6B] line-through`}>{formatPrice(product.display.compareAtPrice)}</p>
             ) : null}
           </Link>
         </li>
