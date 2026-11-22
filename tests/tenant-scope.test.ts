@@ -131,3 +131,10 @@ test("Faz 33: A store + B store's legal document version → rejected (lawyer-re
   // Satıcı bilgisi / yayımlama action'ları requireStoreAdminAccess(storeId, customerId) → storeMatchesCustomer.
   assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-petra"), false);
 });
+
+test("Faz 35: tracking settings — another customer's URL for this store is rejected; settings are keyed by store_id", () => {
+  // updateTrackingSettingsAction → requireStoreAdminAccess(storeId, customerId) → storeMatchesCustomer;
+  // vitrin getStoreTrackingSettings yalnız kendi store_id'sinin satırını okur (satırın store_id'si eşleşmezse "hiç araç yok").
+  assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-petra"), false);
+  assert.equal(storeMatchesCustomer("customer-taktikalp46", "customer-taktikalp46"), true);
+});

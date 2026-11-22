@@ -22,6 +22,7 @@ import {
   CreditCard,
   Scale,
   Building2,
+  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -105,6 +106,8 @@ function buildStoreSections(customerId: string, storeId: string): NavSection[] {
         // Faz 33 — yasal metinler ve satıcı kimliği.
         { href: `${base}/legal`, label: "Yasal Metinler", icon: Scale, isNew: true },
         { href: `${base}/seller`, label: "İşletme Bilgileri", icon: Building2, isNew: true },
+        // Faz 35 — Meta Pixel / GA4 / Google Ads (çerez onayıyla).
+        { href: `${base}/tracking`, label: "Takip ve Reklam", icon: BarChart3, isNew: true },
       ],
     },
   ];
