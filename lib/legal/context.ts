@@ -1,5 +1,6 @@
 import { hasFreeShippingOffer, type ShippingFeeSettings } from "../commerce/shipping-fee.ts";
 import type { LegalValues } from "./template.ts";
+import { NO_TRACKING, activeTools, thirdPartyCookieSection, type StoreTrackingSettings } from "../tracking/store-tracking.ts";
 
 /**
  * Faz 33 — şablon değişkenlerinin değerleri (saf; testli). Tutarlar
@@ -43,6 +44,8 @@ export interface LegalStoreContext {
   paymentMethods: readonly string[];
   /** Mağazanın iyzico entegrasyonu aktif mi (kart cümlesi yalnız o zaman). */
   cardPaymentEnabled: boolean;
+  /** Faz 35 — takip/reklam araçları (Çerez Politikası üçüncü taraf bölümü). Yoksa hiçbiri açık değil. */
+  tracking?: StoreTrackingSettings;
 }
 
 export interface LegalOrderLine {
@@ -127,6 +130,8 @@ export function buildLegalValues(store: LegalStoreContext, order?: LegalOrderCon
     "iade.cevrimici": store.returns.enabled ? "evet" : null,
     "iade.cevrimdisi": store.returns.enabled ? null : "evet",
     "belge.tarih": formatTrDateTime(order?.date ?? now),
+    "cerez.ucuncu_taraf": thirdPartyCookieSection(store.tracking ?? NO_TRACKING),
+    "cerez.onay_cerezi": activeTools(store.tracking ?? NO_TRACKING).any ? "evet" : null,
   };
 
   if (order) {

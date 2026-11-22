@@ -57,6 +57,8 @@ export const LEGAL_VARIABLES: Record<string, string> = {
   "alici.eposta": "Alıcının e-postası",
   "alici.fatura": "Fatura bilgisi (ad/unvan, adres)",
   "belge.tarih": "Metnin oluşturulduğu tarih",
+  "cerez.ucuncu_taraf": "Analitik/reklam çerezleri bölümü (mağazanın takip ayarından üretilir)",
+  "cerez.onay_cerezi": "Çerez tercihi çerezi kullanılıyorsa dolu (en az bir araç açık)",
 };
 
 export type LegalValues = Partial<Record<string, string | null | undefined>>;

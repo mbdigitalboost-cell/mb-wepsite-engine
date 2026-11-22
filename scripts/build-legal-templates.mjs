@@ -81,6 +81,28 @@ on conflict (store_id, kind, version) do nothing;
 -- from public.store_legal_documents d join public.stores s on s.id = d.store_id
 -- where s.slug = 'taktikalp46' order by kind;
 `;
-writeFileSync(join(root, "supabase", "platform", "migrations", "0049_legal_document_seed.sql"), sql);
+// 0049 canlıda uygulandı; yalnız açıkça istenirse yeniden yazılır (node ... --seed-0049).
+if (process.argv.includes("--seed-0049")) {
+  writeFileSync(join(root, "supabase", "platform", "migrations", "0049_legal_document_seed.sql"), sql);
+}
 
-console.log(`ok: ${KINDS.length} şablon → lib/legal/default-templates.ts + 0049_legal_document_seed.sql`);
+// Faz 35: tek bir türün yeni sürümünü ekleyen SQL parçası (ör. --version-sql=cookies), stdout'a.
+const versionArg = process.argv.find((arg) => arg.startsWith("--version-sql="));
+if (versionArg) {
+  const kind = versionArg.split("=")[1];
+  if (!templates[kind]) throw new Error(`bilinmeyen tür: ${kind}`);
+  const { title, body } = templates[kind];
+  const q = (text) => "$legal$" + text + "$legal$";
+  console.log(`-- ${kind} yeni sürüm (mevcut en yüksek sürüm + 1; hukukçu kontrolü sıfırlanır; aynı metin varsa eklenmez)
+insert into public.store_legal_documents (store_id, kind, title, body, version)
+select s.id, '${kind}', ${q(title)}, ${q(body)},
+       coalesce((select max(d.version) from public.store_legal_documents d where d.store_id = s.id and d.kind = '${kind}'), 0) + 1
+from public.stores s
+where s.slug = 'taktikalp46'
+  and not exists (
+    select 1 from public.store_legal_documents d2
+    where d2.store_id = s.id and d2.kind = '${kind}' and d2.body = ${q(body)}
+  );`);
+}
+
+console.error(`ok: ${KINDS.length} şablon → lib/legal/default-templates.ts`);

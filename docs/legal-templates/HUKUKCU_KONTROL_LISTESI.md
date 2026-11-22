@@ -41,6 +41,18 @@ Bu liste, www.t46store.com'daki yasal metinlerin bir hukukçu tarafından kontro
 13. **Çerez Politikası:** bugün yalnız zorunlu çerez/depolama var (oturum çerezi sb-storefront-auth, sepet ve indirim kodu için tarayıcı depolaması), analitik/pazarlama çerezi yok. Analitik ileride eklenirse yalnız onayla yüklenecek şekilde altyapı hazır.
 14. **Uyuşmazlık:** tüketici hakem heyeti parasal sınırları sabit yazılmadı ("her yıl ilan edilen parasal sınırlar"); tüketici mahkemesi öncesi arabuluculuk cümlesi eklendi.
 
+## 3b. Çerez bandı ve takip araçları (Faz 35)
+
+Meta Pixel, Google Analytics 4 ve Google Ads altyapısı kuruldu; kimlikler girilip araç açılana kadar sitede çerez bandı görünmez ve hiçbir üçüncü taraf betiği yüklenmez. Araç açılınca:
+
+15. **Bant metni ve düzen:** altta koyu şerit; metin yalnız açık araçları sayar ("…izin verirseniz ziyaret istatistikleri (Google Analytics) ve reklam ölçümü (Meta, Google Ads) için çerezler kullanılır. Bu araçlarla veriler yurt dışındaki hizmet sağlayıcılara aktarılabilir."). "Kabul Et" ve "Reddet" aynı boyut ve görünümde, "Tercihler" ayrı; kategoriler varsayılan kapalı; kapatma (X) seçim sayılmaz. KVKK Çerez Rehberi'ne uygunluğu.
+16. **Yurt dışı aktarımın dayanağı:** Çerez Politikası, Meta/Google'a aktarımın verilen açık rızaya dayandığını yazıyor. Açık rıza mı, standart sözleşme mi, başka bir yol mu dayanılacağı.
+17. **Rıza kayıtlarının saklama süresi:** her seçim (tarih, analitik/reklam izni, rıza ve çerez politikası sürümü, rastgele tarayıcı kimliği; IP yok) saklanıyor, otomatik silinmiyor. Ne kadar saklanacağı.
+18. **Meta ve Google veri işleme koşulları:** Meta Business Tools Koşulları ve Google Ads/Analytics veri işleme şartlarının kabulü ve KVKK açısından değerlendirmesi.
+19. **_fbp çerezinin süresi:** Meta'nın resmî dokümanında süre bulunamadı; metinde "Meta'nın çerez politikasında belirtilen süre" yazıyor. Diğer süreler (_ga, _ga_<kimlik>: 2 yıl; _gcl_: 90 gün; _fbc: 90 gün) Google ve Meta'nın resmî sayfalarından.
+20. **Tercih çerezi (mb_consent, 6 ay):** zorunlu kategoride sayıldı; süresinin uygunluğu.
+21. **Araç değişince yeni sürüm:** bir araç açılıp kapatıldığında Çerez Politikası otomatik yeni sürüm olur ve ziyaretçilere yeniden sorulur; her yeni sürüm için bu kontrolün yenilenmesi.
+
 ## 4. Kontrol sonrası
 
 - Değişiklik gerekiyorsa: Mağaza → Yasal Metinler → metin → düzenle → "Önizle" → "Yayınla (yeni sürüm)".

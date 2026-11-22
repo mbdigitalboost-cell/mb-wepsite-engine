@@ -6,6 +6,7 @@ import { getReturnSettings } from "@/lib/commerce/returns/service";
 import { isCardPaymentEnabled } from "@/lib/integrations/store-payment-integration";
 import { CARD_PAYMENT_METHOD, PAYMENT_METHODS } from "@/lib/validation/order";
 import { findStoreSiteBySlug } from "@/lib/sites/registry";
+import { getStoreTrackingSettings } from "@/lib/tracking/store-tracking-server";
 import { buildLegalValues, type LegalOrderContext, type LegalStoreContext, type SellerIdentity } from "@/lib/legal/context";
 import { renderLegalTemplate } from "@/lib/legal/template";
 import type { LegalDocumentKind } from "@/lib/supabase/types";
@@ -64,11 +65,12 @@ export async function getPublishedLegalDocuments(storeId: string): Promise<Map<L
 }
 
 export async function loadLegalStoreContext(store: { id: string; name: string; slug: string }): Promise<LegalStoreContext> {
-  const [seller, shipping, returns, cardEnabled] = await Promise.all([
+  const [seller, shipping, returns, cardEnabled, tracking] = await Promise.all([
     getSellerIdentity(store.id),
     getShippingFeeSettings(store.id),
     getReturnSettings(store.id),
     isCardPaymentEnabled(store.id),
+    getStoreTrackingSettings(store.id),
   ]);
   return {
     storeName: store.name,
@@ -85,6 +87,8 @@ export async function loadLegalStoreContext(store: { id: string; name: string; s
     },
     paymentMethods: cardEnabled ? [...PAYMENT_METHODS, CARD_PAYMENT_METHOD] : [...PAYMENT_METHODS],
     cardPaymentEnabled: cardEnabled,
+    // Faz 35 — Çerez Politikası üçüncü taraf bölümü gerçek ayardan.
+    tracking,
   };
 }
 

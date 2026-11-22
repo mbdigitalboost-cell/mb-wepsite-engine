@@ -7,8 +7,14 @@ Haberleşme Kanunu m.51 (cihazda bilgi saklama — hukukçuya teyit).
 Liste koddan çıkarıldı (2026-11-16): lib/supabase/storefront-* →
 "sb-storefront-auth" çerezi (yalnız giriş yapan müşteri); cart-context.tsx →
 localStorage "mb-store-cart:<mağaza>"; checkout-form.tsx → sessionStorage
-"mb-checkout-discount:<mağaza>". Vitrinde analitik/pazarlama betiği YOK;
-ileride eklenirse yalnız çerez onayıyla yüklenir (consent altyapısı, Faz 33).
+"mb-checkout-discount:<mağaza>".
+Faz 35: üçüncü taraf bölümü {{cerez.ucuncu_taraf}} değişkeniyle mağazanın
+GERÇEK takip ayarından (store_tracking_settings) üretilir; çerez adları ve
+süreleri sağlayıcıların resmî sayfalarından: Google Analytics Yardım "[GA4]
+Cookie usage on websites" (_ga, _ga_<container-id>: 2 yıl); Google "How Google
+uses cookies" (_gcl_: 90 gün); Meta geliştirici dokümanı "ClickID and the fbp
+and fbc Parameters" (_fbc: 90 gün; _fbp için süre belirtilmiyor → "Meta'nın
+çerez politikasında belirtilen süre").
 -->
 # Çerez Politikası
 
@@ -20,15 +26,20 @@ Bu politika, {{magaza.adi}} internet sitesinde kullanılan çerezler ve benzeri 
 
 ## Kullandığımız çerezler ve depolama alanları
 
-Sitemizde bugün yalnız sitenin çalışması için **zorunlu** çerezler ve depolama alanları kullanılmaktadır:
+Sitenin çalışması için gerekli **zorunlu** çerezler ve depolama alanları:
 
 - **sb-storefront-auth** (çerez) — Müşteri hesabına giriş yaptığınızda oturumunuzu açık tutar. Yalnız giriş yapan müşterilerde oluşur; çıkış yaptığınızda veya oturum sona erdiğinde geçersiz hâle gelir.
 - **mb-store-cart** (yerel depolama) — Sepetinizdeki ürünleri tarayıcınızda saklar. Sepeti boşalttığınızda, siparişiniz tamamlandığında veya tarayıcı verilerini sildiğinizde silinir.
 - **mb-checkout-discount** (oturum depolama) — Ödeme adımında uyguladığınız indirim kodunu sayfa yenilendiğinde korur. Tarayıcı sekmesi kapandığında silinir.
+{{#if cerez.onay_cerezi}}
+- **mb_consent** (çerez) — Çerez tercihinizi (analitik / reklam izni verip vermediğinizi) 6 ay boyunca hatırlar; böylece her sayfada yeniden sorulmaz.
+{{/if}}
 
 Bu zorunlu çerezler ve depolama alanları, talep ettiğiniz alışveriş hizmetini sunabilmemiz için gereklidir; bu nedenle onayınıza bağlı değildir.
 
-Sitemizde bugün **analitik, reklam veya pazarlama amaçlı çerez kullanılmamaktadır.** İleride bu tür çerezler kullanılmaya başlanırsa, bu politika güncellenir ve bu çerezler yalnızca açık onayınızı almamızdan sonra çalıştırılır.
+## Analitik ve reklam çerezleri (üçüncü taraf)
+
+{{cerez.ucuncu_taraf}}
 
 Kartla ödeme sırasında açılan iyzico güvenli ödeme sayfası, kendi çerezlerini kullanabilir; bu çerezler iyzico'nun kendi politikalarına tabidir.
 
