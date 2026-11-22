@@ -59,6 +59,7 @@ async function loadCompletedOrder(storeId: string, storeSlug: string, sp: { sipa
     total: orderGrandTotal(order),
     paidByCard,
     contractUrl: acceptance ? orderContractHref(storeSlug, storeId, orderId, isMember) : null,
+    orderId,
   };
 }
 

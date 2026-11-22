@@ -19,6 +19,7 @@ import { PROVINCES, ProvinceDistrictSelect, findProvinceByName } from "@/compone
 import { createOrderAction, previewCheckoutAction } from "./actions";
 import { initialCheckoutFormState, type CheckoutFormState } from "./form-state";
 import { CheckoutLegalConsent } from "./checkout-legal";
+import { trackBeginCheckout, trackPurchase } from "@/lib/tracking/store-events";
 
 /** Tasarım kanvası (Odeme.dc.html) — ödeme yöntemi seçimi düz radio yerine ikon+başlık+açıklamalı seçilebilir kart. Gerçek value'lar lib/validation/order.ts'in PAYMENT_METHODS'ı ile BİREBİR (yeni bir ödeme yöntemi İCAT EDİLMEDİ, sadece 3 gerçek seçeneğin görsel sunumu). */
 const PAYMENT_METHOD_DETAILS: Record<CheckoutPaymentMethod, { Icon: typeof Banknote; description: string }> = {
@@ -47,6 +48,8 @@ export interface CompletedOrderSummary {
   total?: number;
   /** Faz 33 — kabul edilen sözleşme anlık görüntüsünün adresi. */
   contractUrl?: string | null;
+  /** Faz 35 — Purchase olayı için sipariş kimliği. */
+  orderId?: string | null;
 }
 
 /** Faz 32 — uygulanan kod ödeme akışı boyunca (sayfa yenilense de) korunur; erişilemezse sessizce yok sayılır. */
@@ -390,6 +393,27 @@ export function CheckoutForm({
     }
   }, [completedOrder, clear, storeSlug]);
 
+  // Faz 35 — Purchase (yalnız çerez onayı + betik yüklüyse; sipariş başına bir kez).
+  // value = sunucunun kaydettiği genel toplam. Kart: yalnız ödeme sunucuda
+  // doğrulandıktan sonra (completedOrder paidByCard) — kart siparişi
+  // oluşturulduğunda (paymentRedirectUrl) gönderilmez.
+  const purchaseOrderId = state.status === "success" && !state.paymentRedirectUrl ? (state.orderId ?? null) : (completedOrder?.orderId ?? null);
+  const purchaseTotal = state.status === "success" && !state.paymentRedirectUrl ? (state.total ?? null) : (completedOrder?.total ?? null);
+  useEffect(() => {
+    if (purchaseOrderId && purchaseTotal !== null) trackPurchase(purchaseOrderId, purchaseTotal);
+  }, [purchaseOrderId, purchaseTotal]);
+
+  // Faz 35 — InitiateCheckout / begin_checkout: ödeme adımına ilk geçişte bir kez.
+  const beganCheckout = useRef(false);
+  useEffect(() => {
+    if (step !== 2 || beganCheckout.current || items.length === 0) return;
+    beganCheckout.current = true;
+    trackBeginCheckout(
+      items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+      items.map((item) => ({ id: item.productId, name: item.productName, variant: item.variantLabel, price: item.unitPrice, quantity: item.quantity })),
+    );
+  }, [step, items]);
+
   if (state.status === "success" && state.paymentRedirectUrl) {
     return (
       <div id="checkout-form" className="mt-6 rounded-[14px] border border-[#292929] bg-[#171717] p-4">
@@ -421,6 +445,7 @@ export function CheckoutForm({
           codFee: state.codFee ?? undefined,
           total: state.total ?? undefined,
           contractUrl: state.contractUrl ?? null,
+          orderId: state.orderId ?? null,
         }
       : completedOrder;
 

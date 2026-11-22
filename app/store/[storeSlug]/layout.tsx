@@ -13,7 +13,9 @@ import { StoreFooter } from "@/components/commerce/public/store-footer";
 import { getStoreBrandFallback, resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
 import { getPublishedLegalDocuments, getSellerIdentity } from "@/lib/legal/store-legal";
 import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
-import { ConsentGate } from "@/components/commerce/public/consent/consent-gate";
+import { CookieConsent } from "@/components/commerce/public/consent/cookie-consent";
+import { getStoreTrackingSettings } from "@/lib/tracking/store-tracking-server";
+import { activeTools } from "@/lib/tracking/store-tracking";
 import { storeBase } from "@/lib/sites/store-href";
 
 /**
@@ -132,6 +134,7 @@ export default async function StoreLayout({
     shippingSettings,
     legalDocuments,
     seller,
+    trackingSettings,
   ] = await Promise.all([
     supabase.auth.getUser(),
     getPublicCategories(store.id),
@@ -139,6 +142,8 @@ export default async function StoreLayout({
     getShippingFeeSettings(store.id),
     getPublishedLegalDocuments(store.id),
     getSellerIdentity(store.id),
+    // Faz 35 — bu mağazanın takip ayarı (başka mağazanın kimliği asla yüklenmez).
+    getStoreTrackingSettings(store.id),
   ]);
 
   // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
@@ -175,13 +180,19 @@ export default async function StoreLayout({
             seller: seller ? { legalName: seller.legalName, address: seller.address, phone: seller.phone, email: seller.email } : null,
             etbis: seller && (seller.etbisInfo || seller.etbisUrl) ? { info: seller.etbisInfo, url: seller.etbisUrl } : null,
           }}
+          showCookiePreferences={activeTools(trackingSettings).any}
         />
         {/*
-          Faz 33 — takip betikleri (GTM/GA4/Pixel) YALNIZ bu kapıdan ve çerez
-          onayından sonra yüklenir. Mağazada bugün hiçbiri tanımlı değil →
-          boş liste: banner yok, çerez yazılmaz. Eklenirse buraya verilir.
+          Faz 35 — çerez bandı + tercih paneli + betik kapısı. Takip betikleri
+          (Meta Pixel / GA4 / Google Ads) YALNIZ bu bileşenden ve ziyaretçinin
+          onayından sonra yüklenir; hiçbir araç açık değilse hiçbir şey render
+          edilmez. Panel ve Petra bu layout'u kullanmaz.
         */}
-        <ConsentGate trackers={[]} cookiePolicyHref={legalDocuments.has("cookies") ? `${storeBase(storeSlug)}/cerez-politikasi` : null} />
+        <CookieConsent
+          storeSlug={storeSlug}
+          settings={trackingSettings}
+          cookiePolicyHref={legalDocuments.has("cookies") ? `${storeBase(storeSlug)}/cerez-politikasi` : null}
+        />
       </CartProvider>
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { freeShippingClaim, productQualifiesForFreeShipping, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackAddToCart, trackViewItem } from "@/lib/tracking/store-events";
 import Image from "next/image";
 import { Check, ImageOff, Minus, Plus, ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/lib/utils/format-price";
@@ -140,6 +141,14 @@ export function ProductDetailClient({
   const discountPercent = shownCompare && shownCompare > shownBase ? Math.round(((shownCompare - shownBase) / shownCompare) * 100) : null;
   const savings = shownCompare && shownCompare > shownBase ? shownCompare - shownBase : null;
   const qualifiesFreeShipping = productQualifiesForFreeShipping(shownTotal, shippingSettings);
+
+  // Faz 35 — ViewContent / view_item: sayfa açılışında bir kez, etkili (vitrin) fiyatla.
+  const viewItemPrice = unselectedDisplay ? unselectedDisplay.price : priced.basePrice;
+  useEffect(() => {
+    trackViewItem({ id: productId, name: productName, price: viewItemPrice });
+    // Yalnız ürün değişince; seçim değişiklikleri yeni bir görüntüleme değildir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
   const shippingClaim = freeShippingClaim(shippingSettings);
   const lineTotal = priced.totalPrice * quantity;
 
@@ -193,6 +202,8 @@ export function ProductDetailClient({
       },
       quantity,
     );
+    // Faz 35 — AddToCart (yalnız çerez onayı + betik yüklüyse; kişisel veri yok).
+    trackAddToCart({ id: productId, name: productName, variant: selectionLabel, price: priced.totalPrice, quantity });
     setJustAdded(true);
     setQuantity(1);
   }

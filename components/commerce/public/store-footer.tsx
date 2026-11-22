@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { PublicCategory } from "@/lib/commerce/public/categories";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
+import { CookiePreferencesLink } from "@/components/commerce/public/consent/cookie-consent";
 
 /** Faz 24 — kullanıcının verdiği TAM adres; değiştirme, takip parametresi ekleme. */
 const MB_DIGITAL_BOOST_INSTAGRAM_URL = "https://www.instagram.com/mbdigitalboost";
@@ -36,6 +37,7 @@ export function StoreFooter({
   logoUrl,
   categories,
   legal,
+  showCookiePreferences = false,
 }: {
   storeSlug: string;
   storeName: string;
@@ -44,6 +46,8 @@ export function StoreFooter({
   categories: PublicCategory[];
   /** Faz 33 — yasal bağlantılar + satıcı satırı + ETBİS. */
   legal?: StoreFooterLegal;
+  /** Faz 35 — en az bir takip aracı açıksa "Çerez Tercihleri" (izni geri alma yolu). */
+  showCookiePreferences?: boolean;
 }) {
   const footerCategories = categories.slice(0, 6);
   const sellerLine = legal?.seller
@@ -106,6 +110,7 @@ export function StoreFooter({
                       {link.label}
                     </Link>
                   ))}
+                  {showCookiePreferences ? <CookiePreferencesLink className="text-left hover:text-[#F5F5F5] hover:underline" /> : null}
                 </div>
               </div>
             ) : null}

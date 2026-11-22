@@ -20,6 +20,8 @@ export interface CheckoutFormState {
   newTotal?: number | null;
   /** Faz 33 — kabul edilen sözleşme anlık görüntüsünün adresi (misafirde imzalı jetonlu). */
   contractUrl?: string | null;
+  /** Faz 35 — sipariş kimliği (Purchase olayının transaction_id/eventID'si; kişisel veri değil). */
+  orderId?: string | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {

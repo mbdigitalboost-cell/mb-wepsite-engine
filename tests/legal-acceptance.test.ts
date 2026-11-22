@@ -12,10 +12,9 @@ import {
 import { buildLegalValues, type LegalStoreContext } from "../lib/legal/context.ts";
 import { renderLegalTemplate } from "../lib/legal/template.ts";
 import { DEFAULT_LEGAL_TEMPLATES } from "../lib/legal/default-templates.ts";
-import { allowedTrackers, parseConsent, readConsentFromCookieHeader, serializeConsent, shouldShowConsentBanner } from "../lib/legal/consent.ts";
 import { buildStoreSitemap } from "../lib/sites/store-sitemap.ts";
 
-/** Faz 33 Kısım C — ödeme adımı onayı, anlık görüntü, çerez kapısı, sitemap. */
+/** Faz 33 Kısım C — ödeme adımı onayı, anlık görüntü, sitemap. (Çerez kapısı: Faz 35, tests/store-tracking.test.ts) */
 
 const STORE: LegalStoreContext = {
   storeName: "Taktikalp46",
@@ -97,19 +96,6 @@ test("contract never contains the identity/tax number; billing is summarized", (
   assert.equal(order.deliveryAddress, "Test Mah., Test Sk. 1, Kadıköy / İstanbul");
   const text = renderLegalTemplate(DEFAULT_LEGAL_TEMPLATES.distance_sales.body, buildLegalValues(STORE, order));
   assert.doesNotMatch(text, /\b\d{10,11}\b(?<!52612445762)/); // satıcının VKN'si dışında 10-11 haneli numara yok
-});
-
-test("cookie consent: no trackers → no banner and nothing loads; trackers load only after consent", () => {
-  assert.equal(shouldShowConsentBanner([], null), false);
-  const trackers = [{ id: "ga4", category: "analytics" as const, src: "https://example.com/ga.js" }];
-  assert.equal(shouldShowConsentBanner(trackers, null), true);
-  assert.deepEqual(allowedTrackers(trackers, null), []);
-  assert.deepEqual(allowedTrackers(trackers, { analytics: false, marketing: false }), []);
-  assert.deepEqual(allowedTrackers(trackers, { analytics: true, marketing: false }).map((t) => t.id), ["ga4"]);
-  const raw = serializeConsent({ analytics: true, marketing: false });
-  assert.deepEqual(parseConsent(raw), { analytics: true, marketing: false });
-  assert.deepEqual(readConsentFromCookieHeader(`a=1; mb_cookie_consent=${encodeURIComponent(raw)}`), { analytics: true, marketing: false });
-  assert.equal(parseConsent("bozuk"), null);
 });
 
 test("sitemap lists only the published legal pages, on the clean origin", () => {

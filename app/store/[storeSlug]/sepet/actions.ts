@@ -390,6 +390,7 @@ export async function createOrderAction(
     codFee: charges.codFee,
     total: charges.grandTotal,
     contractUrl: contractSaved ? orderContractHref(storeSlug, store.id, order.id, Boolean(user)) : null,
+    orderId: order.id,
   };
 }
 
