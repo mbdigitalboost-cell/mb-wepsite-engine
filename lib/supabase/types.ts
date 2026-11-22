@@ -1696,6 +1696,71 @@ export type Database = {
         Update: Record<string, never>;
         Relationships: [];
       };
+      /** Faz 35, migration 0051 — mağaza başına Meta Pixel / GA4 / Google Ads (vitrin okur, admin yazar). */
+      store_tracking_settings: {
+        Row: {
+          store_id: string;
+          meta_pixel_id: string | null;
+          meta_enabled: boolean;
+          ga4_measurement_id: string | null;
+          ga4_enabled: boolean;
+          google_ads_id: string | null;
+          google_ads_purchase_label: string | null;
+          google_ads_enabled: boolean;
+          consent_version: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          store_id: string;
+          meta_pixel_id?: string | null;
+          meta_enabled?: boolean;
+          ga4_measurement_id?: string | null;
+          ga4_enabled?: boolean;
+          google_ads_id?: string | null;
+          google_ads_purchase_label?: string | null;
+          google_ads_enabled?: boolean;
+          consent_version?: number;
+          updated_by?: string | null;
+        };
+        Update: {
+          meta_pixel_id?: string | null;
+          meta_enabled?: boolean;
+          ga4_measurement_id?: string | null;
+          ga4_enabled?: boolean;
+          google_ads_id?: string | null;
+          google_ads_purchase_label?: string | null;
+          google_ads_enabled?: boolean;
+          consent_version?: number;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      /** Faz 35, migration 0051 — çerez rızası ispatı (yalnız service-role). */
+      cookie_consent_records: {
+        Row: {
+          id: number;
+          store_id: string;
+          consent_id: string;
+          analytics: boolean;
+          marketing: boolean;
+          consent_version: number;
+          cookie_policy_version: number | null;
+          action: "accept_all" | "reject_all" | "custom" | "withdraw";
+          created_at: string;
+        };
+        Insert: {
+          store_id: string;
+          consent_id: string;
+          analytics: boolean;
+          marketing: boolean;
+          consent_version: number;
+          cookie_policy_version?: number | null;
+          action: "accept_all" | "reject_all" | "custom" | "withdraw";
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       product_categories: {
         Row: {
           product_id: string;
@@ -2278,6 +2343,11 @@ export type Database = {
       };
     };
     Functions: {
+      /** Faz 35, migration 0051 — son dönem çerez kararı sayıları (SECURITY DEFINER; içeride is_store_editor_member). */
+      store_consent_summary: {
+        Args: { p_store_id: string; p_since: string };
+        Returns: Array<{ action: string; total: number }>;
+      };
       /** Faz 26, migration 0042 — seçenek grubu + değerler + varyantlar + bağlantılar tek transaction'da (SECURITY INVOKER). Dönüş: oluşturulan varyant sayısı. */
       create_product_option_setup: {
         Args: {
