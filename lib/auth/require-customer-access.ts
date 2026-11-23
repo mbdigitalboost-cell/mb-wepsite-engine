@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { requireSession } from "@/lib/auth/require-session";
 import { getCurrentMemberships } from "@/lib/auth/get-memberships";
-import { isAdminRole, isStoreRole, isStoreWriteRole } from "@/lib/auth/roles";
+import { isAdminRole, isStoreWriteRole } from "@/lib/auth/roles";
+import { canAccessCustomer } from "@/lib/auth/dashboard-home";
 
 export interface CustomerAccessContext {
   user: User;
@@ -41,11 +42,9 @@ export async function requireCustomerAccess(customerId: string): Promise<Custome
   const memberships = await getCurrentMemberships(user.id);
 
   const isAdmin = memberships.some((membership) => isAdminRole(membership.role));
-  const isMemberOfThisCustomer = memberships.some(
-    (membership) => isStoreRole(membership.role) && membership.customerId === customerId,
-  );
 
-  if (!isAdmin && !isMemberOfThisCustomer) {
+  // Faz 36: karar tests/dashboard-home.test.ts'te sabitlenen saf yardımcıda.
+  if (!canAccessCustomer(memberships, customerId)) {
     notFound();
   }
 

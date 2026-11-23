@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Users, Globe, CheckCircle2 } from "lucide-react";
 import { loadRoleContext } from "@/lib/auth/require-role";
+import { resolveDashboardHome, storeUserHomeHref } from "@/lib/auth/dashboard-home";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/ui/stat-card";
 
@@ -14,9 +15,13 @@ import { StatCard } from "@/components/ui/stat-card";
  *    customer list at /dashboard/customers. Counts use
  *    `{count: "exact", head: true}` so this stays cheap even as the
  *    number of rows grows — no row data is fetched just to count it.
- *  - Customer with exactly one customer_users row: redirected straight
- *    to their own `/dashboard/customers/[customerId]` — they never see
- *    a list, because there's only ever one thing for them to see.
+ *  - Store user (store_admin / store_editor / store_viewer, via
+ *    `isStoreRole`) bound to exactly one customer: redirected straight to
+ *    that customer's only store panel
+ *    (`/dashboard/customers/[customerId]/stores/[storeId]`), or to the
+ *    customer page if the customer has zero or several stores. Faz 36:
+ *    this used to compare the raw legacy `"customer"` role, so real
+ *    `store_admin` users fell through to "Erişim Bekleniyor".
  *  - Customer with more than one (future-proofing — not possible with
  *    today's data, but the schema allows a user to belong to more than
  *    one customer): a small picker instead of an automatic redirect.
@@ -25,9 +30,10 @@ import { StatCard } from "@/components/ui/stat-card";
  *    message, not an empty dashboard that looks broken.
  */
 export default async function DashboardOverviewPage() {
-  const { isAdmin, memberships } = await loadRoleContext();
+  const { memberships } = await loadRoleContext();
+  const home = resolveDashboardHome(memberships);
 
-  if (isAdmin) {
+  if (home.kind === "admin") {
     const supabase = await createSupabaseServerClient();
     const [customerCount, websiteCount, activeWebsiteCount] = await Promise.all([
       supabase.from("customers").select("id", { count: "exact", head: true }),
@@ -61,15 +67,21 @@ export default async function DashboardOverviewPage() {
     );
   }
 
-  const customerMemberships = memberships.filter(
-    (membership) => membership.role === "customer" && membership.customerId,
-  );
-
-  if (customerMemberships.length === 1) {
-    redirect(`/dashboard/customers/${customerMemberships[0].customerId}`);
+  if (home.kind === "single-customer") {
+    // RLS: mağaza kullanıcısı yalnız kendi müşterisinin mağazalarını görür.
+    const supabase = await createSupabaseServerClient();
+    const { data: stores } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("customer_id", home.customerId);
+    redirect(storeUserHomeHref(home.customerId, (stores ?? []).map((store) => store.id)));
   }
 
-  if (customerMemberships.length > 1) {
+  if (home.kind === "pick-customer") {
+    const supabase = await createSupabaseServerClient();
+    const { data: customers } = await supabase.from("customers").select("id, name").in("id", home.customerIds);
+    const nameById = new Map((customers ?? []).map((customer) => [customer.id, customer.name]));
+
     return (
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Web Siteleriniz</h1>
@@ -77,13 +89,13 @@ export default async function DashboardOverviewPage() {
           Birden fazla müşteriye bağlısınız, birini seçin.
         </p>
         <ul className="mt-6 divide-y divide-black/10 rounded-lg border border-black/10">
-          {customerMemberships.map((membership) => (
-            <li key={membership.customerId}>
+          {home.customerIds.map((customerId) => (
+            <li key={customerId}>
               <Link
-                href={`/dashboard/customers/${membership.customerId}`}
+                href={`/dashboard/customers/${customerId}`}
                 className="block px-4 py-3 text-sm hover:bg-black/5"
               >
-                {membership.customerId}
+                {nameById.get(customerId) ?? customerId}
               </Link>
             </li>
           ))}
