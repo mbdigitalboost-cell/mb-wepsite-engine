@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { getOwnStoreCustomerOrders } from "@/lib/commerce/public/order-lookup";
@@ -9,8 +9,6 @@ import { GuestOrderLookupForm } from "./guest-lookup-form";
 import { storeHref } from "@/lib/sites/store-href";
 
 export const dynamic = "force-dynamic";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * "Siparişlerim" — TEK route, dallanma sayfanın İÇİNDE (devir metninin

@@ -1,12 +1,10 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { SignupForm } from "./signup-form";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 5.1 — storefront customer signup. `force-dynamic` for the same

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Oswald, Barlow, JetBrains_Mono } from "next/font/google";
+// Faz 37 sonrası — fontlar self-hosted (next/font/local); derleme Google Fonts'a bağlı değil. Bkz. lib/fonts/store-fonts.ts.
+import { storeFontClassName, storeFontVariables } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
@@ -30,9 +31,6 @@ import { getReturnsEnabled } from "@/lib/commerce/returns/service";
  * `@theme inline` bloğundaki --font-store-display/body/mono -> Tailwind
  * font-store-* utility eşlemesiyle oluyor.
  */
-const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-store-display" });
-const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-store-body" });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-store-mono" });
 
 /**
  * Per-store tab title. Without this, every /store/[storeSlug]/** page
@@ -160,7 +158,7 @@ export default async function StoreLayout({
   const logoUrl = resolveStoreLogoUrl(storeSlug, profile?.logoUrl);
 
   return (
-    <div className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable} font-store-body`}>
+    <div className={`${storeFontClassName} font-store-body`} style={storeFontVariables}>
       <CartProvider storeSlug={storeSlug}>
         {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
         <StoreAnnouncementBar freeShippingClaim={freeShippingClaim(shippingSettings)} returnsEnabled={returnsEnabled} />

@@ -1,13 +1,11 @@
 "use client";
 
 import { useActionState, useId } from "react";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { updatePasswordAction } from "./actions";
 import { initialUpdatePasswordState } from "./form-state";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export function UpdatePasswordForm({ storeSlug }: { storeSlug: string }) {
   const [state, formAction, pending] = useActionState(

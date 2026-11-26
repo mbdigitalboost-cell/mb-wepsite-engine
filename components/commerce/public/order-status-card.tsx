@@ -1,13 +1,11 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { Truck } from "lucide-react";
 import type { PublicOrderWithItems } from "@/lib/commerce/public/order-lookup";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/commerce/order-status-labels";
 import { formatPrice } from "@/lib/utils/format-price";
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * "Siparişlerim" — tek, paylaşımlı sipariş kartı. HEM üye (kendi sipariş

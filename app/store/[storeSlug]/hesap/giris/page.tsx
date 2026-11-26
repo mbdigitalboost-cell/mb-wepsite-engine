@@ -1,14 +1,12 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { StoreLoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export default async function StoreLoginPage({ params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;

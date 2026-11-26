@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { Container } from "@/components/ui/container";
 import { UpdatePasswordForm } from "./update-password-form";
@@ -7,8 +7,6 @@ import { UpdatePasswordForm } from "./update-password-form";
 // Session-dependent (updatePasswordAction reads cookies via getUser()) —
 // see app/dashboard/layout.tsx for why this needs to be explicit.
 export const dynamic = "force-dynamic";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export default async function StoreUpdatePasswordPage({
   params,

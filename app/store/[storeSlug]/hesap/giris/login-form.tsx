@@ -3,13 +3,11 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { useActionState, useId } from "react";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { loginAction } from "../actions";
 import { initialStoreLoginState } from "../form-state";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export function StoreLoginForm({ storeSlug }: { storeSlug: string }) {
   const [state, formAction, pending] = useActionState(loginAction.bind(null, storeSlug), initialStoreLoginState);

@@ -1,15 +1,13 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
 import { Container } from "@/components/ui/container";
 import { formatPrice } from "@/lib/utils/format-price";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { logoutAction } from "./actions";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 const ORDER_STATUS_LABEL_TR: Record<OrderStatus, string> = {
   pending: "Beklemede",

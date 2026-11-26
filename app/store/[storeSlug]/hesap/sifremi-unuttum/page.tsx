@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { Container } from "@/components/ui/container";
 import { RequestResetForm } from "./request-reset-form";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 export default async function StorePasswordResetRequestPage({
   params,

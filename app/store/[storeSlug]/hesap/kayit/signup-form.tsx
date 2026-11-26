@@ -3,14 +3,12 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { useActionState, useId, useMemo, useState } from "react";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
+import { spaceGrotesk } from "@/lib/fonts/store-fonts";
 import { storefrontInputClasses } from "@/lib/utils/storefront-input-classes";
 import { storefrontButtonClasses } from "@/lib/utils/storefront-button-classes";
 import { PROVINCES, ProvinceDistrictSelect } from "@/components/commerce/public/location-select";
 import { signupAction } from "../actions";
 import { initialStoreSignupState } from "../form-state";
-
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
 
 /**
  * FAZ 5.1b — il/ilçe/mahalle/adres fields added, same set + same

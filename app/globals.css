@@ -44,8 +44,8 @@
    * Tailwind utility" deseni (--font-brand-heading -> font-brand-heading
    * gibi, bu dosyanın kendi önceki tokenları), ama ayrı bir isim alanıyla
    * (--font-store- önekiyle) — admin panelin --font-brand- tokenlarıyla/
-   * ThemeProvider'ıyla KARIŞMASIN. Gerçek font DOSYASI/DEĞERİ burada DEĞİL: next/font/google
-   * app/store/[storeSlug]/layout.tsx'te TEK seferde yükleniyor ve bu üç
+   * ThemeProvider'ıyla KARIŞMASIN. Gerçek font DOSYASI/DEĞERİ burada DEĞİL: self-hosted next/font/local
+   * (lib/fonts/store-fonts.ts), app/store/[storeSlug]/layout.tsx'te TEK seferde yükleniyor ve bu üç
    * CSS değişkenini SADECE storefront route ağacını saran bir wrapper'a
    * (className={oswald.variable} vb.) scoped olarak set ediyor — admin
    * panel/Petra bu değişkenleri hiç görmüyor, varsayılan olarak boş/unset
@@ -68,6 +68,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/* Mağaza hesap/sipariş başlıkları — eski Space_Grotesk({ weight: ["700"] }).className
+   karşılığı. --font-store-grotesk yalnız mağaza ağacında tanımlı
+   (app/store/[storeSlug]/layout.tsx, lib/fonts/store-fonts.ts). */
+.store-font-grotesk {
+  font-family: var(--font-store-grotesk);
+  font-weight: 700;
 }
 
 /* Respect the user's OS-level motion preference everywhere, without every
