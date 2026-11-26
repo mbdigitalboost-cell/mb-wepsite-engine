@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { serverEnv } from "@/lib/config/env";
 
 /**
  * Faz 30 — Siparişler bölümünün sekmeleri: Siparişler · İptal & İade
@@ -21,7 +22,12 @@ export async function OrdersTabs({ customerId, storeId, active }: { customerId: 
     { key: "report", label: "Satış Raporu", href: `${base}/sales-report` },
   ];
 
+  // Faz 37 Kısım E — e-posta sağlayıcısı (Resend) bağlı değilse iptal/iade
+  // e-postaları sessizce atlanır; admin bunu bilsin. Anahtarın kendisi okunmaz/gösterilmez.
+  const emailConnected = Boolean(serverEnv.resendApiKey);
+
   return (
+    <>
     <nav aria-label="Sipariş bölümleri" className="mt-4 flex flex-wrap gap-1 border-b border-black/10">
       {tabs.map((tab) => (
         <Link
@@ -39,5 +45,12 @@ export async function OrdersTabs({ customerId, storeId, active }: { customerId: 
         </Link>
       ))}
     </nav>
+    {!emailConnected ? (
+      <p role="status" className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>E-posta bağlı değil.</strong> Müşterilere iptal/iade bildirim e-postası gitmiyor; sipariş onay e-postası ise henüz yok.
+        Müşteri bilgilendirmesi şu an yalnızca mağaza ekranlarında (Siparişlerim) yapılıyor.
+      </p>
+    ) : null}
+    </>
   );
 }
