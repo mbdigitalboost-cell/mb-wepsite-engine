@@ -132,6 +132,9 @@ const spaceGroteskLatin = localFont({
   ],
   variable: "--font-store-grotesk-latin",
   display: "swap",
+  // Yalnız hesap/sipariş sayfalarında kullanılıyor; modül layout'ta yüklendiği
+  // için preload açık kalsa HER mağaza sayfası bu dosyayı önceden indirirdi.
+  preload: false,
 });
 const spaceGroteskLatinExt = localFont({
   src: [{ path: "./store/space-grotesk-700-latin-ext.woff2", weight: "700", style: "normal" }],

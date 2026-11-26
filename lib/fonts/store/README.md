@@ -15,8 +15,12 @@ indirmesi düştüğü için iki kez ERROR olmuştu).
   `next/font/google` derlemesinin indirdiği dosyaların birebir kopyasıdır
   (içerik değişmedi, yalnız adlandırıldı).
 - **Lisans:** dördü de SIL Open Font License 1.1 (OFL). OFL, fontların bir
-  web sitesiyle birlikte dağıtılmasına ve gömülmesine izin verir; font adı
-  değiştirilmeden satılamaz/ayrı ürün olarak dağıtılamaz.
+  web sitesiyle birlikte dağıtılmasına ve gömülmesine izin verir; tek başına
+  satılamaz. OFL, dosyalar dağıtılırken lisans metninin yanında durmasını
+  ister — her font için resmi metin bu klasörde:
+  `OFL-Oswald.txt`, `OFL-Barlow.txt`, `OFL-JetBrainsMono.txt`,
+  `OFL-SpaceGrotesk.txt` (kaynak: github.com/google/fonts `ofl/<font>/OFL.txt`;
+  telif satırları font dosyalarının içindeki telif kaydıyla birebir aynı).
 - **Türkçe:** ş, ğ, İ, Ş, Ğ latin-ext alt kümesindedir (ı latin'de). Her alt
   küme kendi `unicode-range`'iyle ayrı bir `localFont` çağrısıdır; mağaza
   sarmalayıcısındaki CSS değişkeni yığını `latin, latin-ext, yedek` sırasıyla
