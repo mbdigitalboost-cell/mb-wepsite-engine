@@ -447,8 +447,10 @@ const STATIC_TRUST_BADGES = [
 ];
 
 /** Faz 31 — ücretsiz kargo rozeti mağaza ayarından; iddia yoksa rozet gösterilmez. */
-export function TrustBadgesSection({ freeShippingClaim }: { freeShippingClaim: string | null }) {
-  const TRUST_BADGES = freeShippingClaim ? [{ Icon: Truck, label: freeShippingClaim }, ...STATIC_TRUST_BADGES] : STATIC_TRUST_BADGES;
+export function TrustBadgesSection({ freeShippingClaim, returnsEnabled }: { freeShippingClaim: string | null; returnsEnabled: boolean }) {
+  // Faz 37 Kısım D — "Kolay İade" yalnız iade açıkken (duyuru şeridiyle aynı kural).
+  const staticBadges = returnsEnabled ? STATIC_TRUST_BADGES : STATIC_TRUST_BADGES.filter((badge) => badge.label !== "Kolay İade");
+  const TRUST_BADGES = freeShippingClaim ? [{ Icon: Truck, label: freeShippingClaim }, ...staticBadges] : staticBadges;
   return (
     <div className="border-b border-[#292929] bg-[#0A0A0A] py-5">
       <Container className="flex flex-wrap items-center justify-center gap-y-3">

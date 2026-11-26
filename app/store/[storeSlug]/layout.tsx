@@ -17,6 +17,7 @@ import { CookieConsent } from "@/components/commerce/public/consent/cookie-conse
 import { getStoreTrackingSettings } from "@/lib/tracking/store-tracking-server";
 import { activeTools } from "@/lib/tracking/store-tracking";
 import { storeBase } from "@/lib/sites/store-href";
+import { getReturnsEnabled } from "@/lib/commerce/returns/service";
 
 /**
  * Site geneli tasarım sistemi — bu route ağacının TEK font yükleme noktası
@@ -135,6 +136,7 @@ export default async function StoreLayout({
     legalDocuments,
     seller,
     trackingSettings,
+    returnsEnabled,
   ] = await Promise.all([
     supabase.auth.getUser(),
     getPublicCategories(store.id),
@@ -144,6 +146,8 @@ export default async function StoreLayout({
     getSellerIdentity(store.id),
     // Faz 35 — bu mağazanın takip ayarı (başka mağazanın kimliği asla yüklenmez).
     getStoreTrackingSettings(store.id),
+    // Faz 37 — "Kolay İade" iddiası yalnız iade açıkken.
+    getReturnsEnabled(store.id),
   ]);
 
   // FAZ 6.1 — hamburger menu shows top-level categories only (a flat,
@@ -159,7 +163,7 @@ export default async function StoreLayout({
     <div className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable} font-store-body`}>
       <CartProvider storeSlug={storeSlug}>
         {/* FAZ 7.3 follow-up — site geneli, sabit içerikli duyuru şeridi; bkz. kendi dosyasının doc comment'i. */}
-        <StoreAnnouncementBar freeShippingClaim={freeShippingClaim(shippingSettings)} />
+        <StoreAnnouncementBar freeShippingClaim={freeShippingClaim(shippingSettings)} returnsEnabled={returnsEnabled} />
         <StoreHeader
           storeSlug={storeSlug}
           storeName={store.name}

@@ -14,15 +14,21 @@ import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
  * HEMEN ÜSTÜNDE render ediliyor — her storefront sayfasında görünür.
  * Sabit, onaylı metin; per-store veri yok, bu yüzden props almıyor.
  */
-const STATIC_ANNOUNCEMENT_ITEMS = ["Kolay İade", "Güvenli Ödeme", "Kendi Ürettiğimiz Kydex Kalitesi"];
+const STATIC_ANNOUNCEMENT_ITEMS = ["Güvenli Ödeme", "Kendi Ürettiğimiz Kydex Kalitesi"];
+/** Faz 37 Kısım D — yalnız mağazada iade AÇIKKEN gösterilir (store_return_settings.returns_enabled). */
+const RETURNS_CLAIM = "Kolay İade";
 
 /**
  * Faz 31 — "… TL Üzeri Ücretsiz Kargo" artık sabit kod değil: mağazanın kargo
  * ücreti ayarından (lib/commerce/shipping-fee.ts freeShippingClaim). Sınır
  * yoksa ya da kargo ücreti alınmıyorsa bu iddia hiç gösterilmez.
  */
-export function StoreAnnouncementBar({ freeShippingClaim }: { freeShippingClaim: string | null }) {
-  const ANNOUNCEMENT_ITEMS = freeShippingClaim ? [freeShippingClaim, ...STATIC_ANNOUNCEMENT_ITEMS] : STATIC_ANNOUNCEMENT_ITEMS;
+export function StoreAnnouncementBar({ freeShippingClaim, returnsEnabled }: { freeShippingClaim: string | null; returnsEnabled: boolean }) {
+  const ANNOUNCEMENT_ITEMS = [
+    ...(freeShippingClaim ? [freeShippingClaim] : []),
+    ...(returnsEnabled ? [RETURNS_CLAIM] : []),
+    ...STATIC_ANNOUNCEMENT_ITEMS,
+  ];
   return (
     <div className="border-b border-[#292929] bg-black print:hidden">
       <div className="mx-auto flex h-[34px] max-w-6xl flex-wrap items-center justify-center gap-x-3 px-4 text-center">

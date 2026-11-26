@@ -31,6 +31,22 @@ export interface ReturnSettings {
   address: string | null;
 }
 
+/**
+ * Faz 37 Kısım D — vitrindeki "Kolay İade" iddiası için yalnız açık/kapalı
+ * bilgisi (adres/kod gibi diğer alanlar okunmaz). Hata ya da kayıt yoksa
+ * false: iade kapalıyken iddia gösterilmez.
+ */
+export async function getReturnsEnabled(storeId: string): Promise<boolean> {
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin.from("store_return_settings").select("returns_enabled").eq("store_id", storeId).maybeSingle();
+    if (error) return false;
+    return data?.returns_enabled ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export async function getReturnSettings(storeId: string): Promise<ReturnSettings> {
   const admin = createSupabaseAdminClient();
   const { data } = await admin.from("store_return_settings").select("*").eq("store_id", storeId).maybeSingle();

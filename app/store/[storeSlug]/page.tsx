@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata, storePageUrl } from "@/lib/sites/store-metadata";
 import { onlineStoreJsonLd } from "@/lib/seo/store-structured-data";
+import { getReturnsEnabled } from "@/lib/commerce/returns/service";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getSellerIdentity } from "@/lib/legal/store-legal";
 import { resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
@@ -67,7 +68,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [mainNav, sections, allProducts, categories, brandsWithCounts, profile, shippingSettings] = await Promise.all([
+  const [mainNav, sections, allProducts, categories, brandsWithCounts, profile, shippingSettings, returnsEnabled] = await Promise.all([
     getPublicStoreNavigation(store.id, "main"),
     getPublicStoreHomepageSections(store.id),
     getPublicProducts(store.id),
@@ -79,6 +80,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
     getPublicBrandsWithProductCounts(store.id),
     getPublicStoreProfile(store.id),
     getShippingFeeSettings(store.id),
+    getReturnsEnabled(store.id),
   ]);
 
   // FAZ 7.3 follow-up — "cta" tipi section (bu mağazanın tek homepage
@@ -265,7 +267,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         duruyordu — buraya, kanvasın kendi konumuna taşındı (bileşenin
         kendisi silinmedi, SADECE çağrı sırası değişti).
       */}
-      <TrustBadgesSection freeShippingClaim={freeShippingClaim(shippingSettings)} />
+      <TrustBadgesSection freeShippingClaim={freeShippingClaim(shippingSettings)} returnsEnabled={returnsEnabled} />
 
       {/*
         FAZ 7.3 follow-up — hero'nun altındaki v2 bölümleri (görevin kendi
