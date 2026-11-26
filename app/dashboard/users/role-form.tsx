@@ -4,6 +4,7 @@ import { useActionState, useId, useState } from "react";
 import { changeUserRoleAction } from "./actions";
 import { initialRoleFormState } from "./form-state";
 import { isAdminRole } from "@/lib/auth/roles";
+import { submitWithoutReset } from "@/lib/utils/submit-without-reset";
 import type { AppRole } from "@/lib/supabase/types";
 
 const selectClasses =
@@ -43,7 +44,16 @@ export function RoleForm({ membershipId, currentRole, currentCustomerId, custome
   const formId = useId();
 
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2">
+    // Faz 37 — kontrollü rol seçimi otomatik form sıfırlamasında ilk seçeneğe dönmesin (bkz. submit-without-reset.ts).
+    <form
+      onSubmit={(event) => {
+        submitWithoutReset(formAction)(event);
+        // Şifre FormData'ya alındı; alanda kalmasın (eskiden otomatik sıfırlama temizliyordu).
+        const password = event.currentTarget.elements.namedItem("currentPassword");
+        if (password instanceof HTMLInputElement) password.value = "";
+      }}
+      className="flex flex-wrap items-center gap-2"
+    >
       <input type="hidden" name="membershipId" value={membershipId} />
       <select
         aria-label="Rol"

@@ -3,6 +3,7 @@
 import { createContext, useActionState, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { initialProductFormState, type ProductFormState } from "./form-state";
 import { CategoryPicker, type CategoryPickerOption } from "./category-picker";
+import { submitWithoutReset } from "@/lib/utils/submit-without-reset";
 
 /**
  * Faz 27 Kısım B — tek sayfa ürün formu (Shopify düzeni).
@@ -74,7 +75,8 @@ export function ProductFormRoot({
   const formId = useId();
   return (
     <ProductFormContext.Provider value={{ formId, state, pending }}>
-      <form id={formId} action={formAction} className="hidden" />
+      {/* Faz 37 — action özniteliği YOK: React 19 başarılı action sonrası formu sıfırlıyordu; istemci tarafı gezinmede kontrollü marka seçimi "— Yok —"a dönüp sonraki kayıtta markayı siliyordu (bkz. submit-without-reset.ts). */}
+      <form id={formId} onSubmit={submitWithoutReset(formAction)} className="hidden" />
       {children}
     </ProductFormContext.Provider>
   );
