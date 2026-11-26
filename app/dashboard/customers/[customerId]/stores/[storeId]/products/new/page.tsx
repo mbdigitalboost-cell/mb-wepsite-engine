@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import { createDraftProductAction } from "../actions";
+import { NewProductButton } from "../new-product-button";
 
 /**
  * Faz 27 Kısım B — eski /products/new adresi (yer imleri için). Sayfa
@@ -32,9 +32,7 @@ export default async function NewProductPage({ params }: { params: Promise<{ cus
           ekleyip hazır olunca &quot;Yayınla&quot;ya basarsınız.
         </p>
         <form action={createDraftProductAction.bind(null, customerId, storeId)} className="mt-4">
-          <Button type="submit" size="sm">
-            Taslak oluştur ve düzenle
-          </Button>
+          <NewProductButton label="Taslak oluştur ve düzenle" />
         </form>
       </div>
     </div>

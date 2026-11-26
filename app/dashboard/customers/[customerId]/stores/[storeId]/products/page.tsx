@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inputClasses } from "@/lib/utils/input-classes";
 import { LOW_STOCK_THRESHOLD } from "@/lib/commerce/inventory";
-import { bulkUpdateProductsAction, duplicateProductAction, createDraftProductAction } from "./actions";
+import { bulkUpdateProductsAction, duplicateProductAction, createDraftProductAction, cleanupEmptyDraftsAction } from "./actions";
+import { NewProductButton } from "./new-product-button";
+import { ConfirmSubmitButton } from "../returns/confirm-submit-button";
+import { loadEmptyDrafts } from "@/lib/commerce/draft-products-server";
 import { DuplicateProductButton } from "./duplicate-product-button";
 import { ProductSearchInput } from "./product-search-input";
 import { BulkActionControls } from "./bulk-action-controls";
@@ -34,6 +37,8 @@ interface ProductsSearchParams {
   /** Yalnızca bulkUpdateProductsAction'ın "deleteForever" redirect'inden gelir — buildQuery tarafından ASLA sayfalar arasında taşınmaz, tek seferlik bir banner. */
   bulkDeleted?: string;
   bulkSkipped?: string;
+  /** Faz 37 — cleanupEmptyDraftsAction sonucu (tek seferlik bilgi). */
+  taslakTemizlendi?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -101,7 +106,7 @@ export default async function StoreProductsPage({
 }) {
   const { customerId, storeId } = await params;
   const sp = await searchParams;
-  await requireStoreAccess(storeId, customerId);
+  const { isAdmin } = await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
   const { data: store } = await supabase
@@ -114,6 +119,8 @@ export default async function StoreProductsPage({
   // Faz 29 — toplu işlem onay metninde müşteri adı (yanlış müşteride işlem yapılmasın).
   const { data: scopeCustomer } = await supabase.from("customers").select("name").eq("id", customerId).maybeSingle();
   const scopeLabel = `${scopeCustomer?.name ?? "?"} · ${store.name}`;
+  // Faz 37 — hiç düzenlenmemiş, hiçbir şey bağlanmamış taslaklar (temizle düğmesi yalnız admin'e).
+  const emptyDrafts = isAdmin ? await loadEmptyDrafts(storeId) : [];
 
   const [{ data: categories }, { data: brands }] = await Promise.all([
     supabase.from("categories").select("id, name").eq("store_id", storeId).order("name", { ascending: true }),
@@ -198,12 +205,25 @@ export default async function StoreProductsPage({
           </Button>
           {/* Faz 27 — taslak satır POST ile oluşturulur, tek sayfa formuna gider. */}
           <form action={createDraftProductAction.bind(null, customerId, storeId)}>
-            <Button type="submit" size="sm">
-              Yeni Ürün
-            </Button>
+            <NewProductButton />
           </form>
         </div>
       </div>
+      {sp.taslakTemizlendi !== undefined ? (
+        <p className="mt-2 text-sm text-green-700">{scopeLabel}: {sp.taslakTemizlendi} boş taslak silindi.</p>
+      ) : null}
+      {emptyDrafts.length > 0 ? (
+        <form action={cleanupEmptyDraftsAction.bind(null, customerId, storeId)} className="mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground/70">
+          <span>
+            {emptyDrafts.length} boş taslak var (hiç düzenlenmemiş, görselsiz, siparişsiz: {emptyDrafts.map((draft) => draft.slug).join(", ")}).
+          </span>
+          <ConfirmSubmitButton
+            variant="outline"
+            label="Boş taslakları temizle"
+            confirmText={`${scopeLabel}\n\n${emptyDrafts.length} boş taslak kalıcı olarak silinsin mi? (Yalnız hiç düzenlenmemiş, görselsiz ve siparişsiz "Yeni ürün" taslakları.)`}
+          />
+        </form>
+      ) : null}
       <p className="mt-1 text-sm text-foreground/60">
         Ürün kataloğu. store_editor+ ekleyip düzenleyebilir; kalıcı silme (tekli veya toplu) store_admin+&apos;e ayrılmış ve
         sadece hiç sipariş edilmemiş ürünlerde mümkün.

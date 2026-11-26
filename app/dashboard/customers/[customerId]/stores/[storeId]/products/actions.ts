@@ -14,6 +14,8 @@ import { ensureBrandModelsExist } from "@/lib/commerce/brand-models";
 import { getProductOrderCount } from "@/lib/commerce/product-order-history";
 import { removeProductImageObject } from "@/lib/commerce/upload-product-image";
 import type { ProductFormState } from "./form-state";
+import { DRAFT_PRODUCT_NAME, findReusableDraft } from "@/lib/commerce/draft-products";
+import { draftIdsCreatedBy, loadDraftCandidates, loadEmptyDrafts } from "@/lib/commerce/draft-products-server";
 
 const INVALID_CATEGORY_MESSAGE = "Geçersiz kategori.";
 
@@ -234,6 +236,14 @@ export async function createDraftProductAction(customerId: string, storeId: stri
   const { user } = await requireStoreEditorAccess(storeId, customerId);
   const supabase = await createSupabaseServerClient();
 
+  // Faz 37 — aynı kullanıcının son 30 dakikada açtığı ve hiç dokunmadığı bir
+  // taslak varsa yenisini açma, ona git (çift tıklama / geri-ileri ile
+  // biriken boş taslaklar: 2026-11-23'te 3 saniyede 3 taslak).
+  const candidates = await loadDraftCandidates(storeId);
+  const own = await draftIdsCreatedBy(user.id, candidates.map((candidate) => candidate.id));
+  const reusable = findReusableDraft(candidates, own);
+  if (reusable) redirect(`/dashboard/customers/${customerId}/stores/${storeId}/products/${reusable.id}`);
+
   let productId: string | null = null;
   for (let attempt = 0; attempt < 3 && !productId; attempt++) {
     const suffix = randomBytes(3).toString("hex");
@@ -241,7 +251,7 @@ export async function createDraftProductAction(customerId: string, storeId: stri
       .from("products")
       .insert({
         store_id: storeId,
-        name: "Yeni ürün",
+        name: DRAFT_PRODUCT_NAME,
         slug: `taslak-${suffix}`,
         sku: `TASLAK-${suffix.toUpperCase()}`,
         price: 0,
@@ -810,4 +820,37 @@ export async function bulkUpdateProductsAction(customerId: string, storeId: stri
 
   revalidatePath(basePath);
   revalidateTag(storeProductsTag(storeId), "max");
+}
+
+/**
+ * Faz 37 — "Boş taslakları temizle" (store_admin+, kalıcı silme katmanı).
+ * Yalnız HİÇ düzenlenmemiş, görselsiz, varyantsız/seçeneksiz, eksiz,
+ * kategorisiz ve hiç sipariş edilmemiş taslaklar (isUntouchedDraft +
+ * bağlı kayıt sayısı 0). Her satır silinmeden önce sipariş sayısı yeniden
+ * kontrol edilir; store_id her sorguda.
+ */
+export async function cleanupEmptyDraftsAction(customerId: string, storeId: string): Promise<void> {
+  const { user } = await requireStoreAdminAccess(storeId, customerId);
+  const base = `/dashboard/customers/${customerId}/stores/${storeId}/products`;
+  const drafts = await loadEmptyDrafts(storeId);
+  const supabase = await createSupabaseServerClient();
+  const deleted: string[] = [];
+  for (const draft of drafts) {
+    if ((await getProductOrderCount(storeId, draft.id)) > 0) continue;
+    const { error } = await supabase.from("products").delete().eq("id", draft.id).eq("store_id", storeId).eq("is_active", false);
+    if (error) console.error("[products] empty draft delete failed:", error.message);
+    else deleted.push(draft.id);
+  }
+  if (deleted.length > 0) {
+    await logAuditEvent({
+      userId: user.id,
+      customerId,
+      action: "product.empty_drafts_cleanup",
+      entityType: "store",
+      entityId: storeId,
+      metadata: { deletedProductIds: deleted, slugs: drafts.filter((draft) => deleted.includes(draft.id)).map((draft) => draft.slug) },
+    });
+  }
+  revalidatePath(base);
+  redirect(`${base}?taslakTemizlendi=${deleted.length}`);
 }
