@@ -4,6 +4,7 @@ import { requireStoreEditorAccess } from "@/lib/auth/require-store-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStoreSubscribers, type SubscriberRow } from "@/lib/commerce/subscribers";
 import { countDiscountUsageForAdmin } from "@/lib/commerce/discounts";
+import { isDiscountExpired } from "@/lib/commerce/discount-rules";
 import { formatPrice } from "@/lib/utils/format-price";
 import { inputClasses } from "@/lib/utils/input-classes";
 import { serverEnv } from "@/lib/config/env";
@@ -32,6 +33,18 @@ interface ActiveDiscountRow {
   max_uses: number | null;
   /** Faz 12 devamı, migration 0037. NULL = şart yok. */
   min_order_amount: number | null;
+  /** NULL = süresiz. */
+  expires_at: string | null;
+}
+
+/** Faz 37 Kısım F — süresi dolmuş (hâlâ is_active) indirimler; checkout'la aynı kural. */
+function expiredDiscountIds(discounts: ActiveDiscountRow[]): Set<string> {
+  const now = new Date();
+  return new Set(discounts.filter((d) => isDiscountExpired(d.expires_at, now)).map((d) => d.id));
+}
+
+function formatTrDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul", day: "numeric", month: "long", year: "numeric" });
 }
 
 const SUCCESS_MESSAGES: Record<string, string> = {
@@ -70,7 +83,7 @@ export default async function StoreSubscribersPage({
   searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string }>;
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; indirim?: string }>;
 }) {
   const { customerId, storeId } = await params;
   const sp = await searchParams;
@@ -89,7 +102,7 @@ export default async function StoreSubscribersPage({
     getStoreSubscribers(supabase, storeId),
     supabase
       .from("customer_discounts")
-      .select("id, store_customer_id, guest_email, guest_phone, discount_type, code, value_type, value, max_uses, min_order_amount")
+      .select("id, store_customer_id, guest_email, guest_phone, discount_type, code, value_type, value, max_uses, min_order_amount, expires_at")
       .eq("store_id", storeId)
       .eq("is_active", true),
   ]);
@@ -125,6 +138,16 @@ export default async function StoreSubscribersPage({
     const key = (row.phone ?? row.email ?? "").toLowerCase();
     return discountByGuestKey.get(key) ?? null;
   }
+
+  // Faz 37 Kısım F — "süresi doldu" rozeti ve filtresi (?indirim=suresi-dolmus).
+  const expiredIds = expiredDiscountIds(activeDiscounts);
+  const expiredOnly = sp.indirim === "suresi-dolmus";
+  const subscribersWithExpired = subscribers.filter((row) => {
+    const d = findDiscountFor(row);
+    return d !== null && expiredIds.has(d.id);
+  });
+  const visibleSubscribers = expiredOnly ? subscribersWithExpired : subscribers;
+  const pageHref = `/dashboard/customers/${customerId}/stores/${storeId}/subscribers`;
 
   // Faz 33 — ticari elektronik ileti izni (siparişteki ayrı, opsiyonel onay; en son kayıt karar verir).
   const consentEvidence = await loadMarketingConsentEvidence(storeId);
@@ -170,12 +193,28 @@ export default async function StoreSubscribersPage({
         </p>
       ) : null}
 
-      {subscribers.length === 0 ? (
-        <p className="mt-6 text-sm text-foreground/60">Henüz abone yok.</p>
+      {subscribersWithExpired.length > 0 || expiredOnly ? (
+        <nav aria-label="İndirim filtresi" className="mt-4 flex flex-wrap gap-3 text-xs">
+          <Link href={pageHref} aria-current={!expiredOnly ? "page" : undefined} className={!expiredOnly ? "font-semibold text-foreground" : "text-foreground/60 hover:underline"}>
+            Tümü ({subscribers.length})
+          </Link>
+          <Link
+            href={`${pageHref}?indirim=suresi-dolmus`}
+            aria-current={expiredOnly ? "page" : undefined}
+            className={expiredOnly ? "font-semibold text-foreground" : "text-foreground/60 hover:underline"}
+          >
+            Süresi dolmuş indirim ({subscribersWithExpired.length})
+          </Link>
+        </nav>
+      ) : null}
+
+      {visibleSubscribers.length === 0 ? (
+        <p className="mt-6 text-sm text-foreground/60">{expiredOnly ? "Süresi dolmuş indirimi olan abone yok." : "Henüz abone yok."}</p>
       ) : (
         <ul className="mt-6 space-y-3">
-          {subscribers.map((row) => {
+          {visibleSubscribers.map((row) => {
             const discount = findDiscountFor(row);
+            const discountExpired = discount !== null && expiredIds.has(discount.id);
             const consent = marketingConsentStatus({ email: row.email, phone: row.phone }, consentEvidence);
             return (
               <li key={row.key} className="rounded-lg border border-black/10 p-4">
@@ -207,13 +246,19 @@ export default async function StoreSubscribersPage({
                 {discount ? (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-black/10 bg-black/[0.02] p-2.5 text-xs">
                     <span className="text-foreground/80">
-                      Aktif indirim: {discount.value_type === "percentage" ? `%${discount.value}` : formatPrice(Number(discount.value))}{" "}
+                      {discountExpired ? (
+                        <span className="mr-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">Süresi doldu</span>
+                      ) : null}
+                      {discountExpired ? "İndirim" : "Aktif indirim"}: {discount.value_type === "percentage" ? `%${discount.value}` : formatPrice(Number(discount.value))}{" "}
                       ({discount.discount_type === "code" ? `kod: ${discount.code}` : "otomatik"})
                       {discount.max_uses !== null ? (
                         <> · {usageByDiscountId.get(discount.id) ?? 0}/{discount.max_uses} kullanıldı</>
                       ) : null}
                       {discount.min_order_amount !== null ? (
                         <> · {formatPrice(Number(discount.min_order_amount))} üzeri</>
+                      ) : null}
+                      {discount.expires_at ? (
+                        <> · bitiş: {formatTrDay(discount.expires_at)}</>
                       ) : null}
                     </span>
                     <form action={deactivateDiscount.bind(null, discount.id)}>

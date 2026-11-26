@@ -6,6 +6,7 @@ import { requireStoreAdminAccess, requireStoreEditorAccess } from "@/lib/auth/re
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { contactIsKnown, rowBelongsToStore, type OwnershipQueryClient } from "@/lib/auth/tenant-scope";
 import { logAuditEvent } from "@/lib/auth/audit-log";
+import { discountExpiresAtFromDay } from "@/lib/commerce/discount-rules";
 import { sendEmail } from "@/lib/notifications/send-email";
 import { sendWhatsappMessage } from "@/lib/notifications/send-whatsapp";
 import { loadMarketingConsentEvidence } from "@/lib/legal/admin-legal";
@@ -114,7 +115,7 @@ export async function createDiscountAction(customerId: string, storeId: string, 
     code: discountType === "code" ? (manualCode || generateDiscountCode()).toUpperCase() : null,
     value_type: valueType,
     value: rawValue,
-    expires_at: rawExpiresAt ? new Date(rawExpiresAt).toISOString() : null,
+    expires_at: discountExpiresAtFromDay(rawExpiresAt),
     max_uses: maxUses,
     min_order_amount: minOrderAmount,
     created_by: user.id,

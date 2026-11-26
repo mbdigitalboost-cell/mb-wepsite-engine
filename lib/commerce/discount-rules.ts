@@ -160,7 +160,7 @@ export async function resolveDiscount(ds: DiscountDataSource, request: DiscountR
     const rows = await ds.listActiveCodes(storeId);
     if (!rows) return { status: "invalid_code" };
     const match = rows.find(
-      (row) => row.discount_type === "code" && normalizeDiscountCode(row.code) === code && (!row.expires_at || new Date(row.expires_at) > now),
+      (row) => row.discount_type === "code" && normalizeDiscountCode(row.code) === code && !isDiscountExpired(row.expires_at, now),
     );
     if (!match) return { status: "invalid_code" };
 
@@ -179,7 +179,7 @@ export async function resolveDiscount(ds: DiscountDataSource, request: DiscountR
   if (!storeCustomerId) return { status: "none" };
   const autoRow = await ds.findActiveAuto(storeId, storeCustomerId);
   if (!autoRow) return { status: "none" };
-  if (autoRow.expires_at && new Date(autoRow.expires_at) <= now) return { status: "none" };
+  if (isDiscountExpired(autoRow.expires_at, now)) return { status: "none" };
   // 'auto' pasif bir avantaj — görünmeyen bir şart yüzünden hata gösterilmez.
   return checkLimitsAndBuild(ds, autoRow, subtotal, true);
 }
@@ -209,4 +209,25 @@ export function discountErrorMessage(resolution: DiscountResolution, subtotal: n
     case "invalid_code":
       return GENERIC_CODE_ERROR;
   }
+}
+
+/**
+ * Faz 37 Kısım F — indirimin süresi doldu mu? Checkout (yukarıda) ve admin
+ * "süresi doldu" rozeti AYNI kuralı kullanır: bitiş anı geldiyse/geçtiyse
+ * geçersiz; bitiş yoksa (NULL) süresiz.
+ */
+/**
+ * Faz 37 Kısım F — admin formundaki "Son geçerlilik tarihi" (YYYY-MM-DD) o
+ * günün SONUNA (Türkiye saati, UTC+3 sabit) çevrilir. Önceden
+ * `new Date("YYYY-MM-DD")` UTC gece yarısıydı → kod seçilen gün 03:00'te
+ * bitiyordu (son gün fiilen geçersizdi). Boş/geçersiz → NULL (süresiz).
+ */
+export function discountExpiresAtFromDay(day: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const end = new Date(`${day}T23:59:59.999+03:00`);
+  return Number.isNaN(end.getTime()) ? null : end.toISOString();
+}
+
+export function isDiscountExpired(expiresAt: string | null, now: Date): boolean {
+  return expiresAt !== null && new Date(expiresAt) <= now;
 }
