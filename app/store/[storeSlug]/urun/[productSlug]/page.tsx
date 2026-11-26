@@ -1,7 +1,10 @@
 import { storeBase, storeHref } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { buildStorePageMetadata, shareImageVersion } from "@/lib/sites/store-metadata";
+import { buildStorePageMetadata, shareImageVersion, storePageUrl } from "@/lib/sites/store-metadata";
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/store-structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+import { variantEffectivePrice } from "@/lib/commerce/pricing";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
@@ -177,8 +180,34 @@ export default async function StoreProductPage({
     attachPrimaryImages(store.id, similarProducts),
   ]);
 
+  // Faz 37 — Product + Offer (vitrin fiyatı Faz 34, TRY, stok, kalıcı paylaşım görseli,
+  // SKU/GTIN=barkod, marka) ve BreadcrumbList. Puan/yorum YOK.
+  const productUrl = storePageUrl(storeSlug, `/urun/${product.slug}`);
+  const effectivePrices = variants.map((variant) => variantEffectivePrice(product.price, product.compareAtPrice, variant).price);
+  const inStock = variants.length > 0 ? variants.some((variant) => variant.inStock) : !inventory?.trackInventory || (inventory?.stock ?? 0) > 0;
+  const productStructured = productJsonLd({
+    name: product.name,
+    description: product.seoDescription ?? product.shortDescription,
+    url: productUrl,
+    image: storePageUrl(storeSlug, `/paylasim/urun/${product.slug}?v=${shareImageVersion(product.name, product.display.price, product.display.compareAtPrice)}`),
+    sku: inventory?.sku ?? null,
+    barcode: inventory?.barcode ?? null,
+    brandName: product.brand?.name ?? null,
+    price: product.display.price,
+    highPrice: effectivePrices.length > 0 ? Math.max(...effectivePrices) : null,
+    inStock,
+    sellerName: store.name,
+  });
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Ana Sayfa", url: storePageUrl(storeSlug, "") },
+    ...(category ? [{ name: category.name, url: storePageUrl(storeSlug, `/kategori/${category.slug}`) }] : []),
+    { name: product.name, url: productUrl },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] pb-24 lg:pb-0">
+      <JsonLd data={productStructured} />
+      <JsonLd data={breadcrumb} />
       <Container className="py-10">
         <nav aria-label="Breadcrumb" className={`${storefrontMonoClasses} flex flex-wrap items-center gap-1.5 text-xs text-[#6B6B6B]`}>
           <Link href={storeHref(storeSlug)} className="hover:text-[#F5F5F5] hover:underline">

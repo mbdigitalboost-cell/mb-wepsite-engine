@@ -14,7 +14,13 @@ import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/sto
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: "/silahini-sec", title: "Silahını Seç", imagePath: "/paylasim" });
+  return buildStorePageMetadata({
+    storeSlug,
+    path: "/silahini-sec",
+    title: "Silahını Seç",
+    description: "Silah markanızı ve modelinizi seçin, uyumlu kılıf ve ekipmanları görün.",
+    imagePath: "/paylasim",
+  });
 }
 
 /**

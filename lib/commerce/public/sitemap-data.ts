@@ -5,6 +5,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import type { SitemapRecord } from "@/lib/sites/store-sitemap";
 import { getPublishedLegalDocuments, getSellerIdentity } from "@/lib/legal/store-legal";
 import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
+import { getCategoriesWithActiveProducts } from "@/lib/seo/category-coverage-server";
 
 /**
  * Faz 28 — mağaza sitemap'i için ham kayıtlar. Diğer public okumalarla
@@ -24,7 +25,7 @@ export async function getStoreSitemapRecords(storeSlug: string): Promise<{
   const client = createSupabasePublicClient();
 
   const [categoriesResult, productsResult] = await Promise.all([
-    client.from("categories").select("slug, is_active, updated_at").eq("store_id", store.id).eq("is_active", true),
+    client.from("categories").select("id, slug, is_active, updated_at").eq("store_id", store.id).eq("is_active", true),
     client.from("products").select("slug, is_active, updated_at, brand_id").eq("store_id", store.id).eq("is_active", true),
   ]);
   if (categoriesResult.error) console.error("[sitemap] categories failed:", categoriesResult.error.message);
@@ -49,9 +50,14 @@ export async function getStoreSitemapRecords(storeSlug: string): Promise<{
   const [legalDocuments, seller] = await Promise.all([getPublishedLegalDocuments(store.id), getSellerIdentity(store.id)]);
   const legalPaths = LEGAL_PAGE_LINKS.filter((link) => (link.kind ? legalDocuments.has(link.kind) : Boolean(seller))).map((link) => link.path);
 
+  // Faz 37 — aktif ürünü (kendisinde ya da alt kategorisinde) olmayan kategori sitemap'e girmez.
+  const filled = await getCategoriesWithActiveProducts(store.id);
+
   return {
     legalPaths,
-    categories: (categoriesResult.data ?? []).map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at })),
+    categories: (categoriesResult.data ?? [])
+      .filter((row) => filled === null || filled.has(row.id))
+      .map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at })),
     products: productRows.map((row) => ({ slug: row.slug, isActive: row.is_active, updatedAt: row.updated_at })),
     brands,
   };

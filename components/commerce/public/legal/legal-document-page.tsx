@@ -6,7 +6,15 @@ import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 import type { LegalDocumentKind } from "@/lib/supabase/types";
 import { LegalMarkdown } from "./legal-markdown";
+import { buildStorePageMetadata, storePageUrl } from "@/lib/sites/store-metadata";
+import { breadcrumbJsonLd, fallbackDescription } from "@/lib/seo/store-structured-data";
+import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
+import { JsonLd } from "@/components/seo/json-ld";
 import { PrintButton } from "./print-button";
+
+function legalPath(kind: LegalDocumentKind): string {
+  return LEGAL_PAGE_LINKS.find((link) => link.kind === kind)?.path ?? "/";
+}
 
 /**
  * Faz 33 — mağazanın yayımlanmış yasal metnini (son sürüm) mağaza
@@ -19,7 +27,16 @@ export async function legalDocumentMetadata(storeSlug: string, kind: LegalDocume
   const store = await getStoreBySlug(storeSlug);
   if (!store) return {};
   const document = (await getPublishedLegalDocuments(store.id)).get(kind);
-  return document ? { title: { absolute: `${document.title} | ${store.name}` } } : {};
+  if (!document) return {};
+  // Faz 37 — diğer mağaza sayfalarıyla aynı desen: canonical, og:image, açıklama.
+  return buildStorePageMetadata({
+    storeSlug,
+    path: legalPath(kind),
+    storeName: store.name,
+    title: document.title,
+    description: fallbackDescription(document.title, store.name),
+    imagePath: "/paylasim",
+  });
 }
 
 export async function LegalDocumentPage({ storeSlug, kind, printable = false }: { storeSlug: string; kind: LegalDocumentKind; printable?: boolean }) {
@@ -30,8 +47,14 @@ export async function LegalDocumentPage({ storeSlug, kind, printable = false }: 
   if (!document) notFound();
   const rendered = renderPublishedDocument(document, context);
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Ana Sayfa", url: storePageUrl(storeSlug, "") },
+    { name: rendered.title, url: storePageUrl(storeSlug, legalPath(kind)) },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] print:bg-white">
+      <JsonLd data={breadcrumb} />
       <Container className="max-w-3xl py-10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className={`${storefrontDisplayClasses} text-2xl font-bold tracking-tight text-[#F5F5F5] print:text-black`}>{rendered.title}</h1>

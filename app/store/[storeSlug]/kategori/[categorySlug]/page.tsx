@@ -1,7 +1,10 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { buildStorePageMetadata, shareImageVersion } from "@/lib/sites/store-metadata";
+import { buildStorePageMetadata, shareImageVersion, storePageUrl } from "@/lib/sites/store-metadata";
+import { getCategoriesWithActiveProducts } from "@/lib/seo/category-coverage-server";
+import { breadcrumbJsonLd, fallbackDescription } from "@/lib/seo/store-structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -19,12 +22,15 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const store = await getStoreBySlug(storeSlug);
   const category = store ? await getPublicCategoryBySlug(store.id, categorySlug) : null;
   if (!store || !category) return {};
+  // Faz 37 — aktif ürünü (kendisinde ya da alt kategorisinde) olmayan kategori noindex; ürün gelince kendiliğinden kalkar.
+  const filled = await getCategoriesWithActiveProducts(store.id);
   return buildStorePageMetadata({
     storeSlug,
     path: `/kategori/${category.slug}`,
     storeName: store.name,
     title: category.seoTitle ?? category.name,
-    description: category.seoDescription ?? category.description,
+    description: category.seoDescription?.trim() || category.description?.trim() || fallbackDescription(category.name, store.name),
+    noindex: filled !== null && !filled.has(category.id),
     imagePath: `/paylasim/kategori/${category.slug}?v=${shareImageVersion(category.name)}`,
   });
 }
@@ -120,8 +126,16 @@ export default async function StoreCategoryPage({
         }),
   ]);
 
+  // Faz 37 — BreadcrumbList (Ana Sayfa → Kategoriler → kategori).
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Ana Sayfa", url: storePageUrl(storeSlug, "") },
+    { name: "Kategoriler", url: storePageUrl(storeSlug, "/kategoriler") },
+    { name: category.name, url: storePageUrl(storeSlug, `/kategori/${category.slug}`) },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
+      <JsonLd data={breadcrumb} />
       <Container className="py-10">
         {/*
           Tasarım kanvası (Kategori.dc.html) — görsel varsa başlık/açıklama

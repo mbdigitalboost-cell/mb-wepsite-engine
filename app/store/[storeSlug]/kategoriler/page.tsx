@@ -2,6 +2,7 @@ import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
+import { fallbackDescription } from "@/lib/seo/store-structured-data";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
@@ -14,7 +15,15 @@ import { CategoryImageCard } from "@/components/commerce/public/taktikalp46-home
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: "/kategoriler", title: "Tüm Kategoriler", imagePath: "/paylasim" });
+  const store = await getStoreBySlug(storeSlug);
+  return buildStorePageMetadata({
+    storeSlug,
+    path: "/kategoriler",
+    storeName: store?.name,
+    title: "Tüm Kategoriler",
+    description: store ? fallbackDescription("Tüm kategoriler", store.name) : null,
+    imagePath: "/paylasim",
+  });
 }
 
 /**

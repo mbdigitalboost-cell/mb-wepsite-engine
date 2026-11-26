@@ -7,6 +7,7 @@ import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
 import { storeBase } from "@/lib/sites/store-href";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
+import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
 
 /**
  * Faz 33 — mağazanın kendi İletişim ve satıcı kimliği sayfası (6563 ETK m.3
@@ -18,7 +19,10 @@ import { Container } from "@/components/ui/container";
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
   const store = await getStoreBySlug(storeSlug);
-  return store ? { title: { absolute: `İletişim | ${store.name}` } } : {};
+  // Faz 37 — canonical, og:image, açıklama.
+  return store
+    ? buildStorePageMetadata({ storeSlug, path: "/iletisim", storeName: store.name, title: "İletişim", description: `${store.name} iletişim ve satıcı bilgileri.`, imagePath: "/paylasim" })
+    : {};
 }
 
 export default async function StoreContactPage({ params }: { params: Promise<{ storeSlug: string }> }) {

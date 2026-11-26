@@ -14,6 +14,12 @@ import { buildStoreHref } from "@/lib/sites/store-paths";
  * URL ile geliyor; paylaşım önizlemesine süresi dolan adres koymak yerine
  * ayrı bir fazda kalıcı bir OG görseli üretilmeli.
  */
+/** Faz 37 — mağaza sayfasının mutlak (kanonik) adresi; JSON-LD breadcrumb ve ürün url'i için. */
+export function storePageUrl(storeSlug: string, path: string): string {
+  const site = findStoreSiteBySlug(storeSlug);
+  return site ? `${site.canonicalOrigin}${buildStoreHref(storeSlug, storeSlug, path)}` : buildStoreHref(undefined, storeSlug, path);
+}
+
 export function buildStorePageMetadata(input: {
   storeSlug: string;
   /** "/store/<slug>" sonrası yol: "" (ana sayfa), "/kategoriler", "/urun/x" ... */
@@ -27,6 +33,8 @@ export function buildStorePageMetadata(input: {
    * twitter:card=summary_large_image eklenir.
    */
   imagePath?: string;
+  /** Faz 37 — aktif ürünü olmayan kategori gibi sayfalar: noindex (bağlantılar izlenir). */
+  noindex?: boolean;
 }): Metadata {
   const site = findStoreSiteBySlug(input.storeSlug);
   // Faz 29 — kanonik adres her zaman mağazanın kendi domaininde TEMİZ yol
@@ -50,6 +58,7 @@ export function buildStorePageMetadata(input: {
   const images = imageUrl ? [{ url: imageUrl, width: 1200, height: 630, type: "image/jpeg", alt: fullTitle ?? siteName ?? "" }] : undefined;
 
   return {
+    ...(input.noindex ? { robots: { index: false, follow: true } } : {}),
     ...(fullTitle ? { title: { absolute: fullTitle } } : {}),
     ...(description ? { description } : {}),
     alternates: { canonical: url },

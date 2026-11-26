@@ -1,7 +1,11 @@
 import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { buildStorePageMetadata } from "@/lib/sites/store-metadata";
+import { buildStorePageMetadata, storePageUrl } from "@/lib/sites/store-metadata";
+import { onlineStoreJsonLd } from "@/lib/seo/store-structured-data";
+import { JsonLd } from "@/components/seo/json-ld";
+import { getSellerIdentity } from "@/lib/legal/store-legal";
+import { resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
 import Image from "next/image";
 import Link from "next/link";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
@@ -30,7 +34,16 @@ import {
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  return buildStorePageMetadata({ storeSlug, path: "", imagePath: "/paylasim" });
+  // Faz 37 — açıklama admin → Profil'deki mağaza açıklamasından; boşsa mağaza adıyla kısa, uydurmasız bir cümle.
+  const store = await getStoreBySlug(storeSlug);
+  const profile = store ? await getPublicStoreProfile(store.id) : null;
+  return buildStorePageMetadata({
+    storeSlug,
+    path: "",
+    storeName: store?.name,
+    description: profile?.description?.trim() || (store ? `${store.name} çevrimiçi mağazası.` : null),
+    imagePath: "/paylasim",
+  });
 }
 
 /**
@@ -100,8 +113,24 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
       ? profile.socialLinks.instagram
       : null;
 
+  // Faz 37 — OnlineStore yapısal verisi: satıcı kimliği (Faz 33) + profil; puan/yorum yok.
+  const seller = await getSellerIdentity(store.id);
+  const logo = resolveStoreLogoUrl(storeSlug, profile?.logoUrl);
+  const homeUrl = storePageUrl(storeSlug, "");
+  const storeJsonLd = onlineStoreJsonLd({
+    name: store.name,
+    legalName: seller?.legalName ?? null,
+    url: homeUrl,
+    logo: logo ? (logo.startsWith("http") ? logo : new URL(logo, homeUrl).toString()) : null,
+    telephone: seller?.phone ?? profile?.phone ?? null,
+    email: seller?.email ?? profile?.email ?? null,
+    address: seller?.address ?? profile?.address ?? null,
+    sameAs: instagramUrl ? [instagramUrl] : [],
+  });
+
   return (
     <div>
+      <JsonLd data={storeJsonLd} />
       {mainNav.length > 0 ? (
         <Container className="py-6">
           <nav className="flex flex-wrap gap-4 text-sm">
