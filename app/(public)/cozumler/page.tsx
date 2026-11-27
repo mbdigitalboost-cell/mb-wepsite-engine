@@ -3,7 +3,7 @@ import { Solutions } from "@/components/sections/solutions";
 import { petraSolutions } from "@/lib/data/petra/solutions";
 import { getSolutions } from "@/lib/cms/adapters";
 import { isCmsRow, mapSolutionRows } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { SolutionRow } from "@/lib/cms/customer-types";
@@ -26,7 +26,7 @@ const staticMetadata: Metadata = {
 // Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 // Solutions renders its own heading ("İhtiyacınıza Uygun İklimlendirme

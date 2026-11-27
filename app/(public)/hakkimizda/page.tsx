@@ -12,7 +12,7 @@ import { petraContactInfo } from "@/lib/data/petra/site-config";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
@@ -32,7 +32,7 @@ const staticMetadata: Metadata = {
 // olduğu gibi kullanır (bkz. lib/seo/build-metadata.ts).
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 /**

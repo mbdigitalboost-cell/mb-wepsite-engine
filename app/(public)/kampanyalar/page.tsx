@@ -6,7 +6,8 @@ import { Campaigns } from "@/components/sections/campaigns";
 import { petraCampaigns } from "@/lib/data/petra/campaigns";
 import { getCampaigns } from "@/lib/cms/adapters";
 import { isCmsRow, mapCampaignRows } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraStaticPageSeoDescriptions } from "@/lib/data/petra/seo-descriptions";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { CampaignRow } from "@/lib/cms/customer-types";
@@ -21,14 +22,14 @@ export const revalidate = 300;
 
 const staticMetadata: Metadata = {
   title: "Kampanyalar",
-  description: "Petra Mühendislik güncel kampanyaları.",
+  description: petraStaticPageSeoDescriptions.kampanyalar,
   alternates: { canonical: "/kampanyalar" },
 };
 
 // Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 // Phase 9.2: CMS-first, static petraCampaigns (empty by design) as

@@ -36,7 +36,7 @@ import {
 import { JsonLd } from "@/components/seo/json-ld";
 import { getHero, getSolutions, getTestimonials, getFaqs, getSiteSettings, getProductShowcaseItems, getBrands, getClientReferences, getProjects, getCampaigns } from "@/lib/cms/adapters";
 import { isCmsRow, mapHeroRow, mapSolutionRows, mapTestimonialRows, mapFaqRows, mapSiteSettingsWhatsapp, mapProductShowcaseRows, mapBrandRows, mapClientReferenceRows, mapProjectRows, mapCampaignRows } from "@/lib/cms/petra/mappers";
-import { resolveSiteWideSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { resolveSiteWideSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import type { SolutionRow, TestimonialRow, FaqRow, HeroSectionRow, SiteSettingsRow, ProductShowcaseItemRow, BrandRow, ClientReferenceRow, ProjectRow, CampaignRow } from "@/lib/cms/customer-types";
 
 const PETRA_CONNECTION_KEY = "PETRA";
@@ -87,7 +87,7 @@ const staticMetadata: Metadata = {
 // CMS-first, static `staticMetadata` as fallback for every field.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveSiteWideSeo(PETRA_CONNECTION_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), "/");
 }
 
 /**

@@ -15,6 +15,7 @@ import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getTrackingPublicSettings, getNavigation, getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
 import { resolveSiteWideSeo, applyLayoutSeoOverrides } from "@/lib/seo/build-metadata";
+import { applyPetraShareImage } from "@/lib/seo/petra-share-image";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
 import type { BrandTheme } from "@/lib/theme/types";
 
@@ -62,7 +63,7 @@ const staticMetadata: Metadata = {
     description: petraDefaultDescription,
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: petraDefaultTitle,
     description: petraDefaultDescription,
   },
@@ -81,7 +82,14 @@ export async function generateMetadata(): Promise<Metadata> {
     resolveSiteWideSeo(PETRA_CONNECTION_KEY),
     getSiteSettingsCached(PETRA_CONNECTION_KEY),
   ]);
-  const metadata = applyLayoutSeoOverrides(staticMetadata, seo);
+  // Petra SEO iyileştirme — güvenlik ağı: bugün her public sayfa paylaşım
+  // görselini kendi generateMetadata()'sında (withPetraShareImage) veriyor.
+  // İleride bunu unutan bir sayfa eklenirse görselsiz kalmasın diye layout
+  // varsayılanı da dolu: CMS'in site geneli görseli, yoksa ana sayfa görseli.
+  const metadata = applyPetraShareImage(applyLayoutSeoOverrides(staticMetadata, seo), {
+    pagePath: "/",
+    siteName: petraSiteName,
+  });
   // Faz 6F-2: `getSiteSettings` (fetchPublishedSingle) already filters to
   // `status='published'` — a draft site_settings row never reaches this
   // point at all, so no separate draft check is needed here. `favicon`

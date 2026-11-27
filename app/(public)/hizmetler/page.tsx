@@ -9,7 +9,8 @@ import { petraServiceOfferings } from "@/lib/data/petra/service-offerings";
 import { petraServiceOfferingIcons, petraServiceOfferingIconFallback } from "@/lib/data/petra/service-offering-icons";
 import { getServices } from "@/lib/cms/adapters";
 import { isCmsRow, mapServiceRows } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraStaticPageSeoDescriptions } from "@/lib/data/petra/seo-descriptions";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Icon } from "@/components/ui/icon";
@@ -25,14 +26,14 @@ export const revalidate = 300;
 
 const staticMetadata: Metadata = {
   title: "Hizmetler",
-  description: "Satış, keşif, projelendirme, kurulum ve teknik servis — uçtan uca iklimlendirme hizmeti.",
+  description: petraStaticPageSeoDescriptions.hizmetler,
   alternates: { canonical: "/hizmetler" },
 };
 
 // Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 // Phase 9.2: CMS-first, static petraServices as fallback — same pattern

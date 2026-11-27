@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { getSeo } from "@/lib/cms/adapters";
 import type { SeoSettingsRow } from "@/lib/cms/customer-types";
 import { petraSiteName } from "@/lib/data/petra/site-config";
+import { petraSolutionSeoDescription } from "@/lib/data/petra/seo-descriptions";
+import { applyPetraShareImage } from "@/lib/seo/petra-share-image";
 
 /**
  * Resolves the CUSTOMER'S site-wide `seo_settings` row (page_id IS NULL
@@ -50,6 +52,8 @@ export async function resolveStaticPageSeo(connectionKey: string, routeKey: stri
 
 /** Input shape for resolveSolutionSeo() — kept independent of PetraSolution so this file doesn't need to import lib/data/petra/types.ts. */
 export interface SolutionSeoInput {
+  /** Petra SEO iyileştirme — kod içi açıklama eşlemesinin anahtarı (lib/data/petra/seo-descriptions.ts). */
+  slug: string;
   seoTitle: string | null | undefined;
   seoDescription: string | null | undefined;
   seoOgImage: string | null | undefined;
@@ -106,12 +110,20 @@ export interface ResolvedSolutionSeo {
  * resolver'ın parçası DEĞİL — canonical slug-türetilmiş kalıyor
  * (`/cozumler/${slug}`), robots root public layout'tan miras kalıyor;
  * ikisi de ne solution ne site-wide satır tarafından override edilmemeli.
+ *
+ * Petra SEO iyileştirme — `description` zincirine bir ara adım eklendi:
+ * CMS'teki `seo_description` (admin girdisi) YİNE önce gelir; o boşsa
+ * artık kart özetine düşmeden önce slug'a göre kod içi SEO açıklamasına
+ * (lib/data/petra/seo-descriptions.ts) bakılır. Kart özeti 53 karakter
+ * civarında bir slogandı ("Yüksek performans ve sessiz çalışma ile ideal
+ * konfor.") — kartta doğru, Google sonucu için yetersiz. Kartın kendisi
+ * DEĞİŞMEDİ. Eşlemede olmayan bir slug eski davranışla (kart özeti) kalır.
  */
 export async function resolveSolutionSeo(connectionKey: string, solution: SolutionSeoInput): Promise<ResolvedSolutionSeo> {
   const siteWideSeo = await resolveSiteWideSeo(connectionKey);
   return {
     title: solution.seoTitle ?? `${solution.title} | ${petraSiteName}`,
-    description: solution.seoDescription ?? solution.description,
+    description: solution.seoDescription ?? petraSolutionSeoDescription(solution.slug) ?? solution.description,
     ogImage: solution.seoOgImage ?? siteWideSeo?.og_image ?? null,
   };
 }
@@ -226,4 +238,22 @@ export function applyHomeSeoOverrides(base: Metadata, seo: SeoSettingsRow | null
   }
 
   return merged;
+}
+
+/**
+ * Petra SEO iyileştirme — sayfanın metadata'sına paylaşım görselini
+ * (og:image + twitter:image, büyük kart) ekler. Öncelik: sayfaya özel CMS
+ * görseli → site geneli CMS görseli (`seo_settings.og_image`) → Petra'nın
+ * kendi alan adından üretilen varsayılan (app/(public)/og/[...path]).
+ * Kuralın kendisi ve gerekçesi: lib/seo/petra-share-image.ts. Yalnız
+ * OKUR; CMS'e yazmaz. Her public sayfanın generateMetadata()'sı son adım
+ * olarak bunu çağırır.
+ */
+export async function withPetraShareImage(connectionKey: string, metadata: Metadata, pagePath: string): Promise<Metadata> {
+  const siteWideSeo = await resolveSiteWideSeo(connectionKey);
+  return applyPetraShareImage(metadata, {
+    pagePath,
+    siteName: petraSiteName,
+    siteWideOgImage: siteWideSeo?.og_image ?? null,
+  });
 }

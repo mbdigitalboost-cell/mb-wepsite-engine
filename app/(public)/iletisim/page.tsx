@@ -8,7 +8,8 @@ import { petraContactInfo } from "@/lib/data/petra/site-config";
 import { buildWhatsappHref } from "@/lib/data/petra/whatsapp";
 import { getSiteSettings } from "@/lib/cms/adapters";
 import { mapSiteSettingsContactInfo } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraStaticPageSeoDescriptions } from "@/lib/data/petra/seo-descriptions";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { SiteSettingsRow } from "@/lib/cms/customer-types";
@@ -18,14 +19,14 @@ const ROUTE_KEY = "iletisim";
 
 const staticMetadata: Metadata = {
   title: "İletişim",
-  description: "Petra Mühendislik ile iletişime geçin — keşif talebi oluşturun.",
+  description: petraStaticPageSeoDescriptions.iletisim,
   alternates: { canonical: "/iletisim" },
 };
 
 // Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 export default async function ContactPage() {

@@ -7,7 +7,8 @@ import { petraProjects } from "@/lib/data/petra/projects";
 import { petraSiteWorksFull } from "@/lib/data/petra/site-works";
 import { getProjects } from "@/lib/cms/adapters";
 import { isCmsRow, mapProjectRows } from "@/lib/cms/petra/mappers";
-import { resolveStaticPageSeo, applyHomeSeoOverrides } from "@/lib/seo/build-metadata";
+import { petraStaticPageSeoDescriptions } from "@/lib/data/petra/seo-descriptions";
+import { resolveStaticPageSeo, applyHomeSeoOverrides, withPetraShareImage } from "@/lib/seo/build-metadata";
 import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { ProjectRow } from "@/lib/cms/customer-types";
@@ -22,14 +23,14 @@ export const revalidate = 300;
 
 const staticMetadata: Metadata = {
   title: "Projeler",
-  description: "Petra Mühendislik tarafından tamamlanan iklimlendirme projeleri ve gerçek saha uygulamaları.",
+  description: petraStaticPageSeoDescriptions.projeler,
   alternates: { canonical: "/projeler" },
 };
 
 // Faz 6F-4A-3.3: bkz. app/(public)/hakkimizda/page.tsx'in aynı satırdaki yorumu.
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await resolveStaticPageSeo(PETRA_CONNECTION_KEY, ROUTE_KEY);
-  return applyHomeSeoOverrides(staticMetadata, seo);
+  return withPetraShareImage(PETRA_CONNECTION_KEY, applyHomeSeoOverrides(staticMetadata, seo), `/${ROUTE_KEY}`);
 }
 
 // When published (named/CMS) projects exist, `Projects` renders its own

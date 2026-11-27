@@ -10,7 +10,7 @@ import { petraBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 import { JsonLd } from "@/components/seo/json-ld";
 import { resolvePetraSolutions } from "@/lib/cms/petra/resolve-solutions";
 import { petraSolutionIcons, petraSolutionIconFallback } from "@/lib/data/petra/solution-icons";
-import { resolveSolutionSeo } from "@/lib/seo/build-metadata";
+import { resolveSolutionSeo, withPetraShareImage } from "@/lib/seo/build-metadata";
 
 const PETRA_CONNECTION_KEY = "PETRA";
 
@@ -72,6 +72,7 @@ export async function generateMetadata({
   if (!solution) return {};
 
   const seo = await resolveSolutionSeo(PETRA_CONNECTION_KEY, {
+    slug: solution.slug,
     seoTitle: solution.seoTitle,
     seoDescription: solution.seoDescription,
     seoOgImage: solution.seoOgImage,
@@ -79,7 +80,10 @@ export async function generateMetadata({
     description: solution.shortDescription,
   });
 
-  return {
+  // Petra SEO iyileştirme: paylaşım görseli. seo.ogImage (çözümün kendi
+  // CMS görseli → site geneli CMS görseli) varsa o kalır; yoksa çözüm adını
+  // taşıyan varsayılan görsel (/og/cozumler/<slug>) eklenir.
+  const metadata: Metadata = {
     title: { absolute: seo.title },
     description: seo.description,
     alternates: { canonical: `/cozumler/${solution.slug}` },
@@ -99,6 +103,7 @@ export async function generateMetadata({
     // zaten kullandığı deseni aynı seo.title/description kaynağıyla tekrarı.
     twitter: { title: seo.title, description: seo.description },
   };
+  return withPetraShareImage(PETRA_CONNECTION_KEY, metadata, `/cozumler/${solution.slug}`);
 }
 
 export default async function SolutionDetailPage({
