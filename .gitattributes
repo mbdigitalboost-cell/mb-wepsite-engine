@@ -1,0 +1,4 @@
+# Faz 38 — kabuk betikleri her işletim sisteminde LF satır sonuyla çıkmalı.
+# Windows'ta core.autocrlf=true iken CRLF'e dönen bir git kancası ("#!/bin/sh") çalışmaz.
+.githooks/* text eol=lf
+*.sh text eol=lf
