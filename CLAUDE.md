@@ -1,1 +1,2 @@
 @AGENTS.md
+@SITE_IZOLASYON.md
