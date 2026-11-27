@@ -73,6 +73,10 @@ test("19 sayfa 200 döner; başlık, açıklama ve canonical var", { skip }, asy
     assert.ok(meta(html, "name", "description"), `${path}: description`);
     const canonical = html.match(/<link rel="canonical" href="([^"]*)"/)?.[1];
     assert.ok(canonical?.startsWith(`${SITE}/`) || canonical === SITE, `${path}: canonical ${canonical}`);
+    // og:url varsa www'li alan adını göstermeli (www'siz adres 308 ile yönleniyor;
+    // paylaşım ve canonical yönlendirmesiz adresi kullanmalı).
+    const ogUrl = meta(html, "property", "og:url");
+    if (ogUrl !== null) assert.ok(ogUrl.startsWith(`${SITE}/`) || ogUrl === SITE, `${path}: og:url ${ogUrl}`);
   }
 });
 
@@ -92,6 +96,7 @@ test("her sayfada mutlak og:image, boyutları ve büyük twitter kartı var; gö
     const image = meta(html, "property", "og:image");
     assert.ok(image, `${path}: og:image yok`);
     assert.match(image, /^https:\/\//, `${path}: og:image mutlak değil (${image})`);
+    assert.ok(!image.startsWith("https://petramuhendislik.com"), `${path}: og:image www'siz (${image})`);
     assert.equal(meta(html, "name", "twitter:card"), "summary_large_image", `${path}: twitter:card`);
     assert.equal(meta(html, "name", "twitter:image"), image, `${path}: twitter:image`);
 

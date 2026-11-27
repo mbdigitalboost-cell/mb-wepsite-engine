@@ -48,10 +48,11 @@ export const petraStaticPageSeoDescriptions = {
    * durumuna göre" diyordu; hesaplayıcının formülü (lib/btu/calculate.ts)
    * yalnız alan × bölge katsayısı + kişi sayısı kullanıyor ve sonuç
    * kutusu diğer alanlar için "bilgi amaçlı, hesaba katılmadı" yazıyor.
-   * Kullanıcı kararıyla metin hesaplayıcının gerçekte yaptığına çevrildi.
+   * Kullanıcı kararıyla metin hesaplayıcının gerçekte yaptığına çevrildi;
+   * son hâli (148 karakter) kullanıcının 2026-11-27'de verdiği metindir.
    */
   "btu-hesaplama":
-    "Oda ölçüleri, bölge ve kişi sayısına göre yaklaşık klima BTU ihtiyacınızı ücretsiz hesaplayın. Kesin kapasite için yerinde keşif isteyin.",
+    "Oda alanı, bölge ve kişi sayısına göre yaklaşık klima BTU ihtiyacınızı ücretsiz hesaplayın. Kesin kapasite için Petra Mühendislik'ten keşif isteyin.",
 } as const;
 
 /** Slug eşlemesi; prototip anahtarlarına (ör. "constructor") karşı güvenli. Eşleme yoksa null. */

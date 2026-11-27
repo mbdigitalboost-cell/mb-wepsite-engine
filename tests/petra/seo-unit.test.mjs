@@ -41,7 +41,7 @@ const EXPECTED = {
   "/projeler":
     "Petra Mühendislik ekibinin VRF, klima ve mekanik sistem uygulamalarından gerçek saha görüntüleri: ticari binalarda dış ünite kurulumu ve boru montajı.",
   "/btu-hesaplama":
-    "Oda ölçüleri, bölge ve kişi sayısına göre yaklaşık klima BTU ihtiyacınızı ücretsiz hesaplayın. Kesin kapasite için yerinde keşif isteyin.",
+    "Oda alanı, bölge ve kişi sayısına göre yaklaşık klima BTU ihtiyacınızı ücretsiz hesaplayın. Kesin kapasite için Petra Mühendislik'ten keşif isteyin.",
 };
 
 test("11 sayfanın açıklaması tablodakiyle birebir aynı ve Google sınırı içinde", () => {
