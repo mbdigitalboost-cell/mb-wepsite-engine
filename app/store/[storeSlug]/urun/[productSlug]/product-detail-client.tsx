@@ -1,6 +1,7 @@
 "use client";
 
 import { freeShippingClaim, productQualifiesForFreeShipping, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
+import type { OwnProductionBadge } from "@/lib/commerce/storefront-texts";
 import { useEffect, useMemo, useState } from "react";
 import { trackAddToCart, trackViewItem } from "@/lib/tracking/store-events";
 import Image from "next/image";
@@ -37,8 +38,8 @@ interface ProductDetailClientProps {
   inventory: PublicProductInventory | null;
   /** products.models — uyumlu silah modelleri (yalnızca bilgi; siparişe yazılacak bir alan YOK, bkz. aşağıdaki not). */
   models: string[];
-  /** "Kendi Üretimimiz" rozeti yalnızca bu iddiayı doğrulanmış olarak kullanan mağazada gösterilir. */
-  showOwnProductionBadge: boolean;
+  /** Faz 39 — "kendi üretim" rozeti: metni mağazanın ayarından gelir; null ise rozet ve güven kutusu gösterilmez. */
+  ownProductionBadge: OwnProductionBadge | null;
   /** Faz 31 — mağazanın kargo ücreti ayarı (sabit 2.000 TL yerine). */
   shippingSettings: ShippingFeeSettings;
 }
@@ -89,7 +90,7 @@ export function ProductDetailClient({
   addons,
   inventory,
   models,
-  showOwnProductionBadge,
+  ownProductionBadge,
   shippingSettings,
 }: ProductDetailClientProps) {
   const { addItem, subtotal: cartSubtotal } = useCart();
@@ -247,9 +248,9 @@ export function ProductDetailClient({
                   %{discountPercent} İNDİRİM
                 </span>
               ) : null}
-              {showOwnProductionBadge ? (
+              {ownProductionBadge ? (
                 <span className={`${storefrontMonoClasses} rounded-md border border-[#F5F5F5]/40 bg-[#0A0A0A]/70 px-2.5 py-1 text-xs font-semibold text-[#F5F5F5]`}>
-                  KENDİ ÜRETİMİMİZ
+                  {ownProductionBadge.title.toLocaleUpperCase("tr-TR")}
                 </span>
               ) : null}
             </div>
@@ -455,10 +456,10 @@ export function ProductDetailClient({
 
           <ul
             className="mt-6 grid divide-x divide-[#292929] rounded-[12px] border border-[#292929] bg-[#171717] text-center"
-            style={{ gridTemplateColumns: `repeat(${showOwnProductionBadge ? 3 : 2}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${ownProductionBadge ? 3 : 2}, minmax(0, 1fr))` }}
           >
             {[
-              ...(showOwnProductionBadge ? [{ title: "Kendi Üretimimiz", sub: "Kydex işçiliği" }] : []),
+              ...(ownProductionBadge ? [{ title: ownProductionBadge.title, sub: ownProductionBadge.subtitle ?? "" }] : []),
               ...(shippingClaim && shippingSettings.freeShippingThreshold !== null
                 ? [{ title: "Ücretsiz Kargo", sub: `${shippingSettings.freeShippingThreshold.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} TL üzeri` }]
                 : []),
@@ -466,7 +467,7 @@ export function ProductDetailClient({
             ].map((item) => (
               <li key={item.title} className="px-2 py-3">
                 <p className={`${storefrontDisplayClasses} text-[11px] font-semibold text-[#F5F5F5] sm:text-xs`}>{item.title}</p>
-                <p className="mt-0.5 text-[11px] text-[#A3A3A3]">{item.sub}</p>
+                {item.sub ? <p className="mt-0.5 text-[11px] text-[#A3A3A3]">{item.sub}</p> : null}
               </li>
             ))}
           </ul>

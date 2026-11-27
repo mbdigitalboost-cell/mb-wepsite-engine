@@ -1,6 +1,7 @@
 import { storeBase } from "@/lib/sites/store-href";
 import Link from "next/link";
 import { getPublicStoreProfile } from "@/lib/commerce/public/profile";
+import { getStorefrontTexts } from "@/lib/commerce/public/storefront-texts";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 
@@ -42,7 +43,10 @@ import { Container } from "@/components/ui/container";
  * ya da Instagram'a) — "ürün sayfasına özel" bir hedef istenmedi.
  */
 export async function StorefrontCtaBand({ storeId, storeSlug }: { storeId: string; storeSlug: string }) {
-  const profile = await getPublicStoreProfile(storeId);
+  // Faz 39 — bandın metni mağazanın kendi ayarından (admin → Ayarlar → Vitrin
+  // metinleri). Başlık yoksa bant hiç gösterilmez (uydurma varsayılan yok).
+  const [profile, texts] = await Promise.all([getPublicStoreProfile(storeId), getStorefrontTexts(storeId)]);
+  if (!texts.ctaBandTitle) return null;
   const instagramUrl =
     typeof profile?.socialLinks.instagram === "string" && profile.socialLinks.instagram.trim().length > 0
       ? profile.socialLinks.instagram
@@ -54,9 +58,9 @@ export async function StorefrontCtaBand({ storeId, storeSlug }: { storeId: strin
     <div style={{ background: "linear-gradient(135deg, #B34C00 0%, #D95F00 100%)" }}>
       <Container className="flex flex-col items-center gap-4 py-14 text-center">
         <h2 className={`${storefrontDisplayClasses} max-w-2xl text-2xl font-bold leading-tight text-[#0A0A0A] sm:text-3xl`}>
-          Her Kydex Parça Kendi Atölyemizde Isıyla Şekillendirilir.
+          {texts.ctaBandTitle}
         </h2>
-        <p className="max-w-lg text-sm text-[#0A0A0A]">Kydex&apos;in hassasiyeti. Sahaya hazır performans.</p>
+        {texts.ctaBandSubtitle ? <p className="max-w-lg text-sm text-[#0A0A0A]">{texts.ctaBandSubtitle}</p> : null}
         {instagramUrl ? (
           <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className={ctaClassName}>
             Bizi Instagram&apos;da Takip Et →

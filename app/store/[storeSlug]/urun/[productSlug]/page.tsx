@@ -10,6 +10,8 @@ import { Check } from "lucide-react";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
+import { getStorefrontTexts } from "@/lib/commerce/public/storefront-texts";
+import { ownProductionBadge } from "@/lib/commerce/storefront-texts";
 import {
   getPublicProductBySlug,
   getPublicProductImages,
@@ -27,8 +29,6 @@ import { StorefrontCtaBand } from "@/components/commerce/public/storefront-cta-b
 import { ProductImageCardGrid } from "@/components/commerce/public/product-image-card-grid";
 import { ProductDetailClient } from "./product-detail-client";
 
-/** "Kendi Üretimimiz" iddiası yalnızca bunu doğrulanmış olarak kullanan mağazada (duyuru şeridiyle aynı ifade). */
-const OWN_PRODUCTION_STORE_SLUGS = new Set(["taktikalp46"]);
 
 /**
  * Faz 25 — açıklamayı paragraflara ve özellik kartlarına ayırır. Ayrı bir
@@ -146,7 +146,7 @@ export default async function StoreProductPage({
 
   // Faz 25 — TÜM görseller (her varyantınki dahil) burada, sunucuda imzalanır;
   // galeri seçimi client'ta yapılır ama client asla imza üretmez.
-  const [images, optionGroups, variants, addons, categories, inventory, shippingSettings] = await Promise.all([
+  const [images, optionGroups, variants, addons, categories, inventory, shippingSettings, storefrontTexts] = await Promise.all([
     getPublicProductImages(store.id, product.id),
     getPublicProductOptions(store.id, product.id),
     getPublicProductVariants(store.id, product.id),
@@ -154,6 +154,8 @@ export default async function StoreProductPage({
     getPublicCategories(store.id),
     getPublicProductInventory(store.id, product.id),
     getShippingFeeSettings(store.id),
+    // Faz 39 — "kendi üretim" rozeti mağazanın kendi ayarından (boşsa rozet yok).
+    getStorefrontTexts(store.id),
   ]);
   const category = categories.find((c) => c.id === product.categoryId) ?? null;
   const { paragraphs, features } = splitDescription(product.description);
@@ -239,7 +241,7 @@ export default async function StoreProductPage({
           addons={addons}
           inventory={inventory}
           models={models}
-          showOwnProductionBadge={OWN_PRODUCTION_STORE_SLUGS.has(storeSlug)}
+          ownProductionBadge={ownProductionBadge(storefrontTexts)}
           shippingSettings={shippingSettings}
         />
 

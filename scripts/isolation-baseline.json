@@ -45,34 +45,6 @@
     },
     {
       "rule": "token",
-      "file": "app/store/[storeSlug]/urun/[productSlug]/page.tsx",
-      "match": "taktikalp",
-      "count": 1,
-      "reason": "\"Kendi Üretimimiz\" rozeti mağaza slug'ı sabit yazılarak açılıyor (OWN_PRODUCTION_STORE_SLUGS). Mağaza ayarına (DB) taşınmalı."
-    },
-    {
-      "rule": "token",
-      "file": "app/store/[storeSlug]/urun/[productSlug]/product-detail-client.tsx",
-      "match": "kydex",
-      "count": 1,
-      "reason": "\"Kendi Üretimimiz\" rozetinin alt metni (Kydex işçiliği) sabit; rozet bugün yalnız Taktikalp'te açık. Metin mağaza ayarına taşınmalı."
-    },
-    {
-      "rule": "token",
-      "file": "components/commerce/public/store-announcement-bar.tsx",
-      "match": "kydex",
-      "count": 1,
-      "reason": "Duyuru şeridindeki \"Kendi Ürettiğimiz Kydex Kalitesi\" her mağazada görünür. İkinci mağazadan ÖNCE şerit metni mağaza ayarına taşınmalı."
-    },
-    {
-      "rule": "token",
-      "file": "components/commerce/public/storefront-cta-band.tsx",
-      "match": "kydex",
-      "count": 2,
-      "reason": "CTA bandının yedek metni Taktikalp'e özel (Kydex). İkinci mağazadan ÖNCE mağaza içeriğine taşınmalı."
-    },
-    {
-      "rule": "token",
       "file": "lib/commerce/public/store-brand-assets.ts",
       "match": "taktikalp",
       "count": 7,

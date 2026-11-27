@@ -5,16 +5,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { StoreSettingsForm } from "./settings-form";
 import { MaintenanceForm } from "./maintenance-form";
 import { ReturnSettingsCard } from "./return-settings-card";
+import { StorefrontTextsCard } from "./storefront-texts-card";
 
 export default async function StoreSettingsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string }>;
-  searchParams: Promise<{ iade?: string }>;
+  searchParams: Promise<{ iade?: string; vitrin?: string }>;
 }) {
   const { customerId, storeId } = await params;
-  const { iade } = await searchParams;
+  const { iade, vitrin } = await searchParams;
   await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -68,6 +69,9 @@ export default async function StoreSettingsPage({
 
       {/* Faz 30 — iptal/iade ayarları. */}
       <ReturnSettingsCard customerId={customerId} storeId={storeId} status={iade} />
+
+      {/* Faz 39 — mağazaya özel vitrin metinleri (duyuru şeridi, sayfa sonu bandı, ürün rozeti). */}
+      <StorefrontTextsCard customerId={customerId} storeId={storeId} status={vitrin} />
     </div>
   );
 }

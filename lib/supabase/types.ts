@@ -1736,6 +1736,35 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 39, migration 0052 — mağaza başına vitrin metinleri. Boş alan = parça gösterilmez. */
+      store_storefront_texts: {
+        Row: {
+          store_id: string;
+          announcement_items: string[];
+          cta_band_title: string | null;
+          cta_band_subtitle: string | null;
+          own_production_title: string | null;
+          own_production_subtitle: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          announcement_items?: string[];
+          cta_band_title?: string | null;
+          cta_band_subtitle?: string | null;
+          own_production_title?: string | null;
+          own_production_subtitle?: string | null;
+        };
+        Update: {
+          announcement_items?: string[];
+          cta_band_title?: string | null;
+          cta_band_subtitle?: string | null;
+          own_production_title?: string | null;
+          own_production_subtitle?: string | null;
+        };
+        Relationships: [];
+      };
       /** Faz 35, migration 0051 — çerez rızası ispatı (yalnız service-role). */
       cookie_consent_records: {
         Row: {

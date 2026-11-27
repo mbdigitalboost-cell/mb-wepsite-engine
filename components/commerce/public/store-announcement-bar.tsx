@@ -1,3 +1,4 @@
+import { announcementBarItems } from "@/lib/commerce/storefront-texts";
 import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 
 /**
@@ -12,9 +13,12 @@ import { storefrontMonoClasses } from "@/lib/utils/storefront-typography";
  *
  * Site geneli: app/store/[storeSlug]/layout.tsx'ten, StoreHeader'ın
  * HEMEN ÜSTÜNDE render ediliyor — her storefront sayfasında görünür.
- * Sabit, onaylı metin; per-store veri yok, bu yüzden props almıyor.
+ *
+ * Faz 39 — mağazaya özel maddeler artık kodda sabit DEĞİL: mağazanın
+ * `store_storefront_texts.announcement_items` alanından gelir (admin →
+ * Ayarlar → Vitrin metinleri). Madde yoksa gösterilmez; şeritte hiç madde
+ * kalmazsa şeridin kendisi de render edilmez.
  */
-const STATIC_ANNOUNCEMENT_ITEMS = ["Güvenli Ödeme", "Kendi Ürettiğimiz Kydex Kalitesi"];
 /** Faz 37 Kısım D — yalnız mağazada iade AÇIKKEN gösterilir (store_return_settings.returns_enabled). */
 const RETURNS_CLAIM = "Kolay İade";
 
@@ -23,12 +27,17 @@ const RETURNS_CLAIM = "Kolay İade";
  * ücreti ayarından (lib/commerce/shipping-fee.ts freeShippingClaim). Sınır
  * yoksa ya da kargo ücreti alınmıyorsa bu iddia hiç gösterilmez.
  */
-export function StoreAnnouncementBar({ freeShippingClaim, returnsEnabled }: { freeShippingClaim: string | null; returnsEnabled: boolean }) {
-  const ANNOUNCEMENT_ITEMS = [
-    ...(freeShippingClaim ? [freeShippingClaim] : []),
-    ...(returnsEnabled ? [RETURNS_CLAIM] : []),
-    ...STATIC_ANNOUNCEMENT_ITEMS,
-  ];
+export function StoreAnnouncementBar({
+  freeShippingClaim,
+  returnsEnabled,
+  storeItems,
+}: {
+  freeShippingClaim: string | null;
+  returnsEnabled: boolean;
+  storeItems: readonly string[];
+}) {
+  const ANNOUNCEMENT_ITEMS = announcementBarItems({ freeShippingClaim, returnsClaim: returnsEnabled ? RETURNS_CLAIM : null, storeItems });
+  if (ANNOUNCEMENT_ITEMS.length === 0) return null;
   return (
     <div className="border-b border-[#292929] bg-black print:hidden">
       <div className="mx-auto flex h-[34px] max-w-6xl flex-wrap items-center justify-center gap-x-3 px-4 text-center">
