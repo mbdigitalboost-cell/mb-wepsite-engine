@@ -28,7 +28,7 @@ MB Digital Boost bir ajanstır. Tek repo ve tek platform Supabase'i kullanılır
    - Petra işi yalnızca `petra-production`'dan açılan bir `petra-*` dalında yapılır.
    - `main` asla Petra dalına merge/rebase/cherry-pick edilmez; Petra dalı da asla `main`'e merge edilmez.
    - Petra'nın Supabase'ine kod dışında yazılmaz, migration yapılmaz.
-   - `main`'deki Petra kopyası (`app/(public)/**`) canlıyı etkilemez. Orada Petra değişikliği yapılmaz, çünkü kafa karıştırır.
+   - `main`'deki Petra kopyası (`app/(public)/**` ve sahiplik haritasında `petra` olan dosyalar) canlıyı etkilemez. Orada Petra değişikliği yapılmaz, çünkü kafa karıştırır (push koruması da reddeder).
 4. **İçerik kopyalanmaz.** Bir sitenin metni, görseli, logosu, telefonu, adresi, renkleri ya da yasal metni başka bir siteye kopyalanmaz. Yeni site sıfırdan ya da markasız bir şablondan başlar.
 5. **Site-özel dosyalar site klasöründe durur.** Yeni siteler için:
    - `app/sites/<key>/**` (sayfalar)
@@ -65,7 +65,7 @@ MB Digital Boost bir ajanstır. Tek repo ve tek platform Supabase'i kullanılır
 | `scripts/check-site-env.mjs` (prebuild) | SITE_KEY yoksa ya da adres yanlışsa build'i durdurur | Faz 28 |
 | `lib/sites/route-policy.ts` + testler | Bir sitenin domaininde başka sitenin yolu 404 olur | Faz 28 |
 | `scripts/check-isolation.mjs` (prebuild + test) | Site-özel dosyada başka sitenin adı/domaini/telefonu ya da başka site klasöründen import varsa build ve test kırılır. Ortak motorda yeni sabit marka adı da yasak | Faz 38 |
-| `.githooks/pre-push` | İki sitenin dosyasına dokunan commit'i, Petra dalında Petra dışı dosyayı, `main`'de Petra dosyasını push ettirmez | Faz 38 |
+| `.githooks/pre-push` | Push ettirmez: iki sitenin dosyasına dokunan commit; `main` soyunda Petra'ya ait dosya; `petra-*` / `petra-production` dalında başka sitenin (panel dahil) dosyası, Petra tabanında olmayan yeni ortak dosya ya da `main` soyundan gelen commit. Petra dalında serbest olanlar: Petra dosyaları, `CLAUDE.md` + `SITE_IZOLASYON.md`, Petra tabanında zaten var olan ortak dosyalar. Kurulum her bilgisayarda bir kez: `npm run setup:hooks` | Faz 38 |
 | `scripts/check-live-leaks.mjs` | Canlı sitede sızıntı taraması | Faz 38 |
 | Vercel Ignored Build Step | Her proje yalnız kendi dalını build eder (Petra: `petra-production`; diğerleri: `main`) | Faz 11 + Faz 38 |
 
