@@ -1,0 +1,16 @@
+#!/bin/sh
+# Faz 38 — site izolasyonu push koruması (SITE_IZOLASYON.md §3).
+#
+# Kurulum (her bilgisayarda BİR kez):  npm run setup:hooks
+# Ne yapar: push edilen her commit'i lib/sites/ownership.ts ile eşler ve
+#   - iki sitenin dosyasına dokunan commit'i,
+#   - Petra dalına (petra-production, petra-*) Petra dışı dosyayı ya da main commit'ini,
+#   - main soyundaki dallara Petra dosyasını
+# push ettirmez. Mantık: scripts/check-branch-scope.mjs.
+#
+# `git push --no-verify` bu kancayı atlar; kullanıcı AÇIKÇA istemedikçe kullanılmaz.
+#
+# Betik bu dosyanın yanındaki depodan çalıştırılır (o anki çalışma klasöründen
+# değil): Petra worktree'sinde scripts/ klasörü olmadığı hâlde koruma çalışır.
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec node --no-warnings "$HOOK_DIR/../scripts/check-branch-scope.mjs" "$@"
