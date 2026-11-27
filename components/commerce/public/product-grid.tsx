@@ -31,7 +31,7 @@ function formatPrice(value: number) {
  * Faz 12 devamı — v2 koyu tema. Bu bileşen İKİ çağıran arasında paylaşılıyor
  * (bu dosyanın kendi doc comment'i: homepage + kategori sayfası) — homepage
  * artık bu bileşeni KULLANMIYOR (Öne Çıkan Kydex Ürünler kendi ayrı
- * FeaturedProductsSection'ına geçti, bkz. taktikalp46-homepage-sections.tsx),
+ * FeaturedProductsSection'ına geçti, bkz. lib/sites/taktikalp46/homepage-sections.tsx),
  * bu yüzden tek gerçek çağıran bugün /kategori/[categorySlug] ve
  * /silahini-sec/[brandSlug]/sonuclar — ikisi de artık koyu temalı, bu
  * yüzden bu bileşenin kendisini koyulaştırmak güvenli (üçüncü, hâlâ açık

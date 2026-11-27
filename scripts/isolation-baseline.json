@@ -23,41 +23,6 @@
       "reason": "Kök sitemap SITE_KEY'e göre Petra'nın sitemap üreticisini seçiyor (Faz 28). Kurumsal siteler app/sites/<key>/ altına taşınınca kalkar."
     },
     {
-      "rule": "import",
-      "file": "app/store/[storeSlug]/page.tsx",
-      "match": "components/commerce/public/taktikalp46-homepage-sections.tsx",
-      "count": 1,
-      "reason": "Ortak mağaza sayfası Taktikalp'e özel ana sayfa bölümlerini doğrudan import ediyor. ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
-    },
-    {
-      "rule": "token",
-      "file": "app/store/[storeSlug]/page.tsx",
-      "match": "kydex",
-      "count": 8,
-      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
-    },
-    {
-      "rule": "token",
-      "file": "app/store/[storeSlug]/page.tsx",
-      "match": "taktikalp",
-      "count": 2,
-      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
-    },
-    {
-      "rule": "token",
-      "file": "lib/commerce/public/store-brand-assets.ts",
-      "match": "taktikalp",
-      "count": 7,
-      "reason": "Mağaza slug'ına göre yedek logo/favicon haritası; Taktikalp'in dosya yolları anahtarın altında. Yeni mağaza kendi satırını ekler ya da varlıklar store_profiles'tan gelir."
-    },
-    {
-      "rule": "token",
-      "file": "scripts/build-legal-templates.mjs",
-      "match": "taktikalp",
-      "count": 5,
-      "reason": "Faz 33 yasal şablon üreticisi; ürettiği SQL Taktikalp mağazasını slug'ıyla hedefliyor. Yeni mağaza için slug parametre olmalı."
-    },
-    {
       "rule": "token",
       "file": "supabase/customer-template/migrations/0008_product_showcase_items.sql",
       "match": "petra mühendislik",
@@ -147,6 +112,27 @@
       "match": "taktikalp",
       "count": 2,
       "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    },
+    {
+      "rule": "token",
+      "file": "scripts/build-legal-templates.mjs",
+      "match": "taktikalp",
+      "count": 5,
+      "reason": "Faz 33 yasal şablon üreticisi; ürettiği SQL Taktikalp mağazasını slug'ıyla hedefliyor. Yeni mağaza için slug parametre olmalı."
+    },
+    {
+      "rule": "import",
+      "file": "lib/commerce/public/storefront-showcases.ts",
+      "match": "lib/sites/taktikalp46/showcase.tsx",
+      "count": 1,
+      "reason": "Faz 39 Adım 2.4 — mağaza vitrini kaydı: ortak motorun bir mağazanın özel dosyalarına dokunduğu TEK yer (FAZ39_PLAN.md'de kullanıcı onaylı, Yol 2). Mağazaya özel ana sayfa ve yedek marka dosyaları lib/sites/<siteKey>/showcase.tsx'te durur; motor yalnız bu kayıttan okur. Yeni mağaza kendi showcase dosyasını buraya ekler (o zaman bu madde için yeniden onay alınır)."
+    },
+    {
+      "rule": "token",
+      "file": "lib/commerce/public/storefront-showcases.ts",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "Faz 39 Adım 2.4 — mağaza vitrini kaydı: ortak motorun bir mağazanın özel dosyalarına dokunduğu TEK yer (FAZ39_PLAN.md'de kullanıcı onaylı, Yol 2). Mağazaya özel ana sayfa ve yedek marka dosyaları lib/sites/<siteKey>/showcase.tsx'te durur; motor yalnız bu kayıttan okur. Yeni mağaza kendi showcase dosyasını buraya ekler (o zaman bu madde için yeniden onay alınır)."
     }
   ]
 }

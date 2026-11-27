@@ -1,4 +1,3 @@
-import { storeBase } from "@/lib/sites/store-href";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildStorePageMetadata, storePageUrl } from "@/lib/sites/store-metadata";
@@ -7,9 +6,8 @@ import { getReturnsEnabled } from "@/lib/commerce/returns/service";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getSellerIdentity } from "@/lib/legal/store-legal";
 import { resolveStoreLogoUrl } from "@/lib/commerce/public/store-brand-assets";
-import Image from "next/image";
-import Link from "next/link";
-import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
+import { getStorefrontShowcase } from "@/lib/commerce/public/storefront-showcases";
+import { ProductGrid } from "@/components/commerce/public/product-grid";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { getShippingFeeSettings } from "@/lib/commerce/public/shipping-fee-settings";
 import { freeShippingClaim } from "@/lib/commerce/shipping-fee";
@@ -21,16 +19,6 @@ import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { getPublicBrandsWithProductCounts } from "@/lib/commerce/public/brands";
 import { StoreHomepageSections } from "@/components/commerce/public/homepage-sections/store-homepage-sections";
 import { Container } from "@/components/ui/container";
-import {
-  WhyKydexSection,
-  SilahiniSecBridgeSection,
-  KydexCollectionSection,
-  FeaturedProductsSection,
-  BrandStatementSection,
-  OtherCategoriesSection,
-  TrustBadgesSection,
-  InstagramSection,
-} from "@/components/commerce/public/taktikalp46-homepage-sections";
 
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
@@ -48,19 +36,16 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
 }
 
 /**
- * FAZ 2C-3 STEP 22 — Taktikalp46 / multi-tenant commerce storefront
- * homepage. Lives under `app/store/[storeSlug]/`, a route tree entirely
- * separate from `app/(public)/` (Petra's own routes) — zero shared files,
- * per this phase's own "DO NOT TOUCH PETRA" scope.
+ * Çok kiracılı mağaza ana sayfası (app/store/[storeSlug]/). Kurumsal site
+ * rotalarından (app/(public)/) tamamen ayrı bir rota ağacıdır.
  *
- * This is a functional shell, not a redesign: it proves the full read
- * chain (store resolution → profile/nav/homepage-sections/featured
- * products) works end to end, using the existing generic root layout
- * (app/layout.tsx, already engine-neutral, already wraps /dashboard and
- * /login) and existing shared primitives (Container). Store branding
- * (colors/typography) is intentionally NOT applied to rendering yet —
- * that's a real follow-up (a per-store ThemeProvider), out of this
- * phase's "no redesign" instruction.
+ * Faz 39 Adım 2.4 — bu sayfa artık HİÇBİR mağazaya özel metin, görsel ya da
+ * bileşen içermez. Sırayla şunları gösterir:
+ *   1. mağazanın ana menüsü (admin → Gezinme),
+ *   2. admin'de yayınlanmış ana sayfa bölümleri (StoreHomepageSections),
+ *   3. mağazanın VİTRİNİ varsa onun ana sayfa gövdesi
+ *      (lib/commerce/public/storefront-showcases.ts → lib/sites/<siteKey>/);
+ *      yoksa mağazanın ürün listesi.
  */
 export default async function StoreHomePage({ params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
@@ -83,33 +68,30 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
     getReturnsEnabled(store.id),
   ]);
 
-  // FAZ 7.3 follow-up — "cta" tipi section (bu mağazanın tek homepage
-  // section'ı) artık genel StoreHomepageSections render'ından ÇIKARILIP
-  // aşağıdaki koyu "üst şerit" olarak özel stillendiriliyor; içerik
-  // (title/description) hâlâ bu DB satırından geliyor, sadece görünümü
-  // hardcoded. Diğer section tipleri (varsa/ileride eklenirse) generic
-  // renderer'dan değişmeden geçmeye devam ediyor — bkz. aşağıdaki
-  // StoreHomepageSections çağrısının emptyState notu.
-  const ctaSection = sections.find((section) => section.sectionTypeKey === "cta") ?? null;
+  const showcase = getStorefrontShowcase(storeSlug);
+
+  // Vitrini olan mağazada "cta" tipi bölüm genel listeden çıkarılır: vitrinin
+  // kendi hero'su aynı mesajı taşır, ikisi üst üste gösterilmez (bölüm
+  // veritabanında durur, yalnız burada render edilmez). Vitrini olmayan
+  // mağazada bütün bölümler olduğu gibi gösterilir.
+  const ctaSection = showcase ? (sections.find((section) => section.sectionTypeKey === "cta") ?? null) : null;
   const remainingSections = ctaSection ? sections.filter((section) => section.id !== ctaSection.id) : sections;
 
   const topLevelCategories = categories.filter((category) => category.parentId === null);
-  // "Öne Çıkan Kydex Ürünler" — kaç tane varsa (0-4), sahte ürünle 4'e tamamlanmıyor.
-  const featuredProducts = allProducts.slice(0, 4);
-  // FAZ 7.3 follow-up — en fazla 4 ürün olduğu için (yukarıdaki slice),
-  // ürün başına bir getPublicProductImages çağrısı burada kabul
-  // edilebilir bir maliyet (bu fonksiyonun kendi doc comment'i genel
-  // liste sayfaları için bunu reddetmişti — orada ürün sayısı sınırsızdı,
-  // burada sabit ve küçük). isPrimary=true olan görsel, yoksa sort_order'a
-  // göre ilk görsel kullanılıyor; hiç görseli yoksa null (bileşen nötr bir
-  // placeholder gösteriyor, sahte bir görsel değil).
-  const featuredProductsWithImages = await Promise.all(
-    featuredProducts.map(async (product) => {
-      const images = await getPublicProductImages(store.id, product.id);
-      const primary = images.find((image) => image.isPrimary) ?? images[0] ?? null;
-      return { ...product, imageUrl: primary?.url ?? null };
-    }),
-  );
+  // Vitrin için öne çıkan ürünler — kaç tane varsa (0-4), sahte ürünle 4'e
+  // tamamlanmaz. En fazla 4 ürün olduğu için ürün başına bir görsel sorgusu
+  // kabul edilebilir bir maliyet. isPrimary görsel, yoksa sıradaki ilk
+  // görsel; hiç görsel yoksa null (bileşen nötr bir yer tutucu gösterir).
+  // Vitrini olmayan mağazada bu sorgular hiç yapılmaz.
+  const featuredProductsWithImages = showcase
+    ? await Promise.all(
+        allProducts.slice(0, 4).map(async (product) => {
+          const images = await getPublicProductImages(store.id, product.id);
+          const primary = images.find((image) => image.isPrimary) ?? images[0] ?? null;
+          return { ...product, imageUrl: primary?.url ?? null };
+        }),
+      )
+    : [];
   const instagramUrl =
     typeof profile?.socialLinks.instagram === "string" && profile.socialLinks.instagram.trim().length > 0
       ? profile.socialLinks.instagram
@@ -145,166 +127,25 @@ export default async function StoreHomePage({ params }: { params: Promise<{ stor
         </Container>
       ) : null}
 
-      {/*
-        Devir metni v2 — tasarım kanvasında (Main.dc.html) bu "EKİPMANIM
-        GÜCÜ, SENİN GÜCÜN." üst şeridinin karşılığı YOK; hero kendi
-        başlık/alt metniyle (aşağıda) aynı mesajı zaten taşıyor, ikisini
-        üst üste tutmak kanvasın istediği sade/tek mesajlı açılışla
-        çelişirdi. BİLEREK KALDIRILDI (ctaSection verisi DB'de duruyor,
-        sadece bu sayfada render edilmiyor — admin panel isterse o
-        section'ı kendi tarafında silebilir, bu bir veri silme işlemi
-        değil). remainingSections zaten bu section'ı filtreliyordu,
-        emptyState={<></>}} hâlâ "yayınlanmış bölüm yok" yanlış mesajını
-        bastırmak için korunuyor.
-      */}
+      {/* emptyState: cta bölümü vitrin hero'suna bırakıldıysa "yayınlanmış bölüm yok" mesajı bastırılır. */}
       <StoreHomepageSections sections={remainingSections} emptyState={ctaSection ? <></> : undefined} />
 
-      {/*
-        FAZ 7.2 — checked first, per that phase's own explicit "silip
-        yeniden icat etme" instruction: queried this store's own
-        store_homepage_sections rows directly and confirmed neither button
-        exists there (the store's one "cta" section has an empty config
-        and a null link_url — that section type has no button support at
-        all, only "hero" does, see homepage-section.ts's own config
-        schemas) nor anywhere else in this codebase (grepped for the exact
-        Turkish text first). These two buttons were added plain, NOT wired
-        into the generic, tenant-agnostic StoreHomepageSections renderer
-        above (deliberately — "Silahını Seç" is Taktikalp46-specific copy,
-        not a generic CMS section type).
-
-        FAZ 7.3 — same block, same two <Link> targets
-        (silahini-sec / kategoriler), now expanded into a full v2 hero:
-        real product photo background + gradient overlay + headline/
-        subhead + restyled buttons. Colors are literal v2 hex values, not
-        bg-brand-* tokens — the storefront has no ThemeProvider wired up
-        yet (still true, see the file-level comment above), so there is no
-        brand token to route through; hardcoding here matches this
-        phase's own "sadece JSX/CSS" scope.
-
-        FAZ 7.3 follow-up — the big headline below is now this page's
-        real <h1> (was a <p> before): the old top Container's
-        `{profile?.displayName ?? store.name}` <h1> was removed per this
-        follow-up's explicit "tekrarlayan başlığı kaldır" instruction
-        (header already shows the brand name, this hero already repeats
-        it too — a third repetition served no one), so promoting this
-        one to <h1> is what keeps the page at exactly one semantic
-        heading rather than zero.
-      */}
-      {/*
-        Anasayfa Hero Düzeltmesi devir metni — Kısım A'nın (190a2ef) iki
-        sütunlu hero'su kullanıcı geri bildirimiyle GERİ ALINDI: "hero
-        olmamış, eskisi daha güzeldi". Bu, Faz 7.3 devam #2'nin (commit
-        81df1b9) tam genişlik arka plan fotoğraflı + soldan sağa koyulaşan
-        gradyan + metnin fotoğrafın ÜZERİNE bindirildiği kompozisyonuna
-        BİREBİR aynı desenle dönüş (yükseklik dahil: h-[560px]/
-        sm:h-[640px]/lg:h-[720px], aynı gradient/scrim değerleri). Sadece
-        kompozisyon değişti — başlık/alt metin/buton metinleri ve stilleri
-        (Site Tasarımı v3 devir metninde onaylanan) HİÇ DOKUNULMADI.
-        İstatistik şeridi hâlâ BİLEREK EKLENMEDİ (uydurma sayı yasağı,
-        değişmedi). Köşe rozeti ("Isıl Şekillendirilmiş Kydex") kullanıcı
-        özellikle istemedi ama rahatsız da etmedi dediği için korundu —
-        WhyKydexSection'ın kendi 3. kartındaki AYNI onaylı gerçek.
-      */}
-      <section className="relative isolate overflow-hidden bg-neutral-950">
-        <div className="relative h-[560px] w-full sm:h-[640px] lg:h-[720px]">
-          <Image
-            src="/images/hero/kydex-sarjor-kilifi-hero.jpg"
-            alt="Taktikalp46 Kydex şarjör kılıfı, taktik kemer üzerinde"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[65%_25%] sm:object-[75%_30%]"
-          />
-          {/* Faz 7.3 devam #2 ile AYNI desen — soldan sağa koyulaşan gradyan, okunabilirlik için */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.65) 45%, rgba(10,10,10,0.2) 100%)",
-            }}
-          />
-          {/* Dar ekranda yatay gradient metnin arkasını yeterince koyultmuyor — ek, tam kaplayan bir scrim */}
-          <div aria-hidden="true" className="absolute inset-0 bg-black/35 sm:hidden" />
-
-          <div className="relative flex h-full items-end sm:items-center">
-            <Container className="pb-10 sm:pb-0">
-              <h1
-                className={`${storefrontDisplayClasses} max-w-2xl text-3xl font-bold uppercase leading-tight text-white sm:text-5xl lg:text-6xl`}
-              >
-                SAHADA GÜVEN, HER PARÇADA <span className="text-[#D95F00]">KALİTE</span>
-              </h1>
-              <p className="mt-4 max-w-md text-sm text-white/80 sm:text-base lg:text-lg">
-                Kydex&apos;in hassasiyeti. Sahaya hazır performans.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  href={`${storeBase(storeSlug)}/silahini-sec`}
-                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full bg-[#D95F00] px-8 text-base font-semibold text-[#1A0D00] transition-colors hover:bg-[#F26A00] sm:w-auto`}
-                >
-                  Silahını Seç
-                </Link>
-                <Link
-                  href={`${storeBase(storeSlug)}/kategoriler`}
-                  className={`${storefrontDisplayClasses} inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white px-8 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto`}
-                >
-                  Tüm Kategoriler
-                </Link>
-              </div>
-            </Container>
-          </div>
-
-          <div className="absolute bottom-5 right-5 hidden max-w-[200px] rounded-[14px] border border-white/15 bg-black/50 px-4 py-3 backdrop-blur-sm sm:block">
-            <p className={`${storefrontDisplayClasses} text-xs font-semibold text-white`}>Isıl Şekillendirilmiş Kydex</p>
-          </div>
-        </div>
-      </section>
-
-      {/*
-        Devir metni v2 — kanvasta (Main.dc.html) hero'nun HEMEN ALTINDA
-        4 sütunlu bir güven şeridi var, canlı sitede yoktu. TrustBadgesSection
-        zaten vardı (gerçek/onaylı 4 ifade) ama sayfanın daha aşağısında
-        duruyordu — buraya, kanvasın kendi konumuna taşındı (bileşenin
-        kendisi silinmedi, SADECE çağrı sırası değişti).
-      */}
-      <TrustBadgesSection freeShippingClaim={freeShippingClaim(shippingSettings)} returnsEnabled={returnsEnabled} />
-
-      {/*
-        FAZ 7.3 follow-up — hero'nun altındaki v2 bölümleri (görevin kendi
-        sıralamasıyla, 1'den 10'a). Eski düz "Ürünler" H2 + ProductGrid
-        bloğu (tüm ürünleri stilsiz listeleyen) buradan kaldırıldı: aşağıdaki
-        FeaturedProductsSection aynı ihtiyacı (ürünleri göster) v2 kart
-        stiliyle zaten karşılıyor, ikisini yan yana tutmak görevin istediği
-        tutarlı/premium görünümle çelişirdi. Kategori/marka/ürün bulunamayan
-        bölümler kendi içeride null döner (bkz. taktikalp46-homepage-
-        sections.tsx'in her fonksiyonunun kendi erken-dönüş kontrolü) — bu
-        sayfa onlar için ayrıca bir varlık kontrolü tekrarlamıyor, tek
-        istisna Instagram (aşağıda instagramUrl null ise hiç render
-        edilmiyor, çünkü o bileşen linksiz render edilmeyi desteklemiyor).
-      */}
-      <div>
-        <WhyKydexSection headingFont={storefrontDisplayClasses} />
-        {/*
-          Site Tasarımı v3 devir metni, Kısım A — YENİ "Silahını Seç
-          köprüsü", kategori ızgarasından ÖNCE (devir metninin kendi
-          konumlandırma talimatı). Eski BrandFinderSection ("Silahına
-          Uygun Kılıfı Bul", sadece ürünü olan markaları pill olarak
-          gösteren, sayfanın daha aşağısındaki eski bölüm) BİLEREK
-          KALDIRILDI — aynı "marka seç" niyetini şimdi bu YENİ, daha
-          zengin bölüm (gerçek ürün sayısı + Yakında rozeti + logo/harf
-          rozeti ile) karşılıyor; ikisini aynı sayfada tutmak aynı
-          mesajı iki kez tekrarlardı. BrandFinderSection'ın kendisi
-          dosyadan SİLİNMEDİ (bu kod tabanının "referans için bırak"
-          kuralı, bkz. lib/commerce/product-models-by-brand.ts'in AYNI
-          kararı), sadece buradan çağrılmıyor.
-        */}
-        <SilahiniSecBridgeSection storeSlug={storeSlug} brands={brandsWithCounts} headingFont={storefrontDisplayClasses} />
-        <KydexCollectionSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
-        <FeaturedProductsSection storeSlug={storeSlug} products={featuredProductsWithImages} headingFont={storefrontDisplayClasses} />
-        <BrandStatementSection headingFont={storefrontDisplayClasses} />
-        <OtherCategoriesSection storeSlug={storeSlug} categories={topLevelCategories} headingFont={storefrontDisplayClasses} />
-        {instagramUrl ? <InstagramSection instagramUrl={instagramUrl} headingFont={storefrontDisplayClasses} /> : null}
-      </div>
+      {showcase ? (
+        <showcase.Home
+          storeSlug={storeSlug}
+          brands={brandsWithCounts}
+          topLevelCategories={topLevelCategories}
+          featuredProducts={featuredProductsWithImages}
+          instagramUrl={instagramUrl}
+          freeShippingClaim={freeShippingClaim(shippingSettings)}
+          returnsEnabled={returnsEnabled}
+        />
+      ) : allProducts.length > 0 ? (
+        <Container className="py-10">
+          <h2 className="text-lg font-semibold">Ürünler</h2>
+          <ProductGrid storeSlug={storeSlug} products={allProducts} />
+        </Container>
+      ) : null}
     </div>
   );
 }

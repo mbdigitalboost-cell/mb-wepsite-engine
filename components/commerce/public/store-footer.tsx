@@ -11,7 +11,7 @@ const MB_DIGITAL_BOOST_INSTAGRAM_URL = "https://www.instagram.com/mbdigitalboost
 
 /**
  * Faz 24 — site geneli mağaza footer'ı. Önceden `StoreFooterV2` adıyla
- * yalnızca ana sayfada (taktikalp46-homepage-sections.tsx → page.tsx)
+ * yalnızca ana sayfada (lib/sites/taktikalp46/homepage-sections.tsx → page.tsx)
  * render ediliyordu; /kategoriler, /kategori/**, /sepet, /hesap/** gibi
  * sayfalarda hiç footer yoktu. Artık app/store/[storeSlug]/layout.tsx'ten
  * TEK yerde render ediliyor, ana sayfadan kaldırıldı (çift footer yok).

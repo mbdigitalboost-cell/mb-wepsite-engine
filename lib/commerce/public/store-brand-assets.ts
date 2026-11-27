@@ -5,42 +5,24 @@
  *   1. store_profiles.logo_url / favicon_url — admin Mağaza → Profil
  *      sayfasındaki dosya yükleme (store-branding bucket, Faz 10). Biri
  *      yüklendiği an bu dosyadaki repo yedeği devreden çıkar.
- *   2. Repo yedeği (public/images/<slug>/…) — bucket bugün boş ve iki kolon
- *      NULL olduğu için Taktikalp46'nın favicon/logo'su buradan geliyor.
- *      Başka bir mağaza burada yoksa null → kök app/favicon.ico (panelin
- *      kendi ikonu) devralınır, eski davranış aynen.
+ *   2. Repo yedeği — mağazanın vitrininde (lib/commerce/public/
+ *      storefront-showcases.ts → lib/sites/<siteKey>/) tanımlıysa oradan.
+ *      Faz 39 Adım 2.5: buradaki slug haritası kaldırıldı; bu dosya artık
+ *      hiçbir mağazanın dosya yolunu içermez. Vitrini ya da yedeği olmayan
+ *      mağazada null → kök app/favicon.ico (panelin ikonu) devralınır.
  *
  * KÖK app/favicon.ico / icon.png / apple-icon.png BİLEREK DEĞİŞMEDİ: aynı
- * repo panel (mb-digital-boost-web-panel) ve Petra olarak da deploy oluyor;
- * mağaza ikonu yalnızca app/store/[storeSlug]/layout.tsx'in generateMetadata
- * `icons` alanıyla, yalnızca /store/** altında veriliyor.
+ * repo panel ve kurumsal site olarak da deploy oluyor; mağaza ikonu yalnızca
+ * app/store/[storeSlug]/layout.tsx'in generateMetadata `icons` alanıyla,
+ * yalnızca /store/** altında veriliyor.
  */
+import { getStorefrontShowcase } from "@/lib/commerce/public/storefront-showcases";
+import type { StoreBrandFallback } from "@/lib/commerce/public/storefront-showcase-types";
 
-export interface StoreBrandFallback {
-  favicon: string;
-  icon: string;
-  icon192: string;
-  appleIcon: string;
-  /** Şeffaf, beyaz/bordo — koyu zemin için. 219×160 (1x), 439×320 (2x). */
-  logo: string;
-  logoWidth: number;
-  logoHeight: number;
-}
-
-const STORE_BRAND_FALLBACKS: Record<string, StoreBrandFallback> = {
-  taktikalp46: {
-    favicon: "/images/taktikalp46/favicon.ico",
-    icon: "/images/taktikalp46/icon.png",
-    icon192: "/images/taktikalp46/icon-192.png",
-    appleIcon: "/images/taktikalp46/apple-icon.png",
-    logo: "/images/taktikalp46/taktikalp46-logo@2x.png",
-    logoWidth: 219,
-    logoHeight: 160,
-  },
-};
+export type { StoreBrandFallback };
 
 export function getStoreBrandFallback(storeSlug: string): StoreBrandFallback | null {
-  return STORE_BRAND_FALLBACKS[storeSlug] ?? null;
+  return getStorefrontShowcase(storeSlug)?.brandFallback ?? null;
 }
 
 /** Header/footer logosu: önce DB (admin yüklemesi), yoksa repo yedeği, yoksa null (metin gösterilir). */

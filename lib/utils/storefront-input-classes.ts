@@ -32,7 +32,7 @@
  *
  * Zemin #171717 (kart rengi), metin #F5F5F5, placeholder #A3A3A3, border
  * #292929, focus border+ring #D95F00 ("Silahını Seç" butonuyla aynı turuncu,
- * kullanıcının kendi isteği) — taktikalp46-homepage-sections.tsx/
+ * kullanıcının kendi isteği) — lib/sites/taktikalp46/homepage-sections.tsx/
  * store-header.tsx'te zaten kullanılan AYNI v2 token seti, yeni bir palet
  * icat edilmedi.
  */

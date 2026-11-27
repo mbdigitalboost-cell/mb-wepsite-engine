@@ -66,7 +66,7 @@ function splitDescription(description: string | null): { paragraphs: string[]; f
 /**
  * Faz 12 devamı (Part A) — "Çok Satanlar"/"Benzer Ürünler" kartları için her
  * ürünün birincil görselini çözüyor. Homepage'in FeaturedProductsSection'ı
- * (page.tsx, taktikalp46-homepage-sections.tsx) ile AYNI desen: en fazla 4
+ * (page.tsx, lib/sites/taktikalp46/homepage-sections.tsx) ile AYNI desen: en fazla 4
  * ürünlük, sınırlı bir liste için ürün başına bir getPublicProductImages
  * çağrısı kabul edilebilir bir maliyet (products.ts'in genel liste
  * sayfaları için bunu reddeden kendi doc comment'i burada geçerli değil —

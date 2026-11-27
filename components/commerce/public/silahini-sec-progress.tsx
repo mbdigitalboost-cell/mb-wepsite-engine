@@ -6,7 +6,7 @@ import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/sto
 /**
  * "Silahını Seç" akışı (marka → model → sonuçlar) v2 koyu tema geçişi.
  * TENANT-BAĞIMSIZ, GENEL bir bileşen — Faz 7.3'ün homepage bölümlerinin
- * aksine (o bilinçli olarak taktikalp46-homepage-sections.tsx adında AYRI,
+ * aksine (o bilinçli olarak lib/sites/taktikalp46/homepage-sections.tsx adında AYRI,
  * Taktikalp46'ya özel bir dosyaya alınmıştı) bu akışın 3 sayfası da
  * (silahini-sec/{page.tsx,[brandSlug]/page.tsx,[brandSlug]/sonuclar/page.tsx})
  * hiçbir tenant'a özel hardcoded içerik taşımıyor — hepsi store-scoped
