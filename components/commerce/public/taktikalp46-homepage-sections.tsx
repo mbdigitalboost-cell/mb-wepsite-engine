@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/utils/format-price";
 import { storefrontDisplayClasses, storefrontMonoClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
 import { BrandAvatar } from "@/components/commerce/public/brand-avatar";
+import { CategoryImageCard } from "@/components/commerce/public/category-image-card";
 
 /**
  * FAZ 7.3 follow-up — Taktikalp46'nın v2 ana sayfa bölümleri (hero'nun
@@ -162,56 +163,6 @@ export function SilahiniSecBridgeSection({
         </div>
       </Container>
     </div>
-  );
-}
-
-/**
- * Paylaşımlı kategori kartı — gradient overlay + sol-alt etiket. Hem
- * "Kydex Koleksiyonu" (2) hem "Diğer Kategoriler" (7) için AYNI görsel dil
- * (FAZ 7.3 follow-up'un kendi talimatı: "OtherCategoriesSection'ı,
- * KydexCollectionSection'daki AYNI görsel+gradient+etiket düzenine
- * çevir") — iki ayrı JSX kopyası yerine tek, parametreli bileşen.
- */
-export function CategoryImageCard({
-  storeSlug,
-  category,
-  headingFont,
-  aspect,
-}: {
-  storeSlug: string;
-  category: PublicCategory;
-  headingFont: string;
-  /** Faz 24 — sabit yükseklik yerine en-boy oranı (ör. "aspect-[4/3]"): geniş ekranda dar kartın yatay fotoğrafı sert kırpmasın. */
-  aspect: string;
-}) {
-  const imageUrl = category.imageUrl ?? CATEGORY_FALLBACK_IMAGES[category.slug] ?? null;
-  return (
-    <Link
-      href={`${storeBase(storeSlug)}/kategori/${category.slug}`}
-      className={`group relative block ${aspect} overflow-hidden rounded-[14px] border border-[#292929] bg-[#171717] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
-    >
-      {imageUrl ? (
-        <Image
-          src={imageUrl}
-          alt={category.name}
-          fill
-          // Faz 24 — yerel /images/categories/ dosyaları optimize edilir; DB'deki
-          // image_url admin'in serbest metin URL'i (keyfi host, remotePatterns dışı) → unoptimized kalır.
-          unoptimized={!imageUrl.startsWith("/")}
-          sizes="(min-width: 1024px) 25vw, 50vw"
-          className="object-cover object-center opacity-85 transition-transform duration-300 group-hover:scale-105"
-        />
-      ) : null}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.05) 0%, rgba(10,10,10,0.88) 100%)" }}
-      />
-      <div className="absolute bottom-4 left-4">
-        <p className={`${headingFont} text-[15px] font-semibold text-white`}>{category.name}</p>
-        <p className="mt-0.5 text-xs font-medium text-[#D95F00]">Keşfet →</p>
-      </div>
-    </Link>
   );
 }
 

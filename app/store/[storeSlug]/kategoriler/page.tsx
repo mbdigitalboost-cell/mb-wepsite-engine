@@ -10,7 +10,7 @@ import { getPublicCategories } from "@/lib/commerce/public/categories";
 import { CATEGORY_BANNER_IMAGES } from "@/lib/commerce/public/category-fallback-images";
 import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { Container } from "@/components/ui/container";
-import { CategoryImageCard } from "@/components/commerce/public/taktikalp46-homepage-sections";
+import { CategoryImageCard } from "@/components/commerce/public/category-image-card";
 
 /** Faz 28 — mutlak canonical + OG url (lib/sites/store-metadata.ts). */
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {

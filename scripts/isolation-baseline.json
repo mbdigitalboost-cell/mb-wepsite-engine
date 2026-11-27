@@ -24,20 +24,6 @@
     },
     {
       "rule": "import",
-      "file": "app/store/[storeSlug]/kategoriler/page.tsx",
-      "match": "components/commerce/public/taktikalp46-homepage-sections.tsx",
-      "count": 1,
-      "reason": "Ortak mağaza sayfası Taktikalp'e özel ana sayfa bölümlerini doğrudan import ediyor. ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
-    },
-    {
-      "rule": "token",
-      "file": "app/store/[storeSlug]/kategoriler/page.tsx",
-      "match": "taktikalp",
-      "count": 1,
-      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
-    },
-    {
-      "rule": "import",
       "file": "app/store/[storeSlug]/page.tsx",
       "match": "components/commerce/public/taktikalp46-homepage-sections.tsx",
       "count": 1,
