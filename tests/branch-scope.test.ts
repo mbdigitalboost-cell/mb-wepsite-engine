@@ -9,7 +9,7 @@ import { evaluateCommit, hasScopeTag, isolatedSiteForBranch, ownershipSummary } 
 
 /** Faz 38 — push koruması: bir commit iki siteye dokunamaz; Petra dalı ve main soyu birbirine karışmaz. */
 
-const commit = (subject: string, files: string[], extra: { onSharedLineage?: boolean; message?: string } = {}) => ({
+const commit = (subject: string, files: string[], extra: { onSharedLineage?: boolean; message?: string; existingOnBase?: string[] } = {}) => ({
   sha: "abcdef1234567890",
   subject,
   files,
@@ -39,17 +39,31 @@ test("kural 1 — iki sitenin dosyası aynı commit'te reddedilir; ortak + tek s
   assert.deepEqual(panelPlusShared, { errors: [], warnings: [] });
 });
 
-test("kural 2 — Petra dalı: yalnız Petra dosyaları ve iki doküman; ortak dosya, başka site ve main commit'i reddedilir", () => {
+test("kural 2 — Petra dalı: Petra dosyaları, iki doküman ve tabanda zaten olan ortak dosyalar serbest; yeni ortak dosya, başka site ve main commit'i reddedilir", () => {
   const clean = evaluateCommit("petra-seo", commit("[petra] SEO", ["app/(public)/page.tsx", "lib/data/petra/seo-descriptions.ts", "components/btu/btu-guide.tsx", "lib/seo/build-metadata.ts", "tests/petra/seo-unit.test.mjs", "scripts/vercel-ignore-build-petra.sh"]));
   assert.deepEqual(clean, { errors: [], warnings: [] });
   assert.deepEqual(evaluateCommit("petra-production", commit("[petra] kurallar", ["CLAUDE.md", "SITE_IZOLASYON.md"])), { errors: [], warnings: [] });
 
-  const sharedFile = evaluateCommit("petra-seo", commit("[petra] x", ["app/(public)/page.tsx", "package.json"]));
-  assert.equal(sharedFile.errors.length, 1);
-  assert.match(sharedFile.errors[0], /package\.json/);
+  // Yalnız Petra'nın kullandığı header/footer/menü ve CMS okuyucuları artık Petra'nın.
+  const exclusive = evaluateCommit("petra-seo", commit("[petra] menü", ["components/layout/site-header.tsx", "components/navigation/mobile-nav.tsx", "lib/cms/adapters/seo.ts", "components/ui/reveal.tsx", "app/api/forms/discovery-request/route.ts"]));
+  assert.deepEqual(exclusive, { errors: [], warnings: [] });
 
-  const otherSite = evaluateCommit("petra-production", commit("[petra] x", ["components/commerce/public/taktikalp46-homepage-sections.tsx"]));
-  assert.equal(otherSite.errors.length, 1);
+  // petra-production tabanında ZATEN VAR OLAN ortak dosya serbest.
+  const existingShared = evaluateCommit("petra-seo", commit("[petra] x", ["app/(public)/page.tsx", "package.json", "lib/theme/theme-provider.tsx"], { existingOnBase: ["package.json", "lib/theme/theme-provider.tsx", "app/(public)/page.tsx"] }));
+  assert.deepEqual(existingShared, { errors: [], warnings: [] });
+
+  // Tabanda olmayan YENİ ortak dosya (main'den gelmiş olabilir) reddedilir.
+  const newShared = evaluateCommit("petra-seo", commit("[petra] x", ["app/(public)/page.tsx", "package.json", "lib/sites/registry.ts", "scripts/check-isolation.mjs"], { existingOnBase: ["package.json"] }));
+  assert.equal(newShared.errors.length, 1);
+  assert.match(newShared.errors[0], /tabanında OLMAYAN ortak dosya/);
+  assert.match(newShared.errors[0], /lib\/sites\/registry\.ts/);
+  assert.doesNotMatch(newShared.errors[0], /package\.json/);
+
+  // Başka sitenin dosyası (Taktikalp, panel) tabanda olsa bile reddedilir.
+  const otherSite = evaluateCommit("petra-production", commit("[petra] x", ["components/commerce/public/taktikalp46-homepage-sections.tsx", "app/dashboard/page.tsx"], { existingOnBase: ["app/dashboard/page.tsx"] }));
+  assert.equal(otherSite.errors.filter((error) => /başka bir sitenin dosyası/.test(error)).length, 1);
+  assert.match(otherSite.errors.join("\n"), /taktikalp46-homepage-sections/);
+  assert.match(otherSite.errors.join("\n"), /app\/dashboard\/page\.tsx/);
 
   const fromMain = evaluateCommit("petra-seo", commit("[petra] x", ["app/(public)/page.tsx"], { onSharedLineage: true }));
   assert.equal(fromMain.errors.length, 1);
@@ -61,6 +75,14 @@ test("kural 3 — main soyundaki dallarda Petra dosyası reddedilir; [petra-main
     const result = evaluateCommit(branch, commit("[shared] x", ["app/(public)/page.tsx", "lib/commerce/pricing.ts"]));
     assert.equal(result.errors.length, 1, branch);
     assert.match(result.errors[0], /petra-production/);
+  }
+  // Yalnız Petra'nın kullandığı header/footer/menü de main'de değişemez.
+  for (const file of ["components/layout/site-header.tsx", "components/layout/site-footer.tsx", "components/navigation/desktop-nav.tsx", "lib/cms/adapters/navigation.ts", "lib/motion/use-in-view.ts"]) {
+    assert.equal(evaluateCommit("main", commit("[shared] x", [file])).errors.length, 1, file);
+  }
+  // Panelin ve ortak motorun aynı klasörlerdeki dosyaları etkilenmez.
+  for (const file of ["components/layout/dashboard-shell.tsx", "components/navigation/dashboard-nav.tsx", "lib/theme/theme-provider.tsx", "lib/seo/route-registry.ts"]) {
+    assert.deepEqual(evaluateCommit("main", commit("[shared] x", [file])).errors, [], file);
   }
   const tagged = evaluateCommit("main", commit("[petra-main] kopyayı eşitle", ["app/(public)/page.tsx"]));
   assert.deepEqual(tagged.errors, []);
@@ -126,7 +148,18 @@ test("betik gerçek bir git deposunda: iki site, main'de Petra, Petra dalında T
     const taktikalpOnPetra = commitFiles("[petra] yanlış dosya", ["components/commerce/public/taktikalp46-z.tsx"]);
     const taktikalpOnPetraRun = check("petra-deneme", `${petraClean}..${taktikalpOnPetra}`);
     assert.equal(taktikalpOnPetraRun.status, 1);
-    assert.match(taktikalpOnPetraRun.stderr, /yalnız petra dosyaları/);
+    assert.match(taktikalpOnPetraRun.stderr, /başka bir sitenin dosyası/);
+
+    // Taban dalı (petra-production) = base: README.md orada var → değiştirilebilir;
+    // tabanda olmayan yeni ortak dosya reddedilir.
+    git("branch", "petra-production", base);
+    const existingShared = commitFiles("[petra] tabandaki ortak dosya", ["README.md"]);
+    const existingSharedRun = check("petra-deneme", `${taktikalpOnPetra}..${existingShared}`);
+    assert.equal(existingSharedRun.status, 0, existingSharedRun.stderr);
+    const newShared = commitFiles("[petra] yeni ortak dosya", ["lib/sites/yeni-ortak.ts"]);
+    const newSharedRun = check("petra-deneme", `${existingShared}..${newShared}`);
+    assert.equal(newSharedRun.status, 1);
+    assert.match(newSharedRun.stderr, /tabanında OLMAYAN ortak dosya/);
 
     const mainLineageRun = check("petra-deneme", `${base}..${clean}`);
     assert.equal(mainLineageRun.status, 1);

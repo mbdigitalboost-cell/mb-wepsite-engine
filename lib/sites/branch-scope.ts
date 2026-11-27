@@ -7,9 +7,12 @@ import { SHARED_BRANCH, SITES, type SiteDefinition } from "./registry.ts";
  *
  *  1. Bir commit İKİ FARKLI SİTENİN dosyasına dokunamaz (ortak + tek site serbest).
  *  2. "Ayrı soy" site dalı (deployBranch'i main OLMAYAN site: bugün Petra →
- *     `petra-production` ve `petra-*`): yalnız o sitenin dosyaları + iki kural
- *     dokümanı. Ortak dosya da, başka sitenin dosyası da reddedilir. Aralıkta
- *     ortak dalın (main) soyundan bir commit varsa (merge/cherry-pick) reddedilir.
+ *     `petra-production` ve `petra-*`). Serbest: o sitenin dosyaları, iki kural
+ *     dokümanı ve sitenin production dalında ZATEN VAR OLAN ortak dosyalar
+ *     (o soy, ortak motorun kendi dondurulmuş kopyasını taşır). Reddedilir:
+ *     başka sitenin (panel dahil) dosyası; production dalında olmayan YENİ
+ *     ortak dosya (main'den taşınmış olabilir); ortak dalın (main) soyundan
+ *     bir commit (merge/cherry-pick). (Kullanıcı kararı, 2026-11-28.)
  *  3. Diğer bütün dallar (main, faz-*, taktikalp46-* …): ayrı soy sitesinin
  *     (Petra) dosyası değişemez. Bilinçli geçiş: commit mesajında
  *     `[petra-main]` etiketi → hata yerine uyarı.
@@ -26,6 +29,11 @@ export interface CommitInfo {
   files: readonly string[];
   /** Bu commit ortak dalın (main) soyunda mı? Yalnız ayrı soy dallarında anlamlı. */
   onSharedLineage?: boolean;
+  /**
+   * Yalnız ayrı soy dallarında: `files` içinden, sitenin production dalının
+   * (ör. petra-production) uzaktaki ucunda ZATEN VAR OLAN dosyalar.
+   */
+  existingOnBase?: readonly string[];
 }
 
 export interface BranchScopeResult {
@@ -85,12 +93,21 @@ export function evaluateCommit(branch: string, commit: CommitInfo, sites: readon
   const isolated = isolatedSiteForBranch(branch, sites);
   if (isolated) {
     // 2 — ayrı soy dalı: yalnız o site + kural dokümanları.
-    const foreign = commit.files
-      .map(normalizeRepoPath)
-      .filter((file) => ownerOf(file) !== isolated.key && !ALWAYS_ALLOWED_DOC_FILES.includes(file));
-    if (foreign.length > 0) {
+    const onBase = new Set((commit.existingOnBase ?? []).map(normalizeRepoPath));
+    const otherSite: string[] = [];
+    const newShared: string[] = [];
+    for (const file of commit.files.map(normalizeRepoPath)) {
+      const owner = ownerOf(file);
+      if (owner === isolated.key || ALWAYS_ALLOWED_DOC_FILES.includes(file)) continue;
+      if (owner !== SHARED_OWNER) otherSite.push(file);
+      else if (!onBase.has(file)) newShared.push(file);
+    }
+    if (otherSite.length > 0) {
+      errors.push(`${label}: "${branch}" bir ${isolated.key} dalı; başka bir sitenin dosyası değişemez. Reddedilen: ${sample(otherSite)}`);
+    }
+    if (newShared.length > 0) {
       errors.push(
-        `${label}: "${branch}" bir ${isolated.key} dalı; yalnız ${isolated.key} dosyaları ve ${ALWAYS_ALLOWED_DOC_FILES.join(", ")} değişebilir. Reddedilen: ${sample(foreign)}`,
+        `${label}: "${branch}" bir ${isolated.key} dalı; "${isolated.deployBranch}" tabanında OLMAYAN ortak dosya eklenemez (${SHARED_BRANCH} dalından gelmiş olabilir). ${isolated.key} sahipli olmalı ya da tabanda zaten bulunmalı. Reddedilen: ${sample(newShared)}`,
       );
     }
     if (commit.onSharedLineage) {

@@ -60,10 +60,21 @@ function commitsOf(revListArgs) {
   return (git(["rev-list", "--reverse", ...revListArgs]) ?? "").split("\n").filter(Boolean);
 }
 
+/** Ayrı soy sitesinin production dalının (uzaktaki, yoksa yereldeki) ucundaki bütün dosyalar. */
+function baseFiles(site, remote) {
+  const ref = [`refs/remotes/${remote}/${site.deployBranch}`, `refs/heads/${site.deployBranch}`].find(refExists);
+  if (!ref) return new Set();
+  return new Set((git(["ls-tree", "-r", "--name-only", "-z", ref]) ?? "").split("\0").filter(Boolean));
+}
+
 function check(branch, shas, remote) {
   const sharedRefs = [`refs/remotes/${remote}/${SHARED_BRANCH}`, `refs/heads/${SHARED_BRANCH}`].filter(refExists);
-  const checkLineage = isolatedSiteForBranch(branch) !== null;
-  const commits = shas.map((sha) => commitInfo(sha, sharedRefs, checkLineage));
+  const isolated = isolatedSiteForBranch(branch);
+  const onBase = isolated ? baseFiles(isolated, remote) : null;
+  const commits = shas.map((sha) => {
+    const info = commitInfo(sha, sharedRefs, isolated !== null);
+    return onBase ? { ...info, existingOnBase: info.files.filter((file) => onBase.has(file)) } : info;
+  });
   return { commits, result: evaluatePush(branch, commits) };
 }
 

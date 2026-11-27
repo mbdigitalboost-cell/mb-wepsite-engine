@@ -15,14 +15,17 @@
  * "*" tek yol parçası içinde her şey.
  *
  * NASIL ÇIKARILDI (2026-11-27, main 9592846) — tahminle değil, import
- * grafiği taranarak. Üç kanıt düzeyi var, her kuralın `basis` alanında yazar:
- *   "name"     Yol/ad siteyi açıkça söylüyor (klasör ya da dosya adı).
- *   "wired"    Dosyaya yalnız o sitenin sayfalarından ulaşılıyor VE dosya
- *              o sitenin veri modülünü doğrudan import ediyor.
- *   "feature"  Özellik yalnız o sitede var (aşağıda gerekçesiyle).
- * Yalnız bir sitenin kullandığı ama o siteye bağlı OLMAYAN genel yardımcılar
- * (ör. components/ui/reveal.tsx, lib/motion/**, lib/cms/adapters/**) bilerek
- * "shared" bırakıldı; listesi Faz 38 raporunda "sahibi belirsiz" olarak var.
+ * grafiği taranarak. Dört kanıt düzeyi var, her kuralın `basis` alanında yazar:
+ *   "name"      Yol/ad siteyi açıkça söylüyor (klasör ya da dosya adı).
+ *   "wired"     Dosyaya yalnız o sitenin sayfalarından ulaşılıyor VE dosya
+ *               o sitenin veri modülünü doğrudan import ediyor.
+ *   "feature"   Özellik yalnız o sitede var (aşağıda gerekçesiyle).
+ *   "exclusive" Dosyayı YALNIZ o site kullanıyor: mağaza, panel, API ve kök
+ *               sayfalardan o sitenin dosyalarından geçmeden ulaşılamıyor
+ *               (kullanıcı kararı, 2026-11-28: "yalnız Petra'nın kullandığı
+ *               dosyalar petra olsun; main'de bunlara dokunmak da reddedilsin").
+ *               Başka bir site bu dosyalardan birine ihtiyaç duyarsa önce
+ *               dosya ortak motora taşınır ([shared] commit), sonra kullanılır.
  *
  * YENİ SİTE — dosyaları app/sites/<key>/**, lib/sites/<key>/**,
  * public/sites/<key>/** altına konur; bu üç kalıp aşağıda otomatik olarak
@@ -38,7 +41,7 @@ export type Owner = string;
 export interface OwnershipRule {
   pattern: string;
   owner: Owner;
-  basis: "name" | "wired" | "feature";
+  basis: "name" | "wired" | "feature" | "exclusive";
   note?: string;
 }
 
@@ -74,6 +77,31 @@ export const OWNERSHIP_RULES: readonly OwnershipRule[] = [
   },
   { pattern: "lib/btu/**", owner: "petra", basis: "feature" },
   { pattern: "lib/validation/btu.ts", owner: "petra", basis: "feature" },
+  // Yalnız Petra'nın kullandığı dosyalar ("exclusive"): header/footer/menü, bölüm
+  // yardımcıları, müşteri-CMS bağdaştırıcıları, keşif formu ve API'si.
+  { pattern: "components/layout/site-header.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/layout/site-footer.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/layout/page-header.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/navigation/desktop-nav.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/navigation/mobile-nav.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/navigation/mobile-sticky-cta.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/navigation/floating-whatsapp-button.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/decorative/**", owner: "petra", basis: "exclusive" },
+  { pattern: "components/legal/**", owner: "petra", basis: "exclusive", note: "legal-placeholder.tsx hiçbir sayfadan kullanılmıyor (ölü kod), Petra iletişim bilgisini import ediyor." },
+  { pattern: "components/ui/count-up.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/ui/empty-state.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/ui/logo.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/ui/reveal.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "components/ui/section-divider.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "lib/cms/adapters/**", owner: "petra", basis: "exclusive", note: "connectionKey ile genel yazılmış müşteri-CMS okuyucuları; bugün tek kullanıcısı Petra." },
+  { pattern: "lib/design-system/**", owner: "petra", basis: "exclusive" },
+  { pattern: "lib/motion/**", owner: "petra", basis: "exclusive" },
+  { pattern: "lib/tracking/tracking-scripts.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "lib/utils/render-legal-text.tsx", owner: "petra", basis: "exclusive" },
+  { pattern: "lib/validation/discovery-request.ts", owner: "petra", basis: "exclusive" },
+  { pattern: "app/api/forms/discovery-request/**", owner: "petra", basis: "exclusive", note: "route-policy: bu API yalnız Petra sitesinde açık." },
+  { pattern: "lib/leads/**", owner: "petra", basis: "exclusive", note: "Keşif talebini Petra'nın veritabanına yazar; tek çağıranı yukarıdaki API." },
+  { pattern: "lib/notifications/send-lead-notification.ts", owner: "petra", basis: "exclusive" },
 
   // ───────────── Taktikalp46 (mağaza) ─────────────
   { pattern: "components/commerce/public/taktikalp46-*", owner: "taktikalp46", basis: "name" },

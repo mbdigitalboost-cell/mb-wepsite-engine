@@ -86,48 +86,6 @@
       "reason": "CTA bandının yedek metni Taktikalp'e özel (Kydex). İkinci mağazadan ÖNCE mağaza içeriğine taşınmalı."
     },
     {
-      "rule": "import",
-      "file": "components/layout/site-footer.tsx",
-      "match": "lib/data/petra/types.ts",
-      "count": 1,
-      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
-    },
-    {
-      "rule": "import",
-      "file": "components/layout/site-header.tsx",
-      "match": "lib/data/petra/types.ts",
-      "count": 1,
-      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
-    },
-    {
-      "rule": "import",
-      "file": "components/legal/legal-placeholder.tsx",
-      "match": "lib/data/petra/site-config.ts",
-      "count": 1,
-      "reason": "Hiçbir sayfadan ulaşılmayan (ölü) bileşen Petra iletişim bilgisini import ediyor; silinmeye aday."
-    },
-    {
-      "rule": "import",
-      "file": "components/navigation/desktop-nav.tsx",
-      "match": "lib/data/petra/types.ts",
-      "count": 1,
-      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
-    },
-    {
-      "rule": "import",
-      "file": "components/navigation/mobile-nav.tsx",
-      "match": "lib/data/petra/types.ts",
-      "count": 1,
-      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
-    },
-    {
-      "rule": "import",
-      "file": "lib/cms/adapters/navigation.ts",
-      "match": "lib/data/petra/types.ts",
-      "count": 1,
-      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
-    },
-    {
       "rule": "token",
       "file": "lib/commerce/public/store-brand-assets.ts",
       "match": "taktikalp",
@@ -140,13 +98,6 @@
       "match": "0535 791 11 96",
       "count": 2,
       "reason": "Panel form hata mesajındaki telefon biçimi örneği Petra'nın gerçek numarası; her müşterinin panel kullanıcısına görünür. Kurgusal bir örnekle değiştirilmeli."
-    },
-    {
-      "rule": "import",
-      "file": "lib/validation/discovery-request.ts",
-      "match": "lib/data/petra/solutions.ts",
-      "count": 1,
-      "reason": "Keşif talebi formunun doğrulaması Petra'nın çözüm listesini kullanıyor; form ve API yalnız Petra sitesinde. Dosya Petra'ya taşınınca ya da liste parametre olunca kalkar."
     },
     {
       "rule": "token",
