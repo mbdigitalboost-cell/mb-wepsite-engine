@@ -114,13 +114,6 @@
       "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
     },
     {
-      "rule": "token",
-      "file": "scripts/build-legal-templates.mjs",
-      "match": "taktikalp",
-      "count": 5,
-      "reason": "Faz 33 yasal şablon üreticisi; ürettiği SQL Taktikalp mağazasını slug'ıyla hedefliyor. Yeni mağaza için slug parametre olmalı."
-    },
-    {
       "rule": "import",
       "file": "lib/commerce/public/storefront-showcases.ts",
       "match": "lib/sites/taktikalp46/showcase.tsx",

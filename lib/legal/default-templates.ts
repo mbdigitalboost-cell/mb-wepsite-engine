@@ -1,7 +1,7 @@
 /**
  * OTOMATİK ÜRETİLDİ — scripts/build-legal-templates.mjs (kaynak: docs/legal-templates/*.md).
  * Elle düzenleme; md dosyasını değiştirip betiği çalıştır.
- * Faz 33 — varsayılan yasal metin şablonları (Taktikalp46 sürüm 1 tohumu ile aynı).
+ * Faz 33 — varsayılan yasal metin şablonları (mağazadan bağımsız; mağaza tohumlarıyla aynı metin).
  */
 import type { LegalDocumentKind } from "@/lib/supabase/types";
 
