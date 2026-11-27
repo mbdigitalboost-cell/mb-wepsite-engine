@@ -1,0 +1,264 @@
+{
+  "_aciklama": [
+    "Faz 38 — site izolasyonu denetiminin (scripts/check-isolation.mjs) BİLİNEN ihlalleri.",
+    "Bunlar Faz 38'den önce de vardı; denetim bunları geçirir, YENİ ihlalleri durdurur.",
+    "Bu liste yalnız KÜÇÜLEBİLİR. Bir madde düzeltilince buradan silinir (betik uyarır).",
+    "Yeni madde eklemek ya da count artırmak KULLANICI ONAYI ister (SITE_IZOLASYON.md §3).",
+    "Anahtar: rule + file + match. count: o dosyada kaç kez geçtiği (satır numarası tutulmaz)."
+  ],
+  "olusturuldu": "2026-11-27 (main 9592846)",
+  "entries": [
+    {
+      "rule": "import",
+      "file": "app/not-found.tsx",
+      "match": "components/sites/petra/petra-not-found.tsx",
+      "count": 1,
+      "reason": "Kök 404 sayfası SITE_KEY'e göre Petra'nın 404 bileşenini seçiyor (Faz 28). Kurumsal siteler app/sites/<key>/ altına taşınınca kalkar."
+    },
+    {
+      "rule": "import",
+      "file": "app/sitemap.ts",
+      "match": "lib/sites/petra-sitemap.ts",
+      "count": 1,
+      "reason": "Kök sitemap SITE_KEY'e göre Petra'nın sitemap üreticisini seçiyor (Faz 28). Kurumsal siteler app/sites/<key>/ altına taşınınca kalkar."
+    },
+    {
+      "rule": "import",
+      "file": "app/store/[storeSlug]/kategoriler/page.tsx",
+      "match": "components/commerce/public/taktikalp46-homepage-sections.tsx",
+      "count": 1,
+      "reason": "Ortak mağaza sayfası Taktikalp'e özel ana sayfa bölümlerini doğrudan import ediyor. ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
+    },
+    {
+      "rule": "token",
+      "file": "app/store/[storeSlug]/kategoriler/page.tsx",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
+    },
+    {
+      "rule": "import",
+      "file": "app/store/[storeSlug]/page.tsx",
+      "match": "components/commerce/public/taktikalp46-homepage-sections.tsx",
+      "count": 1,
+      "reason": "Ortak mağaza sayfası Taktikalp'e özel ana sayfa bölümlerini doğrudan import ediyor. ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
+    },
+    {
+      "rule": "token",
+      "file": "app/store/[storeSlug]/page.tsx",
+      "match": "kydex",
+      "count": 8,
+      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
+    },
+    {
+      "rule": "token",
+      "file": "app/store/[storeSlug]/page.tsx",
+      "match": "taktikalp",
+      "count": 2,
+      "reason": "Ortak mağaza ana sayfası Taktikalp'e özel içeriği (hero görseli, slogan, Kydex bölümleri) sabit kodluyor; ikinci bir mağaza bu içeriği aynen gösterir. İkinci mağazadan ÖNCE mağazaya göre seçilir hâle getirilmeli (DB/registry)."
+    },
+    {
+      "rule": "token",
+      "file": "app/store/[storeSlug]/urun/[productSlug]/page.tsx",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "\"Kendi Üretimimiz\" rozeti mağaza slug'ı sabit yazılarak açılıyor (OWN_PRODUCTION_STORE_SLUGS). Mağaza ayarına (DB) taşınmalı."
+    },
+    {
+      "rule": "token",
+      "file": "app/store/[storeSlug]/urun/[productSlug]/product-detail-client.tsx",
+      "match": "kydex",
+      "count": 1,
+      "reason": "\"Kendi Üretimimiz\" rozetinin alt metni (Kydex işçiliği) sabit; rozet bugün yalnız Taktikalp'te açık. Metin mağaza ayarına taşınmalı."
+    },
+    {
+      "rule": "token",
+      "file": "components/commerce/public/store-announcement-bar.tsx",
+      "match": "kydex",
+      "count": 1,
+      "reason": "Duyuru şeridindeki \"Kendi Ürettiğimiz Kydex Kalitesi\" her mağazada görünür. İkinci mağazadan ÖNCE şerit metni mağaza ayarına taşınmalı."
+    },
+    {
+      "rule": "token",
+      "file": "components/commerce/public/storefront-cta-band.tsx",
+      "match": "kydex",
+      "count": 2,
+      "reason": "CTA bandının yedek metni Taktikalp'e özel (Kydex). İkinci mağazadan ÖNCE mağaza içeriğine taşınmalı."
+    },
+    {
+      "rule": "import",
+      "file": "components/layout/site-footer.tsx",
+      "match": "lib/data/petra/types.ts",
+      "count": 1,
+      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
+    },
+    {
+      "rule": "import",
+      "file": "components/layout/site-header.tsx",
+      "match": "lib/data/petra/types.ts",
+      "count": 1,
+      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
+    },
+    {
+      "rule": "import",
+      "file": "components/legal/legal-placeholder.tsx",
+      "match": "lib/data/petra/site-config.ts",
+      "count": 1,
+      "reason": "Hiçbir sayfadan ulaşılmayan (ölü) bileşen Petra iletişim bilgisini import ediyor; silinmeye aday."
+    },
+    {
+      "rule": "import",
+      "file": "components/navigation/desktop-nav.tsx",
+      "match": "lib/data/petra/types.ts",
+      "count": 1,
+      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
+    },
+    {
+      "rule": "import",
+      "file": "components/navigation/mobile-nav.tsx",
+      "match": "lib/data/petra/types.ts",
+      "count": 1,
+      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
+    },
+    {
+      "rule": "import",
+      "file": "lib/cms/adapters/navigation.ts",
+      "match": "lib/data/petra/types.ts",
+      "count": 1,
+      "reason": "Yalnız tür importu (PetraNavLink). Genel gezinme bileşeni türünü Petra'nın tür dosyasından alıyor; tür ortak bir dosyaya taşınınca kalkar. Çalışma anında Petra kodu yüklenmez."
+    },
+    {
+      "rule": "token",
+      "file": "lib/commerce/public/store-brand-assets.ts",
+      "match": "taktikalp",
+      "count": 7,
+      "reason": "Mağaza slug'ına göre yedek logo/favicon haritası; Taktikalp'in dosya yolları anahtarın altında. Yeni mağaza kendi satırını ekler ya da varlıklar store_profiles'tan gelir."
+    },
+    {
+      "rule": "token",
+      "file": "lib/validation/content.ts",
+      "match": "0535 791 11 96",
+      "count": 2,
+      "reason": "Panel form hata mesajındaki telefon biçimi örneği Petra'nın gerçek numarası; her müşterinin panel kullanıcısına görünür. Kurgusal bir örnekle değiştirilmeli."
+    },
+    {
+      "rule": "import",
+      "file": "lib/validation/discovery-request.ts",
+      "match": "lib/data/petra/solutions.ts",
+      "count": 1,
+      "reason": "Keşif talebi formunun doğrulaması Petra'nın çözüm listesini kullanıyor; form ve API yalnız Petra sitesinde. Dosya Petra'ya taşınınca ya da liste parametre olunca kalkar."
+    },
+    {
+      "rule": "token",
+      "file": "lib/validation/store-profile.ts",
+      "match": "0535 791 11 96",
+      "count": 2,
+      "reason": "Panel form hata mesajındaki telefon biçimi örneği Petra'nın gerçek numarası; her müşterinin panel kullanıcısına görünür. Kurgusal bir örnekle değiştirilmeli."
+    },
+    {
+      "rule": "token",
+      "file": "lib/validation/website.ts",
+      "match": "petramuhendislik",
+      "count": 1,
+      "reason": "Panel form hata mesajındaki alan adı örneği Petra'nın alan adına benziyor; kurgusal bir örnekle (ornek.com.tr) değiştirilmeli."
+    },
+    {
+      "rule": "token",
+      "file": "scripts/build-legal-templates.mjs",
+      "match": "taktikalp",
+      "count": 5,
+      "reason": "Faz 33 yasal şablon üreticisi; ürettiği SQL Taktikalp mağazasını slug'ıyla hedefliyor. Yeni mağaza için slug parametre olmalı."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/customer-template/migrations/0008_product_showcase_items.sql",
+      "match": "petra mühendislik",
+      "count": 8,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Müşteri şablonu migration'ı Petra'ya özel içerik tohumluyor; yeni kurumsal müşterinin veritabanına UYGULANMADAN önce bu tohum ayrılmalı."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/customer-template/migrations/0011_brands.sql",
+      "match": "petra mühendislik",
+      "count": 9,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Müşteri şablonu migration'ı Petra'ya özel içerik tohumluyor; yeni kurumsal müşterinin veritabanına UYGULANMADAN önce bu tohum ayrılmalı."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0001_profiles_customers_websites.sql",
+      "match": "petra mühendislik",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Tablo açıklamasında (comment on) örnek müşteri olarak Petra adı geçiyor."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0007_stores.sql",
+      "match": "petra mühendislik",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). stores tablosunun ilk satırı olarak Petra müşterisi tohumlanıyor (o gün var olan tek müşteri)."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0016_categories_brands.sql",
+      "match": "taktikalp",
+      "count": 2,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Tablo açıklaması (comment on) Taktikalp adlı tasarım belgesine atıf yapıyor; veri değil."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0017_products.sql",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Tablo açıklaması (comment on) Taktikalp adlı tasarım belgesine atıf yapıyor; veri değil."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0018_product_variants_options.sql",
+      "match": "taktikalp",
+      "count": 4,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Tablo açıklaması (comment on) Taktikalp adlı tasarım belgesine atıf yapıyor; veri değil."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0019_product_images.sql",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Tablo açıklaması (comment on) Taktikalp adlı tasarım belgesine atıf yapıyor; veri değil."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0046_shipping_fee.sql",
+      "match": "taktikalp",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0048_legal_documents.sql",
+      "match": "0537 322 26 46",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0048_legal_documents.sql",
+      "match": "taktikalp",
+      "count": 3,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0048_legal_documents.sql",
+      "match": "taktikalp46@gmail.com",
+      "count": 1,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    },
+    {
+      "rule": "token",
+      "file": "supabase/platform/migrations/0051_store_tracking_and_consent.sql",
+      "match": "taktikalp",
+      "count": 2,
+      "reason": "Uygulanmış migration; içeriği değiştirilemez (geçmişi yeniden yazmak veritabanıyla repo'yu ayırır). Genel şema migration'ının sonunda Taktikalp mağazası için (slug ile) başlangıç verisi var."
+    }
+  ]
+}

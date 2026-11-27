@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/check-site-env.mjs",
+    "prebuild": "node scripts/check-site-env.mjs && node scripts/check-isolation.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test \"tests/**/*.test.ts\""
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "check:isolation": "node scripts/check-isolation.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

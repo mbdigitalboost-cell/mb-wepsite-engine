@@ -28,6 +28,24 @@ export interface SiteDefinition {
   canonicalOrigin: string;
   /** Yalnız kind "store": stores.slug. Mağaza /store/<storeSlug>/** altında sunulur. */
   storeSlug?: string;
+  /**
+   * Faz 38 — bu sitenin production'ının deploy edildiği Git dalı. Push
+   * koruması (scripts/check-branch-scope.mjs) ve Vercel Ignored Build Step
+   * (scripts/vercel-should-build.mjs) bunu okur. "main" dışındaki bir dal
+   * (Petra: "petra-production") "ayrı soy" demektir: o dal main ile asla
+   * birleştirilmez.
+   */
+  deployBranch: string;
+  /**
+   * Faz 38 — bu siteyi ELE VEREN ifadeler: ad, alan adı, telefon, e-posta,
+   * sosyal medya kullanıcı adı. Küçük harf yazılır; eşleştirme büyük/küçük
+   * harfe ve Türkçe İ/I/ı farkına duyarsızdır, telefonlar boşluklu/boşluksuz
+   * ve +90'lı biçimde de yakalanır (lib/sites/leak-tokens.ts).
+   * Bir sitenin ifadeleri BAŞKA bir sitenin dosyalarında, ortak motorda ve
+   * başka bir sitenin canlı sayfalarında yasaktır (scripts/check-isolation.mjs,
+   * scripts/check-live-leaks.mjs). Yeni site eklerken DOLDURULMASI zorunlu.
+   */
+  leakTokens: readonly string[];
 }
 
 export const SITES: readonly SiteDefinition[] = [
@@ -36,6 +54,12 @@ export const SITES: readonly SiteDefinition[] = [
     kind: "panel",
     displayName: "MB Digital Boost",
     canonicalOrigin: "https://mb-digital-boost-web-panel.vercel.app",
+    deployBranch: "main",
+    // Panel bütün müşterileri listeler; marka taraması panelin KENDİ
+    // dosyalarına uygulanmaz. Tersi uygulanır: panelin alan adı müşteri
+    // sitelerinde görünmemeli (/dashboard yönlendirmeleri registry'den
+    // okunur, sabit yazılmaz).
+    leakTokens: ["mb-digital-boost-web-panel.vercel.app"],
   },
   {
     key: "taktikalp46",
@@ -43,6 +67,8 @@ export const SITES: readonly SiteDefinition[] = [
     displayName: "Taktikalp46",
     canonicalOrigin: "https://www.t46store.com",
     storeSlug: "taktikalp46",
+    deployBranch: "main",
+    leakTokens: ["taktikalp", "t46store", "kydex", "0537 322 26 46", "taktikalp46@gmail.com"],
   },
   {
     // Petra'nın GERÇEK production'ı ayrı, dondurulmuş `petra-production`
@@ -53,8 +79,22 @@ export const SITES: readonly SiteDefinition[] = [
     kind: "corporate",
     displayName: "Petra Mühendislik",
     canonicalOrigin: "https://www.petramuhendislik.com",
+    deployBranch: "petra-production",
+    // "petraamuhendislik" (çift a): Petra'nın Instagram kullanıcı adı;
+    // "petramuhendislik" ifadesi onu yakalamadığı için ayrıca yazıldı.
+    leakTokens: ["petra mühendislik", "petramuhendislik", "petraamuhendislik", "petra iklimlendirme", "0535 791 11 96"],
   },
 ];
+
+/**
+ * Faz 38 — ajans imzası: her sitenin altbilgisinde yer alabilen "MB Digital
+ * Boost" yazısı ve ajansın Instagram adı sızıntı SAYILMAZ. Bir sitenin
+ * leakTokens'ına yanlışlıkla bunlardan biri yazılsa bile taramalar yok sayar.
+ */
+export const ALLOWED_EVERYWHERE: readonly string[] = ["mb digital boost", "mbdigitalboost"];
+
+/** Faz 38 — hiçbir site dalına ait olmayan, ortak motorun geliştirildiği dal. */
+export const SHARED_BRANCH = "main";
 
 export const PANEL_SITE_KEY = "panel";
 
