@@ -94,27 +94,6 @@
     },
     {
       "rule": "token",
-      "file": "lib/validation/content.ts",
-      "match": "0535 791 11 96",
-      "count": 2,
-      "reason": "Panel form hata mesajındaki telefon biçimi örneği Petra'nın gerçek numarası; her müşterinin panel kullanıcısına görünür. Kurgusal bir örnekle değiştirilmeli."
-    },
-    {
-      "rule": "token",
-      "file": "lib/validation/store-profile.ts",
-      "match": "0535 791 11 96",
-      "count": 2,
-      "reason": "Panel form hata mesajındaki telefon biçimi örneği Petra'nın gerçek numarası; her müşterinin panel kullanıcısına görünür. Kurgusal bir örnekle değiştirilmeli."
-    },
-    {
-      "rule": "token",
-      "file": "lib/validation/website.ts",
-      "match": "petramuhendislik",
-      "count": 1,
-      "reason": "Panel form hata mesajındaki alan adı örneği Petra'nın alan adına benziyor; kurgusal bir örnekle (ornek.com.tr) değiştirilmeli."
-    },
-    {
-      "rule": "token",
       "file": "scripts/build-legal-templates.mjs",
       "match": "taktikalp",
       "count": 5,

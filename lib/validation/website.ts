@@ -25,7 +25,7 @@ export const websiteFormSchema = z.object({
     .trim()
     .toLowerCase()
     .max(255, "Domain çok uzun.")
-    .regex(domainRegex, "Geçerli bir domain girin — örn: petramuhendislik.com.tr")
+    .regex(domainRegex, "Geçerli bir domain girin — örn: ornek.com.tr")
     .optional()
     .or(z.literal("")),
   template: z.string().trim().max(80, "Şablon adı çok uzun.").optional().or(z.literal("")),

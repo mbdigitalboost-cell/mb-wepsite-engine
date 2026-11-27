@@ -56,7 +56,7 @@ export const heroFormSchema = z.object({
   backgroundImage: z.string().trim().max(500).url("Geçerli bir URL olmalı.").optional().or(z.literal("")),
 });
 
-/** Turkish phone format used across the project so far, e.g. "0535 791 11 96". */
+/** Turkish phone format used across the project so far, e.g. "05XX XXX XX XX". */
 const phoneRegex = /^0\d{3} \d{3} \d{2} \d{2}$/;
 
 export const siteSettingsFormSchema = z.object({
@@ -66,14 +66,14 @@ export const siteSettingsFormSchema = z.object({
     .string()
     .trim()
     .max(20)
-    .regex(phoneRegex, "Telefon formatı: 0535 791 11 96")
+    .regex(phoneRegex, "Telefon formatı: 05XX XXX XX XX")
     .optional()
     .or(z.literal("")),
   whatsapp: z
     .string()
     .trim()
     .max(20)
-    .regex(phoneRegex, "WhatsApp formatı: 0535 791 11 96")
+    .regex(phoneRegex, "WhatsApp formatı: 05XX XXX XX XX")
     .optional()
     .or(z.literal("")),
   email: z.string().trim().email("Geçerli bir e-posta girin.").max(200).optional().or(z.literal("")),

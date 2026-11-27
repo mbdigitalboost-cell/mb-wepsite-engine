@@ -17,7 +17,7 @@ const urlField = z.string().trim().max(500).url("Geçerli bir URL olmalı.").opt
 export const storeSocialLinksSchema = z.object({
   instagram: urlField,
   facebook: urlField,
-  whatsapp: z.string().trim().max(20).regex(phoneRegex, "WhatsApp formatı: 0535 791 11 96").optional().or(z.literal("")),
+  whatsapp: z.string().trim().max(20).regex(phoneRegex, "WhatsApp formatı: 05XX XXX XX XX").optional().or(z.literal("")),
   tiktok: urlField,
   youtube: urlField,
   linkedin: urlField,
@@ -42,7 +42,7 @@ export const storeBusinessInfoSchema = z.object({
 export const storeProfileFormSchema = z.object({
   displayName: z.string().trim().max(200).optional().or(z.literal("")),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
-  phone: z.string().trim().max(20).regex(phoneRegex, "Telefon formatı: 0535 791 11 96").optional().or(z.literal("")),
+  phone: z.string().trim().max(20).regex(phoneRegex, "Telefon formatı: 05XX XXX XX XX").optional().or(z.literal("")),
   email: z.string().trim().email("Geçerli bir e-posta girin.").max(200).optional().or(z.literal("")),
   address: z.string().trim().max(500).optional().or(z.literal("")),
   socialLinks: storeSocialLinksSchema,
