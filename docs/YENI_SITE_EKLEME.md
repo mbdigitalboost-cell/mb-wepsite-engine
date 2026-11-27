@@ -1,37 +1,127 @@
 # Yeni site ekleme
 
-MB Digital Boost'ta tek bir repo, tek bir platform Supabase'i ve **her site için ayrı bir Vercel projesi** var. Hiçbir site başka bir sitenin sayfasını, markasını, 404'ünü, sitemap kaydını ya da API'sini göstermez. Bunu sağlayan yapı: `SITE_KEY` + `lib/sites/registry.ts` + `lib/sites/route-policy.ts`, ve bunları koruyan testler (`npm test`).
+MB Digital Boost'ta tek bir repo, tek bir platform Supabase'i ve **her site için ayrı bir Vercel projesi** var. Hiçbir site başka bir sitenin sayfasını, markasını, 404'ünü, sitemap kaydını, API'sini, metnini ya da verisini göstermez.
+
+Kuralların tamamı: [`SITE_IZOLASYON.md`](../SITE_IZOLASYON.md) (repo kökü; her Claude Code oturumuna otomatik yüklenir). Bu belge o dosyanın §6'sındaki kontrol listesinin ayrıntılı hâlidir.
+
+Bunu sağlayan yapı:
+
+| Ne | Nerede |
+|---|---|
+| Site kaydı (`key`, `canonicalOrigin`, `deployBranch`, `leakTokens`) | `lib/sites/registry.ts` |
+| Hangi dosya kimin | `lib/sites/ownership.ts` |
+| Bir sitenin domaininde başka sitenin yolu 404 | `lib/sites/route-policy.ts` |
+| Build: `SITE_KEY` / adres doğru mu | `scripts/check-site-env.mjs` (prebuild) |
+| Build + test: site dosyasında başka sitenin izi / importu var mı | `scripts/check-isolation.mjs` (prebuild, `npm test`, `npm run check:isolation`) |
+| Push: bir commit iki siteye dokunuyor mu, dal doğru mu | `.githooks/pre-push` → `scripts/check-branch-scope.mjs` |
+| Vercel: proje yalnız kendi dalını derlesin | `scripts/vercel-should-build.mjs` (Ignored Build Step) |
+| Yayından sonra: canlıda başka sitenin izi var mı | `npm run check:live -- <siteKey>` |
+
+## Başlamadan önce (her bilgisayarda bir kez)
+
+```bash
+npm run setup:hooks
+```
+
+Bu komut `git config core.hooksPath` ayarını bu deponun `.githooks` klasörüne (mutlak yol) çevirir; push koruması bütün worktree'lerde (Petra worktree'si dahil) çalışır. Geri almak: `git config --unset core.hooksPath`. Kanca `git push --no-verify` ile atlanmaz (kullanıcı açıkça istemedikçe).
 
 ## Adımlar
 
-1. **Registry'ye kayıt ekle.** `lib/sites/registry.ts` → `SITES` listesine:
-   - `key`: küçük harf, benzersiz (Vercel'deki `SITE_KEY` değeri)
-   - `kind`: `"store"` (mağaza), `"corporate"` (kurumsal site) ya da `"panel"`
-   - `displayName`: 404 ve sayfa başlıklarında görünen ad
-   - `canonicalOrigin`: `https://www.alanadi.com` (https ile başlar, sonda `/` olmaz)
-   - mağazaysa `storeSlug`: `stores.slug` ile aynı
+### 1. Tür kararı: mağaza mı, kurumsal mı?
 
-2. **Aynı repodan yeni bir Vercel projesi aç.** GitHub `mbdigitalboost-cell/mb-wepsite-engine`, dal `main`, Node 24.x.
+- **Mağaza (`store`)**: ortak mağaza motoru (`app/store/[storeSlug]/**`) sunar; içerik platform veritabanından gelir. Yeni sayfa kodu gerekmez.
+- **Kurumsal (`corporate`)**: sayfalar **`app/sites/<key>/`** altına yazılır. Kök **`app/(public)/` Petra'ya aittir**; orada yeni site için dosya açılmaz, Petra'nın sayfaları kopyalanmaz (içerik kopyalanmaz: `SITE_IZOLASYON.md` §2.4). Yeni site sıfırdan ya da markasız bir şablondan başlar.
 
-3. **Env değişkenlerini gir** (Production + Preview):
-   - `SITE_KEY=<key>` (zorunlu; yoksa build durur: `scripts/check-site-env.mjs`)
-   - `NEXT_PUBLIC_SITE_URL=<canonicalOrigin>` (Production; registry'deki değerle **aynı** olmalı, yoksa build durur)
-   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (platform projesi)
+Site-özel dosyaların yeri (bu üç klasör sahiplik haritasında otomatik olarak `<key>` sitesine aittir, haritaya satır eklemek gerekmez):
 
-4. **Domaini bağla.** Vercel → Project → Domains. www ile apex arasındaki yönlendirmeyi de orada ayarla.
+```
+app/sites/<key>/**      sayfalar
+lib/sites/<key>/**      veri ve yardımcılar
+public/sites/<key>/**   görseller
+```
 
-5. **Supabase Auth → URL Configuration → Redirect URLs** listesine `https://<domain>/**` ekle. Mağaza müşterisinin şifre sıfırlama e-postası bu adrese döner.
+Bir sitenin klasörü başka bir sitenin klasöründen import edemez (ESLint ve `check:isolation` durdurur). Ortak olması gereken kod ortak motora taşınır ve hiçbir sitenin adını, alan adını, telefonunu sabit kodlamaz.
 
-6. **Siteye özel içerik:**
-   - mağaza: platform DB'de `stores` kaydı (`slug` = `storeSlug`), kategoriler ve ürünler. Kod değişikliği gerekmez.
-   - kurumsal: sayfalar, `app/not-found.tsx` ve `app/sitemap.ts` içinde kendi dalı (bkz. aşağıdaki not).
+> **Henüz yapılmadı:** `app/sites/<key>/` altındaki sayfaların sitenin kök adresinde (`/`, `/hakkimizda` …) sunulması için `proxy.ts` / `lib/sites/route-policy.ts`'e host/`SITE_KEY` tabanlı rewrite eklenmesi gerekir. İlk kurumsal site eklenirken yapılır ve `tests/route-policy.test.ts` ile korunur.
 
-7. **Testlere satır ekle.** `tests/route-policy.test.ts` → `MATRIX`'e yeni sitenin en az şu yolları: kök, kendi sayfası, başka sitenin yolu (404), `/dashboard` (panele 308). Yeni bir `/api` route'u eklediysen sahibini `API_ROUTE_OWNERS`'a yaz; yazmazsan test kırılır.
+### 2. Registry kaydı (`lib/sites/registry.ts` → `SITES`)
 
-8. `npm test`, `npx tsc --noEmit` ve `npm run build` çalıştır, push et. Ardından canlıda kontrol et: başka sitenin yolu 404 dönmeli ve kendi markasını göstermeli, `/sitemap.xml` ile `/robots.txt` kendi domainini göstermeli.
+- `key`: küçük harf, benzersiz (Vercel'deki `SITE_KEY` değeri; dal ön eki ve klasör adı da budur)
+- `kind`: `"store"`, `"corporate"` ya da `"panel"`
+- `displayName`: 404 ve sayfa başlıklarında görünen ad
+- `canonicalOrigin`: `https://www.alanadi.com` (https ile başlar, sonda `/` olmaz)
+- mağazaysa `storeSlug`: `stores.slug` ile aynı
+- **`deployBranch`**: production'ın yayınlandığı dal. Yeni siteler için `"main"`. (`"petra-production"` gibi ayrı bir dal "ayrı soy" demektir: o dal `main` ile asla birleştirilmez; yeni site için bu yol **önerilmez**.)
+- **`leakTokens`**: siteyi ele veren ifadeler, küçük harfle: marka adı (boşluklu ve bitişik yazımı), alan adı, telefon, e-posta, sosyal medya kullanıcı adı. Bu ifadeler **başka sitelerin dosyalarında, ortak motorda ve başka sitelerin canlı sayfalarında otomatik olarak yasaklanır**; diğer sitelerin ifadeleri de bu sitede yasaktır. Boş bırakılamaz (test kırılır). En az 5 karakter, başka bir siteyle çakışmayan ifadeler seçin; çok genel bir kelime (ör. yalnız "klima") yanlış alarm üretir.
+
+### 3. Sahiplik haritası (`lib/sites/ownership.ts`)
+
+Site klasörleri (adım 1) otomatik eşlenir. Klasör dışında kalan site-özel dosyalar (ör. o müşteriye özel bir migration ya da seed, ortak klasördeki `<key>-*.tsx` bileşeni) haritaya **satır olarak** yazılır. Emin olunmayan dosya haritaya yazılmaz; raporda "sahibi belirsiz" diye listelenir.
+
+### 4. Ayrı Vercel projesi
+
+Aynı repodan (`mbdigitalboost-cell/mb-wepsite-engine`), Node 24.x.
+
+Env (Production + Preview) — başka bir projenin env'i körlemesine **kopyalanmaz**:
+
+- `SITE_KEY=<key>` (zorunlu; yoksa build durur)
+- `NEXT_PUBLIC_SITE_URL=<canonicalOrigin>` (registry'deki değerle **aynı** olmalı, yoksa build durur)
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (platform projesi)
+
+**Ignored Build Step** (Settings → Git) — proje yalnız kendi dallarını derlesin:
+
+```
+[ -f scripts/vercel-should-build.mjs ] || exit 0; node scripts/vercel-should-build.mjs
+```
+
+Baştaki dosya denetimi şarttır: Vercel komutu derlenen dalın kendi dosyalarıyla çalıştırır; betiğin olmadığı bir dalda çıplak `node …` komutu "atla" yerine **hatalı deployment** üretir. Derlenen dallar: `deployBranch`, `<key>-*` ve (main'den yayınlanan projelerde) `faz-*`, `shared-*`. Başka sitenin dalları hiçbir zaman derlenmez.
+
+Domaini bağla: Vercel → Project → Domains (www ↔ apex yönlendirmesi dahil).
+
+### 5. Veri
+
+- Platform veritabanında kendi `customers` / `stores` kaydı. Mağaza: `stores.slug` = `storeSlug`, kategoriler ve ürünler.
+- Ayrı bir Supabase gerekiyorsa kullanıcı karar verir.
+- **Hiçbir kayıt başka müşteriden kopyalanmaz.** `supabase/customer-template/` migration'ları bugün Petra'ya özel içerik de tohumluyor (`0008`, `0011`; `scripts/isolation-baseline.json`'da yazılı): yeni bir kurumsal müşterinin veritabanına uygulanmadan önce bu tohumlar ayrılmalıdır.
+- Her sorgu `store_id` / `customer_id` ile süzülür; URL'den gelen id'nin o müşteriye ait olduğu sunucuda kontrol edilir (Faz 29).
+
+### 6. Dış servisler (hepsi site başına)
+
+- Google Search Console mülkü
+- Takip kodları (GA4, Meta, Ads): mağazada admin panelinden, mağaza başına
+- E-posta gönderen adresi ve adı
+- Supabase Auth → URL Configuration → Redirect URLs: `https://<domain>/**`
+- Cloudflare / DNS
+- Ödeme, kargo, fatura anahtarları: mağaza başına, veritabanında, admin'den girilir
+
+### 7. Testler
+
+- `tests/route-policy.test.ts` → `MATRIX`'e yeni sitenin en az şu yolları: kök, kendi sayfası, başka sitenin yolu (404), `/dashboard` (panele 308). Yeni bir `/api` route'u eklediysen sahibini `API_ROUTE_OWNERS`'a yaz.
+- `tests/build-scope.test.ts` → `MATRIX`'e yeni sitenin dalları.
+- `npm run check:isolation` yeşil olmalı. `npm test`, `npx tsc --noEmit`, `npm run build`.
+
+### 8. Yayın ve yayın sonrası
+
+- Dal ve commit'ler site anahtarıyla etiketlenir: dal `<key>-…`, commit başlığı `[<key>] …`. Ortak motor değişikliği ayrı commit'tir: `[shared] …`. Bir commit iki sitenin dosyasına dokunamaz.
+- Push'tan önce: `npm run check:scope -- --range origin/main..HEAD --files` (sahiplik özeti) ve `npm run check:isolation`.
+- Production yayını, kullanıcı o siteyi adıyla anarak onay verdikten sonra yapılır.
+- Yayından sonra: `npm run check:live -- <key>` ve diğer sitelerin production SHA'sının değişmediğinin raporu.
+- `SITE_IZOLASYON.md` §1 tablosuna ve bu belgeye yeni siteyi yaz.
+
+## İkinci mağazadan ÖNCE bilinmesi gerekenler
+
+Ortak mağaza motorunda bugün **Taktikalp46'ya özel sabit içerik** var. İkinci bir mağaza açılırsa bunları aynen gösterir; açmadan önce mağazaya göre seçilir hâle getirilmelidir. Tam liste gerekçeleriyle `scripts/isolation-baseline.json`'da; başlıcaları:
+
+- `app/store/[storeSlug]/page.tsx`: ana sayfa hero görseli, sloganlar ve Taktikalp'e özel bölümler
+- `components/commerce/public/store-announcement-bar.tsx`, `storefront-cta-band.tsx`: sabit duyuru / CTA metinleri
+- `app/store/[storeSlug]/urun/[productSlug]/page.tsx`: "Kendi Üretimimiz" rozeti mağaza slug'ı sabit yazılarak açılıyor
+- `lib/commerce/public/store-brand-assets.ts`: mağaza slug'ına göre yedek logo/favicon haritası
+- Mağaza font seti (`lib/fonts/store/**`) ve mağaza teması tek bir tasarımdır
+
+Baseline yalnız küçülebilir: bir madde düzeltilince dosyadan silinir. Yeni madde eklemek kullanıcı onayı ister.
 
 ## Bilinmesi gerekenler
 
-- **Her `main` push'unda bütün site projeleri build alır.** Site sayısı arttıkça her projeye bir *Ignored Build Step* eklenmeli ki yalnızca ilgili değişikliklerde build alınsın. Petra bu yüzden zaten `petra-production` dalından deploy ediliyor.
 - **Admin yalnızca panel domaininde.** Mağaza ya da kurumsal sitede `/dashboard`, `/login`, `/mfa-challenge` ve `/auth/set-password` panele 308 ile yönlenir.
-- **İkinci kurumsal site:** Petra'nın sayfaları bugün kökte, `app/(public)/` altında duruyor. İkinci bir kurumsal site gelince yollar çakışır. O zaman kurumsal siteler `app/sites/<key>/` altına taşınmalı ve host/`SITE_KEY` ile rewrite edilmeli. Petra main'e taşınmadan bu yapılmamalı.
+- **Petra ayrı bir soydur.** Canlısı `petra-production` dalından yayınlanır; Petra işi yalnız oradan açılan `petra-*` dallarında yapılır. `main`'deki `app/(public)/**` Petra kopyası canlıyı etkilemez ve orada Petra değişikliği yapılmaz. Push koruması `main` soyuna Petra dosyası, Petra dalına Petra dışı dosya girmesini engeller.
+- **Bir koruma yanlış alarm veriyorsa koruma gevşetilmez.** Ya kod düzeltilir ya da `scripts/isolation-baseline.json`'a gerekçesiyle ve kullanıcı onayıyla istisna yazılır.

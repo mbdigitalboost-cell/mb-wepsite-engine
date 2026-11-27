@@ -80,5 +80,24 @@ npm run lint
 npm run build
 ```
 
+## Site izolasyonu (Faz 38)
+
+Bu repo birden çok müşterinin sitesini barındırır; her site ayrı bir
+müşteridir ve kodu, içeriği, verisi, yayını birbirine karışmaz. Kurallar:
+[`SITE_IZOLASYON.md`](SITE_IZOLASYON.md). Yeni site: [`docs/YENI_SITE_EKLEME.md`](docs/YENI_SITE_EKLEME.md).
+
+Depoyu klonladıktan sonra **bir kez** çalıştırın (push korumasını etkinleştirir):
+
+```bash
+npm run setup:hooks
+```
+
+```bash
+npm test                          # check:isolation dahil bütün testler
+npm run check:isolation           # site dosyasında başka sitenin izi/importu var mı
+npm run check:scope -- --range origin/main..HEAD --files   # push öncesi sahiplik özeti
+npm run check:live -- <siteKey>   # yayından sonra canlı sızıntı taraması
+```
+
 <!-- webhook test: 2026-08-16T15:59:20Z -->
 
