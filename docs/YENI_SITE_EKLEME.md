@@ -89,7 +89,8 @@ Domaini bağla: Vercel → Project → Domains (www ↔ apex yönlendirmesi dahi
 
 - Google Search Console mülkü
 - Takip kodları (GA4, Meta, Ads): mağazada admin panelinden, mağaza başına
-- E-posta gönderen adresi ve adı
+- E-posta: mağaza başına `store_email_settings` satırı (admin → Mağaza → Ayarlar → E-posta: gönderen adı/adresi, yanıt adresi, yeni sipariş bildirim adresleri). **Satır yoksa o mağaza adına hiçbir e-posta gönderilmez**; ortam değişkenindeki ya da başka mağazanın adresine düşülmez. Gönderen adresinin alan adı e-posta sağlayıcısında (Resend) doğrulanmış olmalıdır (DKIM/SPF).
+- E-posta sağlayıcı anahtarı (`RESEND_API_KEY`): bugün ortamda TEK anahtar var ve yalnız ilk mağazanın alan adı için yetkili. **Farklı alan adıyla ikinci bir mağaza eklenirken anahtar da mağaza başına tutulmalıdır** (ödeme/kargo anahtarlarıyla aynı desen: yalnız service-role okuyabilen ayrı tablo). Bu yapılmadan ikinci mağazanın e-postaları sağlayıcıda reddedilir.
 - Supabase Auth → URL Configuration → Redirect URLs: `https://<domain>/**`
 - Cloudflare / DNS
 - Ödeme, kargo, fatura anahtarları: mağaza başına, veritabanında, admin'den girilir
@@ -110,12 +111,10 @@ Domaini bağla: Vercel → Project → Domains (www ↔ apex yönlendirmesi dahi
 
 ## İkinci mağazadan ÖNCE bilinmesi gerekenler
 
-Ortak mağaza motorunda bugün **Taktikalp46'ya özel sabit içerik** var. İkinci bir mağaza açılırsa bunları aynen gösterir; açmadan önce mağazaya göre seçilir hâle getirilmelidir. Tam liste gerekçeleriyle `scripts/isolation-baseline.json`'da; başlıcaları:
+Ortak mağaza motorunda kalan mağazaya özel noktaların tam listesi gerekçeleriyle `scripts/isolation-baseline.json`'dadır; başlıcaları:
 
-- `app/store/[storeSlug]/page.tsx`: ana sayfa hero görseli, sloganlar ve Taktikalp'e özel bölümler
-- `components/commerce/public/store-announcement-bar.tsx`, `storefront-cta-band.tsx`: sabit duyuru / CTA metinleri
-- `app/store/[storeSlug]/urun/[productSlug]/page.tsx`: "Kendi Üretimimiz" rozeti mağaza slug'ı sabit yazılarak açılıyor
-- `lib/commerce/public/store-brand-assets.ts`: mağaza slug'ına göre yedek logo/favicon haritası
+- Ana sayfa tasarımı ve yedek logo/favicon artık mağazanın kendi klasöründedir (`lib/sites/<siteKey>/showcase.tsx`, Faz 39); vitrin metinleri (duyuru şeridi, sayfa sonu bandı, ürün rozeti) ve e-posta ayarı veritabanındadır. Yeni mağaza bunları kendi satırlarıyla doldurur; boş bırakılan parça gösterilmez.
+- E-posta sağlayıcı anahtarı mağaza başına değildir (bkz. yukarıda "Dış servisler").
 - Mağaza font seti (`lib/fonts/store/**`) ve mağaza teması tek bir tasarımdır
 
 Baseline yalnız küçülebilir: bir madde düzeltilince dosyadan silinir. Yeni madde eklemek kullanıcı onayı ister.

@@ -1736,6 +1736,80 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 40, migration 0054 — mağaza başına e-posta göndereni ve tür anahtarları. Satır yoksa e-posta gönderilmez. */
+      store_email_settings: {
+        Row: {
+          store_id: string;
+          from_name: string;
+          from_email: string;
+          reply_to_email: string | null;
+          order_notification_emails: string[];
+          send_order_confirmation: boolean;
+          send_shipped: boolean;
+          send_cancel_refund: boolean;
+          send_store_new_order: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          from_name: string;
+          from_email: string;
+          reply_to_email?: string | null;
+          order_notification_emails?: string[];
+          send_order_confirmation?: boolean;
+          send_shipped?: boolean;
+          send_cancel_refund?: boolean;
+          send_store_new_order?: boolean;
+        };
+        Update: {
+          from_name?: string;
+          from_email?: string;
+          reply_to_email?: string | null;
+          order_notification_emails?: string[];
+          send_order_confirmation?: boolean;
+          send_shipped?: boolean;
+          send_cancel_refund?: boolean;
+          send_store_new_order?: boolean;
+        };
+        Relationships: [];
+      };
+      /** Faz 40, migration 0054 — sipariş e-postası gönderim kaydı (içerik tutulmaz; yalnız service-role yazar). */
+      order_email_log: {
+        Row: {
+          id: string;
+          store_id: string;
+          order_id: string | null;
+          return_id: string | null;
+          kind: string;
+          recipient: string;
+          provider_message_id: string | null;
+          status: string;
+          error: string | null;
+          attempts: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          order_id?: string | null;
+          return_id?: string | null;
+          kind: string;
+          recipient: string;
+          provider_message_id?: string | null;
+          status: string;
+          error?: string | null;
+          attempts?: number;
+        };
+        Update: {
+          recipient?: string;
+          provider_message_id?: string | null;
+          status?: string;
+          error?: string | null;
+          attempts?: number;
+        };
+        Relationships: [];
+      };
       /** Faz 39, migration 0052 — mağaza başına vitrin metinleri. Boş alan = parça gösterilmez. */
       store_storefront_texts: {
         Row: {

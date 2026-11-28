@@ -217,7 +217,8 @@ export async function sendSubscriberEmailAction(customerId: string, storeId: str
   const declaredNonCommercial = formData.get("nonCommercial") === "on";
   if (!canSendSubscriberMessage(consentStatus, declaredNonCommercial)) redirect(`${basePath(customerId, storeId)}?error=no-consent`);
 
-  const result = await sendEmail({ to, subject, text, fromName: audience.storeName ?? undefined });
+  // Faz 40 — gönderen bu mağazanın kendi e-posta ayarından gelir; ayar yoksa gönderilmez.
+  const result = await sendEmail({ storeId, to, subject, text });
 
   if (!result.sent) {
     redirect(`${basePath(customerId, storeId)}?error=email-not-sent`);

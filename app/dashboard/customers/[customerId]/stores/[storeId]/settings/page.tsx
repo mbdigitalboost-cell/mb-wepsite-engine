@@ -6,16 +6,17 @@ import { StoreSettingsForm } from "./settings-form";
 import { MaintenanceForm } from "./maintenance-form";
 import { ReturnSettingsCard } from "./return-settings-card";
 import { StorefrontTextsCard } from "./storefront-texts-card";
+import { EmailSettingsCard } from "./email-settings-card";
 
 export default async function StoreSettingsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string }>;
-  searchParams: Promise<{ iade?: string; vitrin?: string }>;
+  searchParams: Promise<{ iade?: string; vitrin?: string; eposta?: string }>;
 }) {
   const { customerId, storeId } = await params;
-  const { iade, vitrin } = await searchParams;
+  const { iade, vitrin, eposta } = await searchParams;
   await requireStoreAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -72,6 +73,9 @@ export default async function StoreSettingsPage({
 
       {/* Faz 39 — mağazaya özel vitrin metinleri (duyuru şeridi, sayfa sonu bandı, ürün rozeti). */}
       <StorefrontTextsCard customerId={customerId} storeId={storeId} status={vitrin} />
+
+      {/* Faz 40 — mağaza başına e-posta göndereni, bildirim adresleri, test ve son gönderimler. */}
+      <EmailSettingsCard customerId={customerId} storeId={storeId} status={eposta} />
     </div>
   );
 }

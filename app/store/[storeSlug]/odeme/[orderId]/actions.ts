@@ -7,6 +7,7 @@ import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAuditEvent } from "@/lib/auth/audit-log";
 import { CARD_PAYMENT_METHOD, PAYMENT_METHODS } from "@/lib/validation/order";
+import { notifyOrderPlaced } from "@/lib/commerce/order-emails/service";
 
 /**
  * Faz 22 — "Başka yöntem seç": kart ödemesi başarısız olan/vazgeçilen
@@ -53,6 +54,10 @@ export async function switchPaymentMethodAction(storeSlug: string, orderId: stri
   if (storeRow?.customer_id) {
     revalidatePath(`/dashboard/customers/${storeRow.customer_id}/stores/${store.id}/orders`);
   }
+
+  // Faz 40 — sipariş artık kapıda ödeme/havale: onay e-postası şimdi gider
+  // (kartken ödenmediği için gönderilmemişti). Hata fırlatmaz.
+  await notifyOrderPlaced(store.id, orderId);
 
   redirect(`${storeBase(storeSlug)}/sepet?siparis=${orderId}&odeme=yontem`);
 }

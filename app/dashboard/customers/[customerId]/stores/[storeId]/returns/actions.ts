@@ -107,18 +107,7 @@ export async function approveReturnAction(customerId: string, storeId: string, r
     entityId: returnId,
     metadata: { storeId, orderNumber: context.order.orderNumber, kind: record.kind },
   });
-  const fresh = await loadOwnedReturn(storeId, returnId);
-  await sendReturnEmail({
-    storeId,
-    to: context.order.customerEmail,
-    orderNumber: context.order.orderNumber,
-    returnNumber: record.return_number,
-    kind: record.kind,
-    event: "approved",
-    returnCode: fresh?.return_code,
-    carrierName: fresh?.return_carrier_name,
-    instructions: fresh?.return_instructions_snapshot,
-  });
+  await sendReturnEmail({ storeId, orderId: record.order_id, returnId, event: "approved" });
   revalidateReturn(customerId, storeId, returnId, record.order_id);
   redirect(detailPath(customerId, storeId, returnId, "ok=onay"));
 }
@@ -144,15 +133,7 @@ export async function rejectReturnAction(customerId: string, storeId: string, re
     entityId: returnId,
     metadata: { storeId, orderNumber: context?.order.orderNumber ?? null, kind: record.kind },
   });
-  await sendReturnEmail({
-    storeId,
-    to: context?.order.customerEmail ?? null,
-    orderNumber: context?.order.orderNumber ?? 0,
-    returnNumber: record.return_number,
-    kind: record.kind,
-    event: "rejected",
-    rejectionReason: reason,
-  });
+  await sendReturnEmail({ storeId, orderId: record.order_id, returnId, event: "rejected" });
   revalidateReturn(customerId, storeId, returnId, record.order_id);
   redirect(detailPath(customerId, storeId, returnId, "ok=red"));
 }
@@ -296,15 +277,7 @@ export async function refundReturnAction(customerId: string, storeId: string, re
     entityId: returnId,
     metadata: { storeId, orderNumber: context.order.orderNumber, amount, mode },
   });
-  await sendReturnEmail({
-    storeId,
-    to: context.order.customerEmail,
-    orderNumber: context.order.orderNumber,
-    returnNumber: record.return_number,
-    kind: record.kind,
-    event: "refunded",
-    refundAmount: amount,
-  });
+  await sendReturnEmail({ storeId, orderId: record.order_id, returnId, event: "refunded", refundAmount: amount });
   revalidateReturn(customerId, storeId, returnId, record.order_id);
   redirect(detailPath(customerId, storeId, returnId, "ok=iade"));
 }

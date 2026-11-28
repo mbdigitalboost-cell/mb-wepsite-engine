@@ -22,6 +22,7 @@ import {
 import type { OrderStatus, PaymentStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 import { setOrderTestFlagAction } from "./test-flag-actions";
+import { OrderEmailSection } from "./order-email-section";
 import { LegalMarkdown } from "@/components/commerce/public/legal/legal-markdown";
 
 interface OrderItemRow {
@@ -85,10 +86,13 @@ interface OrderItemAddonRow {
  */
 export default async function StoreOrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string; orderId: string }>;
+  searchParams: Promise<{ epostaTekrar?: string }>;
 }) {
   const { customerId, storeId, orderId } = await params;
+  const { epostaTekrar } = await searchParams;
   await requireStoreEditorAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -489,6 +493,9 @@ export default async function StoreOrderDetailPage({
           </div>
         </dl>
       </section>
+
+      {/* Faz 40 — bu siparişin e-posta kayıtları + "Tekrar gönder". */}
+      <OrderEmailSection customerId={customerId} storeId={storeId} orderId={orderId} customerEmail={order.customer_email} resendStatus={epostaTekrar} />
 
       {/*
         Faz 21 — Basit Kargo senkronu. Üç hâl: not_sent (henüz gönderilmedi /

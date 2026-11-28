@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { contactIsKnown, rowBelongsToStore, storeMatchesCustomer, type OwnershipQueryClient } from "../lib/auth/tenant-scope.ts";
-import { formatFromAddress } from "../lib/notifications/format-from.ts";
 
 /**
  * Faz 29 — müşteri izolasyonu. Gerçek DB'ye yazılmaz: iki mağazalı sahte bir
@@ -101,13 +100,6 @@ test("messages only go to the store's own audience", () => {
   assert.equal(contactIsKnown("05321112233", audience), true);
   assert.equal(contactIsKnown("baskasi@example.com", audience), false);
   assert.equal(contactIsKnown("", audience), false);
-});
-
-test("sender shows the store name, never another brand", () => {
-  assert.equal(formatFromAddress("bildirim@mbdigitalboost.com", "Taktikalp46"), '"Taktikalp46" <bildirim@mbdigitalboost.com>');
-  assert.equal(formatFromAddress("MB Digital Boost <bildirim@mbdigitalboost.com>", "Taktikalp46"), '"Taktikalp46" <bildirim@mbdigitalboost.com>');
-  assert.equal(formatFromAddress("bildirim@mbdigitalboost.com", 'Kötü"<ad>'), '"Kötüad" <bildirim@mbdigitalboost.com>');
-  assert.equal(formatFromAddress("bildirim@mbdigitalboost.com"), "bildirim@mbdigitalboost.com");
 });
 
 test("Faz 30: A store + B store's return request → rejected (admin actions query id + store_id)", async () => {

@@ -28,6 +28,7 @@ import {
 } from "@/lib/legal/store-legal";
 import { buildAcceptanceRecord, isChecked, legalAcceptanceError, legalOrderFromCheckout } from "@/lib/legal/acceptance";
 import { orderContractHref } from "@/lib/legal/order-acceptance";
+import { notifyOrderPlaced } from "@/lib/commerce/order-emails/service";
 
 /**
  * FAZ 2 (mağaza sepeti/sipariş) — the ONLY function in this file, and the
@@ -367,6 +368,12 @@ export async function createOrderAction(
       marketingConsent,
     },
   });
+
+  // Faz 40 — sipariş onayı (müşteri) + mağazaya bildirim. Kart siparişinde
+  // burada GÖNDERİLMEZ: ödeme sunucuda doğrulanınca finalizeCardPayment
+  // gönderir (notifyOrderPlaced koşulu kendisi de denetler). Hata fırlatmaz;
+  // e-posta sorunu siparişi etkilemez.
+  if (!isCardPayment) await notifyOrderPlaced(store.id, order.id);
 
   if (storeRow?.customer_id) {
     // The admin orders list is `ƒ` (server-rendered on demand, never

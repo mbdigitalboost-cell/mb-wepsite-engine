@@ -105,10 +105,6 @@ export const serverEnv = {
   get resendApiKey() {
     return readServerEnv("RESEND_API_KEY");
   },
-  /** Sender address once a domain is verified in Resend — see send-lead-notification.ts's own comment on the shared onboarding sender's delivery restriction. */
-  get resendFromEmail() {
-    return readServerEnv("RESEND_FROM_EMAIL");
-  },
   /**
    * "Aboneler" — WhatsApp gönderim altyapısı (lib/notifications/send-whatsapp.ts),
    * Meta Cloud API. Platform-level (RESEND_API_KEY ile aynı desen) — henüz

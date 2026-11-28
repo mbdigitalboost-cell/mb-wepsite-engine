@@ -1,6 +1,8 @@
 import "server-only";
-import { serverEnv } from "@/lib/config/env";
-import { formatFromAddress } from "@/lib/notifications/format-from";
+
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isEmailProviderConfigured, sendViaResend } from "@/lib/notifications/resend";
+import { resolveSender, toStoreEmailSettings } from "@/lib/commerce/order-emails/settings";
 
 export interface SendEmailResult {
   sent: boolean;
@@ -9,55 +11,46 @@ export interface SendEmailResult {
 }
 
 /**
- * GENEL, serbest-metin e-posta gönderimi — "Aboneler" sayfasının
- * "E-posta Gönder" aksiyonu için. lib/notifications/send-lead-notification.ts
- * ile AYNI Resend API deseni (o dosya değiştirilmedi, bu ayrı bir fonksiyon —
- * lead-notification "best-effort, asla hata döndürme" iken bu fonksiyon bir
- * admin'in kendi, o anki gönderim eylemi: sonucu (başarılı/başarısız)
- * ARAYANA döndürmesi gerekiyor ki admin UI'da gerçek bir geri bildirim
- * gösterilebilsin).
+ * Bir MAĞAZA adına serbest metin e-postası — "Aboneler" sayfasının
+ * "E-posta Gönder" aksiyonu için. Sonucu arayana döndürür (admin UI gerçek
+ * bir geri bildirim gösterir); hata fırlatmaz.
  *
- * RESEND_API_KEY platform genelinde paylaşımlı (lead-notification'la aynı
- * env var) — ayrı bir "Aboneler'e özel" key YOK, tek bir Resend hesabı hepsini
- * kapsıyor, tıpkı lead notification'daki gibi.
- *
- * YAPILANDIRILMAMIŞSA (RESEND_API_KEY yok): hata FIRLATMAZ — { sent: false,
- * error: "..." } döner, admin UI bunu nazik bir mesaj olarak gösterir. Bu
- * dosya bu env var'ı hiçbir deployment'ta test EDEMEDİ (bkz. bu fazın kendi
- * raporu) — gerçek bir gönderim, RESEND_API_KEY eklenene kadar doğrulanamaz.
+ * Faz 40 — GÖNDEREN artık ortam değişkeninden DEĞİL, mağazanın kendi
+ * `store_email_settings` satırından gelir. Satır yoksa e-posta gönderilmez;
+ * ortam adresine, sağlayıcının deneme adresine ya da başka bir mağazanın
+ * adresine düşmek yoktur (SITE_IZOLASYON.md §2.8). `storeId` zorunludur:
+ * bu fonksiyonla mağazasız e-posta gönderilemez.
  */
-export async function sendEmail(params: { to: string; subject: string; text: string; fromName?: string }): Promise<SendEmailResult> {
-  const apiKey = serverEnv.resendApiKey;
-  if (!apiKey) {
+export async function sendEmail(params: { storeId: string; to: string; subject: string; text: string }): Promise<SendEmailResult> {
+  if (!isEmailProviderConfigured()) {
     return { sent: false, error: "E-posta sağlayıcısı henüz yapılandırılmadı (RESEND_API_KEY eksik)." };
   }
 
-  const from = formatFromAddress(serverEnv.resendFromEmail || "onboarding@resend.dev", params.fromName);
-
   try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [params.to],
-        subject: params.subject,
-        text: params.text,
-      }),
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-      console.error("[notifications/send-email] Resend request failed:", response.status, body);
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("store_email_settings")
+      .select("from_name, from_email, reply_to_email, order_notification_emails, send_order_confirmation, send_shipped, send_cancel_refund, send_store_new_order")
+      .eq("store_id", params.storeId)
+      .maybeSingle();
+    if (error) {
+      console.error("[notifications/send-email] settings read failed:", error.message);
       return { sent: false, error: "E-posta gönderilemedi, lütfen daha sonra tekrar deneyin." };
     }
+    const sender = resolveSender(toStoreEmailSettings(data));
+    if (!sender) {
+      console.info("[notifications/send-email] e-posta ayarı yok — gönderilmedi");
+      return { sent: false, error: "Bu mağazanın e-posta ayarı yok. Mağaza → Ayarlar → E-posta bölümünden gönderen adresini tanımlayın." };
+    }
 
+    const result = await sendViaResend({ from: sender.from, replyTo: sender.replyTo, to: [params.to], subject: params.subject, text: params.text });
+    if (!result.ok) {
+      console.error("[notifications/send-email] send failed:", result.error);
+      return { sent: false, error: "E-posta gönderilemedi, lütfen daha sonra tekrar deneyin." };
+    }
     return { sent: true };
   } catch (err) {
-    console.error("[notifications/send-email] unexpected error:", err);
+    console.error("[notifications/send-email] unexpected error:", err instanceof Error ? err.message : "unknown");
     return { sent: false, error: "E-posta gönderilemedi, lütfen daha sonra tekrar deneyin." };
   }
 }

@@ -68,14 +68,7 @@ export async function createReturnRequestAction(
   });
   if (!result.ok) return { error: result.error };
 
-  await sendReturnEmail({
-    storeId: access.storeId,
-    to: access.context.order.customerEmail,
-    orderNumber: access.context.order.orderNumber,
-    returnNumber: result.returnNumber,
-    kind: parsed.data.kind,
-    event: "requested",
-  });
+  await sendReturnEmail({ storeId: access.storeId, orderId, returnId: result.id, event: "requested" });
 
   redirect(detailPath(storeSlug, orderId, access.token, `talep=${result.returnNumber}`));
 }

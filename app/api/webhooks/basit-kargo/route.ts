@@ -1,3 +1,4 @@
+import { notifyOrderShipped } from "@/lib/commerce/order-emails/service";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -190,6 +191,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     console.error("[basit-kargo webhook] order update failed:", updateError.message);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
+
+  // Faz 40 — sipariş "shipped" olduysa (ya da takip numarası şimdi yazıldıysa)
+  // kargo e-postası; koşulu servis kendisi denetler, bir kez gönderir, hata fırlatmaz.
+  if (update.status === "shipped" || update.tracking_number) await notifyOrderShipped(store.storeId, order.id);
 
   const { data: storeRow } = await admin.from("stores").select("customer_id").eq("id", store.storeId).maybeSingle();
   if (storeRow?.customer_id) {

@@ -11,6 +11,7 @@ import { getShippingIntegrationSecrets } from "@/lib/integrations/store-shipping
 import { cancelShippingProviderOrders, loadOrderContentSummaries, pushOrdersToShippingProvider } from "@/lib/integrations/shipping-push";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
+import { notifyOrderPlaced, notifyOrderShipped, notifyOrderStatusChanged } from "@/lib/commerce/order-emails/service";
 
 /**
  * Faz 22 — "kart seçilmiş ama ödenmemiş sipariş onaylanıyor" uyarısı için
@@ -59,6 +60,10 @@ async function syncShippingAfterStatusChange(params: {
     // Yan etki asıl işlemi asla düşürmez — sipariş durumu zaten değişti.
     console.error("[orders] shipping sync after status change failed:", error instanceof Error ? error.message : error);
   }
+  // Faz 40 — durum e-postası: "shipped" (takip numarası yazılmışsa) ve
+  // "cancelled". Tek tek, toplu ve "Toplu Onayla" yollarının hepsi buradan
+  // geçer. Servis koşulu kendisi denetler, bir kez gönderir, hata fırlatmaz.
+  await notifyOrderStatusChanged(storeId, orderIds, status);
 }
 
 /**
@@ -160,6 +165,10 @@ export async function updateOrderPaymentStatusAction(
     metadata: { paymentStatus },
   });
 
+  // Faz 40 — ödenmemiş bir kart siparişi elle "ödendi" yapıldıysa bekleyen
+  // sipariş onayı şimdi gider (daha önce gönderildiyse yeniden gönderilmez).
+  if (paymentStatus === "paid") await notifyOrderPlaced(storeId, orderId);
+
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders/${orderId}`);
 }
@@ -229,6 +238,9 @@ export async function updateShippingInfoAction(
     entityId: orderId,
     metadata: { carrier: carrier || null, trackingNumber: trackingNumber || null },
   });
+
+  // Faz 40 — sipariş "shipped" iken takip numarası şimdi yazıldıysa kargo e-postası (bir kez).
+  await notifyOrderShipped(storeId, orderId);
 
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders`);
   revalidatePath(`/dashboard/customers/${customerId}/stores/${storeId}/orders/${orderId}`);
