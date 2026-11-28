@@ -19,7 +19,11 @@ import {
   validateStoreEmailSettings,
   type StoreEmailSettings,
 } from "../lib/commerce/order-emails/settings.ts";
+import { runDeferred } from "../lib/commerce/order-emails/defer.ts";
 import {
+  NEUTRAL_HEADER_BACKGROUND,
+  legalTextToPlain,
+  resolveHeaderBand,
   renderCancelled,
   renderOrderConfirmation,
   renderReturnEmail,
@@ -479,4 +483,107 @@ test("iptal talebi onayı ve iade metinleri", () => {
   const refunded = renderReturnEmail(STORE, ORDER, { event: "refunded", requestKind: "return", returnNumber: 7, refundAmount: 1480, returnCode: null, carrierName: null, instructions: null, rejectionReason: null });
   assert.match(refunded.subject, /ödemeniz iade edildi/);
   assert.match(refunded.text, /₺1\.480,00 tutarındaki ödemeniz iade edildi/);
+});
+
+// ---------------------------------------------------------------------------
+// Faz 40 düzeltmeleri: başlık şeridi, düz metin sözleşme, yanıttan sonra gönderim
+// ---------------------------------------------------------------------------
+
+test("başlık: logo koyu şerit üzerinde (bgcolor + style), 48 px, alt metin mağaza adı ve açık renkte; gövde beyaz", () => {
+  const withLogo: EmailStore = { ...STORE, logoUrl: "https://ornek-magaza.example/logo.png" };
+  const { html } = renderShipped(withLogo, ORDER);
+  assert.match(html, /<td bgcolor="#18181b" style="background:#18181b;background-color:#18181b;/);
+  assert.match(html, /<img src="https:\/\/ornek-magaza\.example\/logo\.png" alt="Örnek Mağaza" height="48" style="height:48px;[^"]*color:#ffffff;/);
+  assert.match(html, /padding:24px;background:#ffffff;/);
+  // Logo yoksa mağaza adı şerit üzerinde açık renkle yazılır.
+  const noLogo = renderShipped(STORE, ORDER).html;
+  assert.match(noLogo, /<td bgcolor="#18181b"[^>]*><a [^>]*color:#ffffff;[^>]*>Örnek Mağaza<\/a>/);
+});
+
+test("başlık şeridi bütün e-posta türlerinde aynıdır", () => {
+  const all = [
+    renderOrderConfirmation(STORE, ORDER, LEGAL),
+    renderStoreNewOrder(STORE, ORDER, { adminOrderUrl: null, customerPhone: null, customerEmail: null, note: null }),
+    renderShipped(STORE, ORDER),
+    renderCancelled(STORE, ORDER, { returnNumber: null }),
+    renderReturnEmail(STORE, ORDER, { event: "requested", requestKind: "return", returnNumber: 7, refundAmount: null, returnCode: null, carrierName: null, instructions: null, rejectionReason: null }),
+    renderTestEmail(STORE, { fromName: "Örnek Mağaza", fromEmail: "siparis@ornek-magaza.example" }),
+  ];
+  const header = (html: string) => /<table role="presentation"[^>]*><tr><td bgcolor=.*?<\/table>/.exec(html)?.[0];
+  assert.ok(header(all[0].html));
+  for (const email of all) assert.equal(header(email.html), header(all[0].html));
+});
+
+test("şerit rengi mağaza verisinden gelir; geçersizse nötr koyu renk, yazı rengi karşıtlığa göre", () => {
+  assert.deepEqual(resolveHeaderBand(null), { background: NEUTRAL_HEADER_BACKGROUND, foreground: "#ffffff" });
+  assert.deepEqual(resolveHeaderBand("kırmızı"), { background: NEUTRAL_HEADER_BACKGROUND, foreground: "#ffffff" });
+  assert.deepEqual(resolveHeaderBand("url(x)"), { background: NEUTRAL_HEADER_BACKGROUND, foreground: "#ffffff" });
+  assert.deepEqual(resolveHeaderBand("#0B1F3A"), { background: "#0b1f3a", foreground: "#ffffff" });
+  assert.deepEqual(resolveHeaderBand("#fc0"), { background: "#ffcc00", foreground: "#18181b" });
+  const html = renderShipped({ ...STORE, headerBackground: "#0b1f3a" }, ORDER).html;
+  assert.match(html, /<td bgcolor="#0b1f3a" style="background:#0b1f3a;/);
+});
+
+test("düz metin sözleşme: markdown işaretleri yok, bağlantılar mutlak; HTML sürümü ve anlık görüntü değişmez", () => {
+  const source = "## Cayma hakkı\n\n### Nasıl kullanılır\n\n**Süre:** 14 gün. [Cayma formunu](/cayma-formu) doldurabilir ya da [Siparişlerim](/siparislerim) sayfasını kullanabilirsiniz.\n\n- [bilgi@ornek-magaza.example](mailto:bilgi@ornek-magaza.example) adresine yazın\n- [Bakanlık](https://www.ticaret.gov.tr) duyuruları\n\n---\n\nSon madde";
+  const before = source;
+  const plain = legalTextToPlain(source, "https://ornek-magaza.example/");
+  assert.equal(
+    plain,
+    "Cayma hakkı\n\nNasıl kullanılır\n\nSüre: 14 gün. Cayma formunu (https://ornek-magaza.example/cayma-formu) doldurabilir ya da Siparişlerim (https://ornek-magaza.example/siparislerim) sayfasını kullanabilirsiniz.\n\n- bilgi@ornek-magaza.example adresine yazın\n- Bakanlık (https://www.ticaret.gov.tr) duyuruları\n\n----------\n\nSon madde",
+  );
+  assert.equal(source, before);
+
+  const email = renderOrderConfirmation(STORE, ORDER, { preInformation: source, distanceSales: "# Sözleşme\n\n**Madde 1** — Taraflar" });
+  const legalText = email.text.slice(email.text.indexOf("ÖN BİLGİLENDİRME FORMU"));
+  assert.doesNotMatch(legalText, /\*\*|^#{1,3} |\]\(\//m);
+  assert.match(legalText, /Cayma formunu \(https:\/\/ornek-magaza\.example\/cayma-formu\)/);
+  assert.match(legalText, /Madde 1 — Taraflar/);
+  // HTML sürümü önceki gibi: bağlantı <a>, kalın <strong>.
+  assert.match(email.html, /<a href="https:\/\/ornek-magaza\.example\/cayma-formu"[^>]*>Cayma formunu<\/a>/);
+  assert.match(email.html, /<strong>Süre:<\/strong>/);
+});
+
+test("yanıttan sonra gönderim: iş zamanlanır ve çağıran beklemez; zamanlama çalışmazsa hemen yapılır", async () => {
+  const queued: Array<() => Promise<void>> = [];
+  let ran = 0;
+  await runDeferred((task) => void queued.push(task), async () => void ran++);
+  assert.equal(ran, 0, "yanıt dönmeden e-posta işi çalışmamalı");
+  assert.equal(queued.length, 1);
+  await queued[0]();
+  assert.equal(ran, 1);
+
+  // after() kullanılamıyor (istek kapsamı yok): iş kaybolmaz, hemen çalışır.
+  await runDeferred(() => {
+    throw new Error("istek kapsamı yok");
+  }, async () => void ran++);
+  assert.equal(ran, 2);
+});
+
+test("yanıttan sonra gönderim: iş hata verirse kayıt için onError çağrılır ve hata asla dışarı çıkmaz", async () => {
+  const queued: Array<() => Promise<void>> = [];
+  const errors: string[] = [];
+  await runDeferred(
+    (task) => void queued.push(task),
+    async () => {
+      throw new Error("veri okunamadı");
+    },
+    (error) => void errors.push(error instanceof Error ? error.message : "?"),
+  );
+  await assert.doesNotReject(queued[0]());
+  assert.deepEqual(errors, ["veri okunamadı"]);
+  // onError da hata verse bile sipariş akışı etkilenmez.
+  await assert.doesNotReject(
+    runDeferred(
+      () => {
+        throw new Error("x");
+      },
+      async () => {
+        throw new Error("y");
+      },
+      () => {
+        throw new Error("z");
+      },
+    ),
+  );
 });

@@ -36,6 +36,12 @@ export interface EmailStore {
   homeUrl: string;
   /** Mutlak https adresi; yoksa mağaza adı yazıyla gösterilir. */
   logoUrl: string | null;
+  /**
+   * Başlık şeridinin arka plan rengi (#rgb ya da #rrggbb), mağaza verisinden.
+   * Yoksa ya da geçersizse nötr koyu renk kullanılır; şablonda mağazaya özel
+   * sabit renk yoktur.
+   */
+  headerBackground?: string | null;
   /** "Siparişlerim" sayfasının mutlak adresi. */
   ordersUrl: string;
   /** Yayınlanmış yasal sayfaların bağlantıları (altbilgi). */
@@ -137,7 +143,8 @@ function itemLabel(item: EmailOrderItem): string {
 
 const STYLE = {
   body: "margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b;",
-  card: "max-width:600px;margin:0 auto;background:#ffffff;padding:24px;",
+  card: "max-width:600px;margin:0 auto;background:#ffffff;",
+  content: "padding:24px;background:#ffffff;",
   h1: "margin:0 0 12px;font-size:20px;line-height:1.3;color:#18181b;",
   h2: "margin:24px 0 8px;font-size:15px;line-height:1.3;color:#18181b;",
   p: "margin:0 0 10px;font-size:14px;line-height:1.5;color:#27272a;",
@@ -157,15 +164,50 @@ function sellerLines(seller: EmailSeller | null): string[] {
   return lines;
 }
 
+/** Mağaza rengi verilmemişse başlık şeridinde kullanılan nötr koyu renk. */
+export const NEUTRAL_HEADER_BACKGROUND = "#18181b";
+
+/**
+ * Başlık şeridinin renkleri. Arka plan mağaza verisinden gelir (geçerli bir
+ * hex değilse nötr koyu renk); yazı rengi arka plana göre seçilir ki logo
+ * yüklenmediğinde alt metin (mağaza adı) okunabilsin.
+ */
+export function resolveHeaderBand(color: string | null | undefined): { background: string; foreground: string } {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((color ?? "").trim());
+  if (!match) return { background: NEUTRAL_HEADER_BACKGROUND, foreground: "#ffffff" };
+  const hex = (match[1].length === 3 ? match[1].replace(/./g, "$&$&") : match[1]).toLowerCase();
+  const channel = (offset: number) => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+  // WCAG karşıtlığı: beyaz yazı mı koyu yazı mı daha okunaklı?
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const darkContrast = (luminance + 0.05) / 0.0601;
+  return { background: `#${hex}`, foreground: whiteContrast >= darkContrast ? "#ffffff" : "#18181b" };
+}
+
+/**
+ * Bütün e-posta türlerinin ortak başlığı: koyu şerit üzerinde logo (48 px).
+ * Şerit bir tablo hücresidir; renk hem `bgcolor` özniteliğiyle hem `style`
+ * ile verilir (Outlook `style` arka planını yok sayabilir). Logo açık renkli
+ * ve saydam olabildiği için beyaz zeminde görünmüyordu.
+ */
+function headerHtml(store: EmailStore): string {
+  const band = resolveHeaderBand(store.headerBackground);
+  const text = `font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:bold;color:${band.foreground};`;
+  const inner = store.logoUrl
+    ? `<a href="${esc(store.homeUrl)}" style="${text}text-decoration:none;"><img src="${esc(store.logoUrl)}" alt="${esc(store.name)}" height="48" style="height:48px;width:auto;border:0;outline:none;display:block;${text}"></a>`
+    : `<a href="${esc(store.homeUrl)}" style="${text}text-decoration:none;">${esc(store.name)}</a>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td bgcolor="${band.background}" style="background:${band.background};background-color:${band.background};padding:16px 24px;">${inner}</td></tr></table>`;
+}
+
 function layout(store: EmailStore, title: string, bodyHtml: string, note: string): string {
-  const header = store.logoUrl
-    ? `<a href="${esc(store.homeUrl)}"><img src="${esc(store.logoUrl)}" alt="${esc(store.name)}" height="48" style="height:48px;width:auto;border:0;display:block;"></a>`
-    : `<a href="${esc(store.homeUrl)}" style="font-size:18px;font-weight:bold;color:#18181b;text-decoration:none;">${esc(store.name)}</a>`;
   const seller = sellerLines(store.seller)
     .map((line) => `<p style="${STYLE.muted}">${esc(line)}</p>`)
     .join("");
   const links = store.legalLinks.map((link) => `<a href="${esc(link.url)}" style="color:#71717a;text-decoration:underline;">${esc(link.label)}</a>`).join(" · ");
-  return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title></head><body style="${STYLE.body}"><div style="${STYLE.card}"><div style="padding-bottom:16px;border-bottom:1px solid #e4e4e7;margin-bottom:20px;">${header}</div>${bodyHtml}<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e4e4e7;">${seller}${links ? `<p style="${STYLE.muted}">${links}</p>` : ""}<p style="${STYLE.muted}">${esc(note)}</p></div></div></body></html>`;
+  return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title></head><body style="${STYLE.body}"><div style="${STYLE.card}">${headerHtml(store)}<div style="${STYLE.content}">${bodyHtml}<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e4e4e7;">${seller}${links ? `<p style="${STYLE.muted}">${links}</p>` : ""}<p style="${STYLE.muted}">${esc(note)}</p></div></div></div></body></html>`;
 }
 
 function footerText(store: EmailStore, note: string): string {
@@ -272,6 +314,31 @@ export function legalTextToHtml(source: string, homeUrl: string): string {
     .join("");
 }
 
+/**
+ * Yasal metin (Faz 33 anlık görüntüsü, markdown) → e-postanın DÜZ METİN
+ * sürümü. Anlık görüntünün kendisi değişmez; yalnız e-postaya dönüştürülür:
+ * başlık (#) ve kalın (**) işaretleri kaldırılır, bağlantılar mutlak adresle
+ * "metin (https://…)" biçiminde yazılır (göreli yol mağaza adresine çevrilir).
+ */
+export function legalTextToPlain(source: string, homeUrl: string): string {
+  const origin = homeUrl.replace(/\/+$/, "");
+  const inline = (text: string) =>
+    parseLegalInline(text)
+      .map((part) => {
+        if (part.type !== "link") return part.text;
+        const href = part.href.startsWith("/") ? `${origin}${part.href}` : part.href.replace(/^(mailto|tel):/, "");
+        return href === part.text.trim() ? part.text : `${part.text} (${href})`;
+      })
+      .join("");
+  const blocks = parseLegalMarkdown(source).map((block) => {
+    if (block.type === "heading") return inline(block.text);
+    if (block.type === "list") return block.items.map((item) => `- ${inline(item)}`).join("\n");
+    if (block.type === "hr") return "----------";
+    return block.lines.map(inline).join("\n");
+  });
+  return blocks.join("\n\n");
+}
+
 // ---------------------------------------------------------------------------
 // Türler
 // ---------------------------------------------------------------------------
@@ -367,12 +434,12 @@ export function renderOrderConfirmation(store: EmailStore, order: EmailOrder, le
       "",
       "ÖN BİLGİLENDİRME FORMU",
       "",
-      legal.preInformation.trim(),
+      legalTextToPlain(legal.preInformation, store.homeUrl),
       "",
       "--------------------------------------------------",
       "MESAFELİ SATIŞ SÖZLEŞMESİ",
       "",
-      legal.distanceSales.trim(),
+      legalTextToPlain(legal.distanceSales, store.homeUrl),
     );
   }
 

@@ -14,7 +14,7 @@ import {
 } from "@/lib/integrations/iyzico";
 import { getPaymentIntegrationCredentials } from "@/lib/integrations/store-payment-integration";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
-import { notifyOrderPlaced } from "@/lib/commerce/order-emails/service";
+import { notifyOrderPlacedAfterResponse } from "@/lib/commerce/order-emails/service";
 
 /**
  * Faz 22 — kart ödemesinin sunucu tarafı akışı (iyzico Checkout Form).
@@ -324,8 +324,9 @@ export async function finalizeCardPayment(params: {
   // Faz 40 — ödeme sunucuda doğrulandı ve "ödendi" işareti BU çağrıda atıldı
   // (idempotent güncelleme 1 satır döndü): sipariş onayı + mağaza bildirimi
   // şimdi gider. Diğer yol (callback/webhook) buraya ulaşmaz; e-posta kaydı da
-  // (order_id, kind) tekilliğiyle ikinci gönderimi engeller. Hata fırlatmaz.
-  await notifyOrderPlaced(storeId, order.id);
+  // (order_id, kind) tekilliğiyle ikinci gönderimi engeller. Gönderim yanıttan
+  // sonra yapılır (after); kural aynı: yalnız ödeme doğrulandıktan sonra. Hata fırlatmaz.
+  await notifyOrderPlacedAfterResponse(storeId, order.id);
 
   const paidOrder: CardPaymentOrder = {
     ...order,

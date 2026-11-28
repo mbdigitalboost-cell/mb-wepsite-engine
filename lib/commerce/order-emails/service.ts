@@ -1,5 +1,8 @@
 import "server-only";
 
+import { after } from "next/server";
+import { runDeferred } from "@/lib/commerce/order-emails/defer";
+
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendViaResend } from "@/lib/notifications/resend";
 import { getStorefrontShowcase } from "@/lib/commerce/public/storefront-showcases";
@@ -161,6 +164,10 @@ async function loadStore(admin: Admin, storeId: string): Promise<LoadedStore | n
       name: store.name,
       homeUrl,
       logoUrl: absoluteLogoUrl(store.slug, profile?.logo_url ?? null, homeUrl),
+      // Mağaza verisinde bugün bir "arka plan rengi" alanı yok (marka ayarında
+      // yalnız ana/ikincil/vurgu/hover rengi var); bu yüzden başlık şeridi nötr
+      // koyu renkle çıkar. Böyle bir alan eklendiğinde buradan verilir.
+      headerBackground: null,
       ordersUrl: storePageUrl(store.slug, "/siparislerim"),
       legalLinks,
       returnsPolicyUrl: published.has("returns") ? storePageUrl(store.slug, "/iade-ve-cayma") : null,
@@ -342,6 +349,49 @@ export async function notifyOrderPlaced(storeId: string, orderId: string): Promi
     await sendOrderKind(context, orderId, "order_confirmation");
     await sendOrderKind(context, orderId, "store_new_order");
   });
+}
+
+/**
+ * Gönderim hiç başlayamadıysa (ör. sipariş verisi okunamadı) bunu kayda
+ * "failed" olarak düşer ki panelde görünsün ve "Tekrar gönder" ile
+ * denenebilsin. Var olan kayda dokunmaz; kendisi de hata fırlatmaz.
+ */
+async function recordPreparationFailure(storeId: string, orderId: string, kinds: readonly OrderKind[]): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    for (const kind of kinds) {
+      const { data: existing } = await admin.from("order_email_log").select("id").eq("store_id", storeId).eq("order_id", orderId).eq("kind", kind).limit(1).maybeSingle();
+      if (existing) continue;
+      await admin.from("order_email_log").insert({ store_id: storeId, order_id: orderId, return_id: null, kind, recipient: "-", status: "failed", error: "Gönderim hazırlanamadı.", attempts: 1 });
+    }
+  } catch {
+    // Kayıt da yazılamadı; asıl iş etkilenmez.
+  }
+}
+
+/**
+ * Sipariş "alındı" e-postalarını YANITTAN SONRA gönderir (next/server `after`):
+ * müşteri sipariş ekranını e-posta sağlayıcısını beklemeden görür. Çağıran
+ * önce siparişi ve sözleşme kaydını yazmış olmalıdır. Koşullar (kartta ödeme
+ * doğrulaması), tekrar koruması ve kayıt notifyOrderPlaced ile aynıdır.
+ * `after` kullanılamıyorsa gönderim hemen yapılır; hiçbir durumda hata fırlatmaz.
+ */
+export async function notifyOrderPlacedAfterResponse(storeId: string, orderId: string): Promise<void> {
+  await runDeferred(
+    after,
+    async () => {
+      const context = await loadContext(storeId, orderId);
+      if (!context) return;
+      const { order } = context;
+      if (!canSendOrderPlacedEmails({ paymentMethod: order.email.paymentMethod, paymentStatus: order.paymentStatus, status: order.status }, CARD_PAYMENT_METHOD)) return;
+      await sendOrderKind(context, orderId, "order_confirmation");
+      await sendOrderKind(context, orderId, "store_new_order");
+    },
+    async (error) => {
+      console.error("[order-emails] deferred order placed failed:", error instanceof Error ? error.message : "unknown");
+      await recordPreparationFailure(storeId, orderId, ["order_confirmation", "store_new_order"]);
+    },
+  );
 }
 
 /** Kargo e-postası: sipariş "shipped" ve takip numarası yazılmışsa; bir kez. Koşul tutmuyorsa hiçbir şey yapmaz. */

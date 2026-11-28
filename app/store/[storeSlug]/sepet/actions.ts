@@ -28,7 +28,7 @@ import {
 } from "@/lib/legal/store-legal";
 import { buildAcceptanceRecord, isChecked, legalAcceptanceError, legalOrderFromCheckout } from "@/lib/legal/acceptance";
 import { orderContractHref } from "@/lib/legal/order-acceptance";
-import { notifyOrderPlaced } from "@/lib/commerce/order-emails/service";
+import { notifyOrderPlacedAfterResponse } from "@/lib/commerce/order-emails/service";
 import { getOrderBankTransferDetails } from "@/lib/commerce/payments/bank-transfer-server";
 
 /**
@@ -372,9 +372,10 @@ export async function createOrderAction(
 
   // Faz 40 — sipariş onayı (müşteri) + mağazaya bildirim. Kart siparişinde
   // burada GÖNDERİLMEZ: ödeme sunucuda doğrulanınca finalizeCardPayment
-  // gönderir (notifyOrderPlaced koşulu kendisi de denetler). Hata fırlatmaz;
-  // e-posta sorunu siparişi etkilemez.
-  if (!isCardPayment) await notifyOrderPlaced(store.id, order.id);
+  // gönderir (koşul serviste yeniden denetlenir). Gönderim YANITTAN SONRA
+  // yapılır (after): sipariş ve sözleşme kaydı yukarıda yazıldı, müşteri
+  // e-posta sağlayıcısını beklemez. Hata fırlatmaz; siparişi etkilemez.
+  if (!isCardPayment) await notifyOrderPlacedAfterResponse(store.id, order.id);
 
   if (storeRow?.customer_id) {
     // The admin orders list is `ƒ` (server-rendered on demand, never
