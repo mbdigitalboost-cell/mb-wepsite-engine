@@ -29,6 +29,7 @@ import {
 import { buildAcceptanceRecord, isChecked, legalAcceptanceError, legalOrderFromCheckout } from "@/lib/legal/acceptance";
 import { orderContractHref } from "@/lib/legal/order-acceptance";
 import { notifyOrderPlaced } from "@/lib/commerce/order-emails/service";
+import { getOrderBankTransferDetails } from "@/lib/commerce/payments/bank-transfer-server";
 
 /**
  * FAZ 2 (mağaza sepeti/sipariş) — the ONLY function in this file, and the
@@ -398,6 +399,12 @@ export async function createOrderAction(
     total: charges.grandTotal,
     contractUrl: contractSaved ? orderContractHref(storeSlug, store.id, order.id, Boolean(user)) : null,
     orderId: order.id,
+    // Faz 40 (ek) — yalnız Havale/EFT siparişinde ve mağaza bilgiyi girmişse; yoksa null (bölüm gösterilmez).
+    bankTransfer: await getOrderBankTransferDetails(store.id, {
+      paymentMethod: parsedCustomer.data.paymentMethod,
+      paymentStatus: "unpaid",
+      status: "pending",
+    }),
   };
 }
 

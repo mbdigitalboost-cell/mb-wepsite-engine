@@ -1,3 +1,5 @@
+import type { BankTransferDetails } from "@/lib/commerce/payments/bank-transfer";
+
 export interface CheckoutFormState {
   status: "idle" | "error" | "success";
   error: string | null;
@@ -22,6 +24,8 @@ export interface CheckoutFormState {
   contractUrl?: string | null;
   /** Faz 35 — sipariş kimliği (Purchase olayının transaction_id/eventID'si; kişisel veri değil). */
   orderId?: string | null;
+  /** Faz 40 (ek) — Havale/EFT siparişinde mağazanın hesap bilgileri; yoksa null. */
+  bankTransfer?: BankTransferDetails | null;
 }
 
 export const initialCheckoutFormState: CheckoutFormState = {

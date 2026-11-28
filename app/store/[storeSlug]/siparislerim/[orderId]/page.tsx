@@ -14,6 +14,8 @@ import { storefrontDisplayClasses } from "@/lib/utils/storefront-typography";
 import { createReturnRequestAction, markHandedToCarrierAction, withdrawReturnAction } from "./actions";
 import { ReturnRequestForm } from "./return-request-form";
 import { getOrderLegalAcceptance } from "@/lib/legal/order-acceptance";
+import { getOrderBankTransferDetails } from "@/lib/commerce/payments/bank-transfer-server";
+import { BankTransferBox } from "@/components/commerce/public/bank-transfer-box";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,8 @@ export default async function OrderDetailPage({
   const eligibility = eligibilityFor(context, settings);
   // Faz 33 — onaylanan sözleşme anlık görüntüsü (varsa).
   const acceptance = await getOrderLegalAcceptance(access.storeId, orderId);
+  // Faz 40 (ek) — ödenmemiş Havale/EFT siparişinde mağazanın hesap bilgileri (mağaza girmişse). Erişim yukarıda doğrulandı.
+  const bankTransfer = await getOrderBankTransferDetails(access.storeId, { paymentMethod: order.paymentMethod, paymentStatus: order.paymentStatus, status: order.status });
   const windowDays = Math.max(MIN_RETURN_WINDOW_DAYS, settings.returnWindowDays);
   const net = orderGrandTotal({ subtotal: order.subtotal, discount_amount: order.discountAmount, shipping_fee: order.shippingFee, cod_fee: order.codFee });
 
@@ -88,6 +92,8 @@ export default async function OrderDetailPage({
             </Link>
           </p>
         ) : null}
+
+        {bankTransfer ? <BankTransferBox details={bankTransfer} amount={net} orderNumber={order.orderNumber} /> : null}
 
         {sp.talep ? (
           <div role="status" className="mt-6 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">

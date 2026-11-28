@@ -1,5 +1,7 @@
 "use client";
 
+import { BankTransferBox } from "@/components/commerce/public/bank-transfer-box";
+import type { BankTransferDetails } from "@/lib/commerce/payments/bank-transfer";
 import { computeShippingCharges, type ShippingFeeSettings } from "@/lib/commerce/shipping-fee";
 import type { CheckoutPreview } from "@/lib/commerce/checkout/quote";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +27,7 @@ import { trackBeginCheckout, trackPurchase } from "@/lib/tracking/store-events";
 const PAYMENT_METHOD_DETAILS: Record<CheckoutPaymentMethod, { Icon: typeof Banknote; description: string }> = {
   "Kapıda Nakit": { Icon: Banknote, description: "Teslimat anında nakit ödeme" },
   "Kapıda Kart": { Icon: CreditCard, description: "Teslimat anında kartla ödeme" },
+  // Faz 40 (ek) — açıklama yalnız mağaza Havale bilgisi girmişse gösterilir (bkz. bankTransferAvailable).
   "Havale-EFT": { Icon: Landmark, description: "IBAN bilgisi sipariş sonrası gösterilir" },
   // Faz 22 — iyzico Checkout Form; yalnızca mağazanın entegrasyonu aktifse listelenir (cardPaymentEnabled).
   [CARD_PAYMENT_METHOD]: { Icon: CreditCard, description: "iyzico güvenli ödeme sayfası — kart bilgisi bu siteye girilmez" },
@@ -50,6 +53,8 @@ export interface CompletedOrderSummary {
   contractUrl?: string | null;
   /** Faz 35 — Purchase olayı için sipariş kimliği. */
   orderId?: string | null;
+  /** Faz 40 (ek) — Havale/EFT siparişinde mağazanın hesap bilgileri (sunucudan); yoksa null. */
+  bankTransfer?: BankTransferDetails | null;
 }
 
 /** Faz 32 — uygulanan kod ödeme akışı boyunca (sayfa yenilense de) korunur; erişilemezse sessizce yok sayılır. */
@@ -182,10 +187,13 @@ export function CheckoutForm({
   completedOrder,
   shippingSettings,
   legal,
+  bankTransferAvailable,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
   savedAddresses: SavedAddress[];
+  /** Faz 40 (ek) — mağaza Havale/EFT bilgisi girmiş mi (yalnız var/yok; IBAN sipariş sonrası sunucudan gelir). */
+  bankTransferAvailable: boolean;
   /** Faz 22 — mağazanın iyzico entegrasyonu aktif mi (sunucu karar verir, sepet/page.tsx). */
   cardPaymentEnabled: boolean;
   /** Faz 22 — kart ödemesi/yöntem değişikliği sonrası geri dönüşte sunucunun doğruladığı sipariş. */
@@ -446,6 +454,7 @@ export function CheckoutForm({
           total: state.total ?? undefined,
           contractUrl: state.contractUrl ?? null,
           orderId: state.orderId ?? null,
+          bankTransfer: state.bankTransfer ?? null,
         }
       : completedOrder;
 
@@ -504,6 +513,10 @@ export function CheckoutForm({
           </dl>
         ) : null}
         {successSummary.paidByCard ? <p className="mt-3 text-sm text-emerald-400">Kart ödemeniz başarıyla alındı.</p> : null}
+        {/* Faz 40 (ek) — Havale/EFT siparişinde mağazanın hesap bilgileri; mağaza girmemişse bölüm yok. */}
+        {successSummary.bankTransfer ? (
+          <BankTransferBox details={successSummary.bankTransfer} amount={successSummary.total ?? null} orderNumber={successSummary.orderNumber} />
+        ) : null}
         {/* Faz 33 — onaylanan Ön Bilgilendirme Formu ve Mesafeli Satış Sözleşmesi (saklayıp yazdırabilmesi için). */}
         {successSummary.contractUrl ? (
           <p className="mt-3 text-sm">
@@ -840,7 +853,9 @@ export function CheckoutForm({
               */}
               <div className="space-y-2.5">
                 {availablePaymentMethods.map((method) => {
-                  const { Icon, description } = PAYMENT_METHOD_DETAILS[method];
+                  const { Icon, description: methodDescription } = PAYMENT_METHOD_DETAILS[method];
+                  // Havale bilgisi girilmemişse "IBAN sipariş sonrası gösterilir" vaadi yazılmaz.
+                  const description = method === "Havale-EFT" && !bankTransferAvailable ? null : methodDescription;
                   const isSelected = paymentMethod === method;
                   return (
                     <label
@@ -860,7 +875,7 @@ export function CheckoutForm({
                       <Icon size={20} strokeWidth={1.6} className="shrink-0 text-[#A3A3A3]" aria-hidden="true" />
                       <span className="flex-1">
                         <span className="block text-sm font-semibold text-[#F5F5F5]">{method}</span>
-                        <span className="mt-0.5 block text-xs text-[#6B6B6B]">{description}</span>
+                        {description ? <span className="mt-0.5 block text-xs text-[#6B6B6B]">{description}</span> : null}
                       </span>
                     </label>
                   );

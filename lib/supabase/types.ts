@@ -1774,6 +1774,29 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** Faz 40, migration 0056 — mağazanın Havale/EFT bilgileri. Vitrin erişimi yok; panelde yalnız store_admin+. */
+      store_bank_transfer_details: {
+        Row: {
+          store_id: string;
+          account_holder: string;
+          bank_name: string;
+          iban: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          store_id: string;
+          account_holder: string;
+          bank_name: string;
+          iban: string;
+        };
+        Update: {
+          account_holder?: string;
+          bank_name?: string;
+          iban?: string;
+        };
+        Relationships: [];
+      };
       /** Faz 40, migration 0054 — sipariş e-postası gönderim kaydı (içerik tutulmaz; yalnız service-role yazar). */
       order_email_log: {
         Row: {

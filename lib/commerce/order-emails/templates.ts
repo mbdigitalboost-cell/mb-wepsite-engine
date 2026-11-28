@@ -83,6 +83,12 @@ export interface EmailOrder {
   };
   carrier: string | null;
   trackingNumber: string | null;
+  /**
+   * Ödenmemiş Havale/EFT siparişinde mağazanın kendi girdiği hesap bilgileri
+   * (IBAN dörderli gruplarla biçimlenmiş); mağaza girmemişse null — o zaman
+   * e-postada ödeme talimatı YER ALMAZ (uydurma talimat yok).
+   */
+  bankTransfer: { accountHolder: string; bankName: string; iban: string } | null;
 }
 
 export interface EmailLegalTexts {
@@ -309,6 +315,17 @@ export function renderOrderConfirmation(store: EmailStore, order: EmailOrder, le
   if (order.paymentMethod) {
     html.push(h2("Ödeme yöntemi"), p(order.paymentMethod));
     text.push("", `Ödeme yöntemi: ${order.paymentMethod}`);
+  }
+  if (order.bankTransfer) {
+    const bank = [
+      `Hesap sahibi: ${order.bankTransfer.accountHolder}`,
+      `Banka: ${order.bankTransfer.bankName}`,
+      `IBAN: ${order.bankTransfer.iban}`,
+      `Ödenecek tutar: ${formatMoney(order.total)}`,
+      `Sipariş no: #${order.orderNumber}`,
+    ];
+    html.push(h2("Havale / EFT bilgileri"), linesHtml(bank));
+    text.push("", "HAVALE / EFT BİLGİLERİ", ...bank);
   }
   html.push(h2("Teslimat adresi"), linesHtml([order.customerName, ...shipping]));
   text.push("", "TESLİMAT ADRESİ", order.customerName, ...shipping);

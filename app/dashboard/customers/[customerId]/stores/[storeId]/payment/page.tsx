@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ensurePaymentIntegration, getPaymentIntegrationSummary } from "@/lib/integrations/store-payment-integration";
 import { removePaymentKeysAction, savePaymentKeysAction, testPaymentConnectionAction, updatePaymentSettingsAction } from "./actions";
 import { PaymentKeysForm, PaymentSettingsForm, PaymentTestForm, WebhookUrlCopy } from "./payment-forms";
+import { BankTransferCard } from "./bank-transfer-card";
 
 /**
  * Faz 22 — "Ödeme (iyzico)" mağaza bazlı ayar sayfası; Faz 21 Kargo
@@ -15,8 +16,15 @@ import { PaymentKeysForm, PaymentSettingsForm, PaymentTestForm, WebhookUrlCopy }
  * İlk açılışta kayıt oluşturulur (is_active=false) — anahtar yokken sayfa
  * "Bağlı değil" gösterir, hiçbir yer çökmez.
  */
-export default async function StorePaymentIntegrationPage({ params }: { params: Promise<{ customerId: string; storeId: string }> }) {
+export default async function StorePaymentIntegrationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ customerId: string; storeId: string }>;
+  searchParams: Promise<{ havale?: string }>;
+}) {
   const { customerId, storeId } = await params;
+  const { havale } = await searchParams;
   await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -131,6 +139,9 @@ export default async function StorePaymentIntegrationPage({ params }: { params: 
           <li>Sandbox test kartları: docs.iyzico.com → Test Kartları (sandbox ortamında gerçek kart çalışmaz).</li>
         </ul>
       </section>
+
+      {/* Faz 40 (ek) — Havale/EFT bilgileri; yalnız Havale siparişinin müşterisine, sipariş sonrası gösterilir. */}
+      <BankTransferCard customerId={customerId} storeId={storeId} status={havale} />
     </div>
   );
 }

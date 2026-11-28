@@ -337,6 +337,7 @@ const ORDER: EmailOrder = {
   billing: { type: "individual", name: null, taxOffice: null, sameAsShipping: true, line: null, district: null, city: null },
   carrier: "Örnek Kargo",
   trackingNumber: "TR000111222",
+  bankTransfer: null,
 };
 
 const LEGAL = { preInformation: "# Ön Bilgilendirme\n\n**Satıcı:** ÖRNEK LTD.\n\n- Madde bir\n- [İade](/iade-ve-cayma)", distanceSales: "# Sözleşme\n\nMadde 1 — Taraflar" };
@@ -413,6 +414,27 @@ test("uydurma yok: teslimat süresi, kampanya, yorum isteği, ödeme talimatı i
   }
   const transfer = renderOrderConfirmation(STORE, { ...ORDER, paymentMethod: "Havale-EFT", codFee: 0 }, null);
   assert.doesNotMatch(transfer.text, /iban|hesab[ıi]na|dekont/i);
+  assert.doesNotMatch(transfer.html, /iban/i);
+});
+
+test("Havale bilgisi yalnız mağaza girmişse onay e-postasında yer alır; başka türlerde yer almaz", () => {
+  const withBank = { ...ORDER, paymentMethod: "Havale-EFT", codFee: 0, bankTransfer: { accountHolder: "ÖRNEK LTD. ŞTİ.", bankName: "Örnek Bankası", iban: "TR33 0006 1005 1978 6457 8413 26" } };
+  const email = renderOrderConfirmation(STORE, withBank, null);
+  for (const body of [email.html, email.text]) {
+    assert.match(body, /Hesap sahibi: ÖRNEK LTD\. ŞTİ\./);
+    assert.match(body, /Banka: Örnek Bankası/);
+    assert.match(body, /IBAN: TR33 0006 1005 1978 6457 8413 26/);
+    assert.match(body, /Ödenecek tutar: ₺1\.480,00/);
+  }
+  const others = [
+    renderShipped(STORE, withBank),
+    renderCancelled(STORE, withBank, { returnNumber: null }),
+    renderStoreNewOrder(STORE, withBank, { adminOrderUrl: null, customerPhone: null, customerEmail: null, note: null }),
+  ];
+  for (const other of others) {
+    assert.doesNotMatch(other.text, /TR33/);
+    assert.doesNotMatch(other.html, /TR33/);
+  }
 });
 
 test("deneme siparişinde konu [TEST] ile başlar", () => {

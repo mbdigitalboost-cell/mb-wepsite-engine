@@ -1,3 +1,4 @@
+import { getOrderBankTransferDetails, storeHasBankTransferDetails } from "@/lib/commerce/payments/bank-transfer-server";
 import { notFound } from "next/navigation";
 import { getStoreBySlug } from "@/lib/commerce/public/store";
 import { createSupabaseStorefrontServerClient } from "@/lib/supabase/storefront-server";
@@ -31,7 +32,7 @@ async function loadCompletedOrder(storeId: string, storeSlug: string, sp: { sipa
   const admin = createSupabaseAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("order_number, payment_status, payment_method, subtotal, discount_amount, discount_code, shipping_fee, cod_fee, customer_user_id")
+    .select("order_number, status, payment_status, payment_method, subtotal, discount_amount, discount_code, shipping_fee, cod_fee, customer_user_id")
     .eq("id", orderId)
     .eq("store_id", storeId)
     .maybeSingle();
@@ -60,6 +61,8 @@ async function loadCompletedOrder(storeId: string, storeSlug: string, sp: { sipa
     paidByCard,
     contractUrl: acceptance ? orderContractHref(storeSlug, storeId, orderId, isMember) : null,
     orderId,
+    // Faz 40 (ek) — kart siparişi Havale'ye çevrildiyse mağazanın hesap bilgileri (varsa).
+    bankTransfer: await getOrderBankTransferDetails(storeId, { paymentMethod: order.payment_method, paymentStatus: order.payment_status, status: order.status }),
   };
 }
 
@@ -180,11 +183,13 @@ export default async function StoreCartPage({
   const store = await getStoreBySlug(storeSlug);
   if (!store) notFound();
 
-  const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder, shippingSettings] = await Promise.all([
+  const [{ initialCustomer, savedAddresses }, cardPaymentEnabled, completedOrder, shippingSettings, bankTransferAvailable] = await Promise.all([
     loadCheckoutPrefill(store.id),
     isCardPaymentEnabled(store.id),
     loadCompletedOrder(store.id, storeSlug, sp),
     getShippingFeeSettings(store.id),
+    // Faz 40 (ek) — yalnız var/yok bilgisi (IBAN vitrine gitmez): "IBAN sipariş sonrası gösterilir" metni buna bağlı.
+    storeHasBankTransferDetails(store.id),
   ]);
   // Faz 33 — iki metin de yayımlanmışsa ödeme adımında onay zorunlu.
   const legalDocuments = await getPublishedLegalDocuments(store.id);
@@ -205,6 +210,7 @@ export default async function StoreCartPage({
           completedOrder={completedOrder}
           shippingSettings={shippingSettings}
           legal={legal}
+          bankTransferAvailable={bankTransferAvailable}
         />
       </Container>
     </div>

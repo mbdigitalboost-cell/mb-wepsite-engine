@@ -46,10 +46,13 @@ export function CartList({
   completedOrder,
   shippingSettings,
   legal,
+  bankTransferAvailable,
 }: {
   storeSlug: string;
   initialCustomer: InitialCustomer | null;
   savedAddresses: SavedAddress[];
+  /** Faz 40 (ek) — bkz. CheckoutForm'un aynı adlı prop'u. */
+  bankTransferAvailable: boolean;
   /** Faz 22 — bkz. CheckoutForm'un aynı adlı prop'ları; burada sadece geçiriliyor. */
   cardPaymentEnabled: boolean;
   completedOrder: CompletedOrderSummary | null;
@@ -294,6 +297,7 @@ export function CartList({
         completedOrder={completedOrder}
         shippingSettings={shippingSettings}
         legal={legal}
+        bankTransferAvailable={bankTransferAvailable}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import { storePageUrl } from "@/lib/sites/store-metadata";
 import { LEGAL_PAGE_LINKS } from "@/lib/legal/links";
 import { CARD_PAYMENT_METHOD } from "@/lib/validation/order";
 import { orderGrandTotal } from "@/lib/commerce/shipping-fee";
+import { getOrderBankTransferDetails } from "@/lib/commerce/payments/bank-transfer-server";
+import { formatBankIban } from "@/lib/commerce/payments/bank-transfer";
 import {
   canSendOrderPlacedEmails,
   canSendShippedEmail,
@@ -211,6 +213,8 @@ async function loadOrder(admin: Admin, storeId: string, orderId: string): Promis
   const shippingFee = Number(order.shipping_fee ?? 0);
   const codFee = Number(order.cod_fee ?? 0);
   const email = order.customer_email?.trim() || null;
+  // Yalnız ödenmemiş Havale/EFT siparişinde ve mağaza bilgiyi girmişse; aksi hâlde null.
+  const bankTransfer = await getOrderBankTransferDetails(storeId, { paymentMethod: order.payment_method, paymentStatus: order.payment_status, status: order.status });
 
   return {
     status: order.status,
@@ -252,6 +256,7 @@ async function loadOrder(admin: Admin, storeId: string, orderId: string): Promis
       },
       carrier: order.carrier,
       trackingNumber: order.tracking_number,
+      bankTransfer: bankTransfer ? { accountHolder: bankTransfer.accountHolder, bankName: bankTransfer.bankName, iban: formatBankIban(bankTransfer.iban) } : null,
     },
   };
 }
