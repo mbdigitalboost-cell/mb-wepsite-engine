@@ -5,6 +5,7 @@ import {
   formatBankIban,
   ibanLast4,
   parseBankTransferInput,
+  resolveBankTransferSubmission,
   shouldShowBankTransfer,
   toBankTransferDetails,
 } from "../lib/commerce/payments/bank-transfer.ts";
@@ -62,4 +63,28 @@ test("Havale bilgisi yalnız ödenmemiş, iptal edilmemiş Havale siparişinde g
 test("gösterim dörderli gruplarla; denetim kaydı için yalnız son 4 hane", () => {
   assert.equal(formatBankIban(VALID), "TR33 0006 1005 1978 6457 8413 26");
   assert.equal(ibanLast4("TR33 0006 1005 1978 6457 8413 26"), "1326");
+});
+
+test("panel formu: kayıt varken IBAN boş bırakılırsa kayıtlı IBAN korunur, yalnız ad/banka güncellenir", () => {
+  const kept = resolveBankTransferSubmission({ accountHolder: "Yeni Ad", bankName: "Yeni Banka", iban: "  " }, VALID);
+  assert.deepEqual(kept, { kind: "save", value: { accountHolder: "Yeni Ad", bankName: "Yeni Banka", iban: VALID } });
+  // Yeni IBAN yazıldıysa o doğrulanır ve kaydedilir.
+  const other = "TR320010009999901234567890";
+  const changed = resolveBankTransferSubmission({ accountHolder: "Ad", bankName: "Banka", iban: other }, VALID);
+  assert.equal(changed.kind === "save" ? changed.value.iban : "", other);
+  // Yeni IBAN geçersizse kayıtlı olana sessizce düşülmez, hata verilir.
+  assert.equal(resolveBankTransferSubmission({ accountHolder: "Ad", bankName: "Banka", iban: "TR330006100519786457841327" }, VALID).kind, "error");
+  // Kayıt varken ad ya da banka boşsa hata.
+  assert.equal(resolveBankTransferSubmission({ accountHolder: "", bankName: "Banka", iban: "" }, VALID).kind, "error");
+});
+
+test("panel formu: kayıt yokken üç alan da zorunlu; boş form kaydı silmez, hata verir", () => {
+  const err = (input: { accountHolder: string; bankName: string; iban: string }) => {
+    const result = resolveBankTransferSubmission(input, null);
+    return result.kind === "error" ? result.error : "";
+  };
+  assert.match(err({ accountHolder: "", bankName: "", iban: "" }), /zorunlu/);
+  assert.equal(err({ accountHolder: "Ad", bankName: "Banka", iban: "" }), "IBAN zorunlu.");
+  assert.match(err({ accountHolder: "Ad", bankName: "Banka", iban: "TR12" }), /26 karakter/);
+  assert.deepEqual(resolveBankTransferSubmission({ accountHolder: "Ad", bankName: "Banka", iban: VALID }, null), { kind: "save", value: { accountHolder: "Ad", bankName: "Banka", iban: VALID } });
 });

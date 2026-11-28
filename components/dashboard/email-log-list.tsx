@@ -1,4 +1,5 @@
 import { EMAIL_KIND_LABELS, type EmailKind } from "@/lib/commerce/order-emails/settings";
+import { PendingSubmitButton } from "@/components/dashboard/pending-submit-button";
 
 export interface EmailLogListRow {
   id: string;
@@ -66,9 +67,7 @@ export function EmailLogList({
                   <td className="py-1.5">
                     {row.status !== "sent" && row.kind !== "test" ? (
                       <form action={resendAction(row.id)}>
-                        <button type="submit" className="rounded-md border border-black/15 px-2 py-1 text-xs hover:bg-black/5">
-                          Tekrar gönder
-                        </button>
+                        <PendingSubmitButton label="Tekrar gönder" pendingLabel="Gönderiliyor…" className="rounded-md border border-black/15 px-2 py-1 text-xs hover:bg-black/5" />
                       </form>
                     ) : null}
                   </td>

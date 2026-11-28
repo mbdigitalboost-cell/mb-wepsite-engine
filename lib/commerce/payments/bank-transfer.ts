@@ -72,3 +72,24 @@ export function formatBankIban(iban: string): string {
 export function ibanLast4(iban: string): string {
   return normalizeIban(iban).slice(-4);
 }
+
+/**
+ * Admin formunun gönderimi. Kayıtlı IBAN panelde maskeli gösterildiği için
+ * IBAN alanı boş gelebilir: kayıt VARSA ve IBAN alanı boşsa kayıtlı IBAN
+ * korunur (yalnız ad/banka güncellenir). Kayıt yokken üç alan da zorunludur.
+ * Bu fonksiyon kaydı SİLMEZ; kaldırma ayrı bir düğmedir.
+ */
+export function resolveBankTransferSubmission(
+  input: { accountHolder: string; bankName: string; iban: string },
+  existingIban: string | null,
+): { kind: "save"; value: BankTransferDetails } | { kind: "error"; error: string } {
+  const typedIban = normalizeIban(input.iban);
+  const parsed = parseBankTransferInput({ ...input, iban: !typedIban && existingIban !== null ? existingIban : input.iban });
+  if (parsed.kind === "clear") return { kind: "error", error: "Hesap sahibi adı, banka adı ve IBAN zorunlu." };
+  if (parsed.kind === "error") {
+    // Kayıt yokken yalnız IBAN boş bırakıldıysa biçim hatası yerine anlaşılır mesaj.
+    if (!typedIban && existingIban === null && input.accountHolder.trim() && input.bankName.trim()) return { kind: "error", error: "IBAN zorunlu." };
+    return parsed;
+  }
+  return parsed;
+}

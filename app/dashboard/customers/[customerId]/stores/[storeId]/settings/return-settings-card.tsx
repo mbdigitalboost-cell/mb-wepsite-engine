@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PendingSubmitButton } from "@/components/dashboard/pending-submit-button";
 import { MIN_RETURN_WINDOW_DAYS } from "@/lib/commerce/returns/eligibility";
 import { updateReturnSettingsAction } from "./return-settings-actions";
 
@@ -54,9 +55,7 @@ export async function ReturnSettingsCard({ customerId, storeId, status }: { cust
           <textarea name="address" rows={2} maxLength={1000} defaultValue={data?.return_address ?? ""} className={inputClasses} />
         </label>
         <div>
-          <button type="submit" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90">
-            İade ayarlarını kaydet
-          </button>
+          <PendingSubmitButton label="İade ayarlarını kaydet" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90" />
         </div>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PendingSubmitButton } from "@/components/dashboard/pending-submit-button";
 import { ANNOUNCEMENT_ITEM_MAX_LENGTH, ANNOUNCEMENT_MAX_ITEMS, STOREFRONT_TEXT_MAX_LENGTH, toStorefrontTexts } from "@/lib/commerce/storefront-texts";
 import { updateStorefrontTextsAction } from "./storefront-texts-actions";
 
@@ -62,9 +63,7 @@ export async function StorefrontTextsCard({ customerId, storeId, status }: { cus
           <input name="ownProductionSubtitle" maxLength={STOREFRONT_TEXT_MAX_LENGTH} defaultValue={texts.ownProductionSubtitle ?? ""} className={inputClasses} />
         </label>
         <div>
-          <button type="submit" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90">
-            Vitrin metinlerini kaydet
-          </button>
+          <PendingSubmitButton label="Vitrin metinlerini kaydet" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90" />
         </div>
       </form>
     </div>

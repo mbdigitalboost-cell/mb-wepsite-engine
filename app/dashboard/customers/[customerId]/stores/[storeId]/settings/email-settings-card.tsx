@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PendingSubmitButton } from "@/components/dashboard/pending-submit-button";
 import { isEmailProviderConfigured } from "@/lib/notifications/resend";
 import { EMAIL_MAX_LENGTH, FROM_NAME_MAX_LENGTH, MAX_NOTIFICATION_EMAILS, toStoreEmailSettings } from "@/lib/commerce/order-emails/settings";
 import { EmailLogList } from "@/components/dashboard/email-log-list";
@@ -96,16 +97,17 @@ export async function EmailSettingsCard({ customerId, storeId, status }: { custo
           </label>
         </fieldset>
         <div>
-          <button type="submit" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90">
-            E-posta ayarını kaydet
-          </button>
+          <PendingSubmitButton label="E-posta ayarını kaydet" className="h-9 rounded-md bg-brand-accent px-4 text-sm font-medium text-white hover:opacity-90" />
         </div>
       </form>
 
       <form action={sendTestEmailAction.bind(null, customerId, storeId)} className="mt-4">
-        <button type="submit" disabled={!settings || !providerReady} className="h-9 rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 disabled:opacity-50">
-          Bana test e-postası gönder
-        </button>
+        <PendingSubmitButton
+          label="Bana test e-postası gönder"
+          pendingLabel="Gönderiliyor…"
+          disabled={!settings || !providerReady}
+          className="h-9 rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5"
+        />
         <p className="mt-1 text-xs text-foreground/50">Kayıtlı ayarla, oturum açtığınız e-posta adresine gönderilir.</p>
       </form>
 

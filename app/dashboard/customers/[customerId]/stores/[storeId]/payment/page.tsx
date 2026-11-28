@@ -18,13 +18,10 @@ import { BankTransferCard } from "./bank-transfer-card";
  */
 export default async function StorePaymentIntegrationPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ customerId: string; storeId: string }>;
-  searchParams: Promise<{ havale?: string }>;
 }) {
   const { customerId, storeId } = await params;
-  const { havale } = await searchParams;
   await requireStoreAdminAccess(storeId, customerId);
 
   const supabase = await createSupabaseServerClient();
@@ -141,7 +138,7 @@ export default async function StorePaymentIntegrationPage({
       </section>
 
       {/* Faz 40 (ek) — Havale/EFT bilgileri; yalnız Havale siparişinin müşterisine, sipariş sonrası gösterilir. */}
-      <BankTransferCard customerId={customerId} storeId={storeId} status={havale} />
+      <BankTransferCard customerId={customerId} storeId={storeId} />
     </div>
   );
 }
