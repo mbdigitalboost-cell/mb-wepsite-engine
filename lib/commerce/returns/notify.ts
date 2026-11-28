@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notifyReturnEvent } from "@/lib/commerce/order-emails/service";
+import { notifyReturnEvent, notifyReturnEventAfterResponse } from "@/lib/commerce/order-emails/service";
 import type { ReturnEmailEvent } from "@/lib/commerce/order-emails/templates";
 
 export type { ReturnEmailEvent };
@@ -22,4 +22,13 @@ export type { ReturnEmailEvent };
  */
 export async function sendReturnEmail(params: { storeId: string; orderId: string; returnId: string; event: ReturnEmailEvent; refundAmount?: number }): Promise<void> {
   await notifyReturnEvent(params);
+}
+
+/**
+ * Müşterinin kendi verdiği talep için: e-posta YANITTAN SONRA gönderilir
+ * (talep kaydı önce yazılır; müşteri e-posta sağlayıcısını beklemez). Aynı
+ * tekrar koruması ve kayıt; hata fırlatmaz, talebi etkilemez.
+ */
+export async function sendReturnEmailAfterResponse(params: { storeId: string; orderId: string; returnId: string; event: ReturnEmailEvent }): Promise<void> {
+  await notifyReturnEventAfterResponse(params);
 }

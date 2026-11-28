@@ -434,14 +434,47 @@ const RETURN_EVENT_KIND: Record<ReturnEmailEvent, EmailKind> = {
  * "talep onaylandı" e-postası olarak değil, siparişin iptal e-postası olarak
  * gider (müşteri aynı olay için iki e-posta almaz).
  */
-export async function notifyReturnEvent(params: {
+interface ReturnEventParams {
   storeId: string;
   orderId: string;
   returnId: string;
   event: ReturnEmailEvent;
   refundAmount?: number | null;
-}): Promise<void> {
-  await guarded("return event", async () => {
+}
+
+export async function notifyReturnEvent(params: ReturnEventParams): Promise<void> {
+  await guarded("return event", () => sendReturnEvent(params));
+}
+
+/**
+ * Müşterinin kendi verdiği iptal/iade talebinin e-postası YANITTAN SONRA
+ * gönderilir (next/server `after`): talep kaydı yazılmıştır, müşteri e-posta
+ * sağlayıcısını beklemez. Tekrar koruması ((return_id, kind)) ve kayıt aynıdır.
+ * `after` kullanılamıyorsa hemen gönderilir; gönderim hazırlanamazsa kayda
+ * "failed" düşülür. Hiçbir durumda hata fırlatmaz; talebi etkilemez.
+ */
+export async function notifyReturnEventAfterResponse(params: ReturnEventParams): Promise<void> {
+  await runDeferred(
+    after,
+    () => sendReturnEvent(params),
+    async (error) => {
+      console.error("[order-emails] deferred return event failed:", error instanceof Error ? error.message : "unknown");
+      try {
+        const admin = createSupabaseAdminClient();
+        const kind = RETURN_EVENT_KIND[params.event];
+        const { data: existing } = await admin.from("order_email_log").select("id").eq("store_id", params.storeId).eq("return_id", params.returnId).eq("kind", kind).limit(1).maybeSingle();
+        if (!existing) {
+          await admin.from("order_email_log").insert({ store_id: params.storeId, order_id: params.orderId, return_id: params.returnId, kind, recipient: "-", status: "failed", error: "Gönderim hazırlanamadı.", attempts: 1 });
+        }
+      } catch {
+        // Kayıt da yazılamadı; talep etkilenmez.
+      }
+    },
+  );
+}
+
+async function sendReturnEvent(params: ReturnEventParams): Promise<void> {
+  {
     const context = await loadContext(params.storeId, params.orderId);
     if (!context) return;
     const { admin, store, order } = context;
@@ -480,7 +513,7 @@ export async function notifyReturnEvent(params: {
           },
         ),
     });
-  });
+  }
 }
 
 export type ResendOutcome = DispatchOutcome | { status: "not_allowed" };

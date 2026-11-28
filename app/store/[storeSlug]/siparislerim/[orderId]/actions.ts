@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveCustomerReturnAccess } from "@/lib/commerce/returns/access";
 import { createReturnRequest, customerMarkHandedToCarrier, customerWithdrawRequest } from "@/lib/commerce/returns/service";
-import { sendReturnEmail } from "@/lib/commerce/returns/notify";
+import { sendReturnEmailAfterResponse } from "@/lib/commerce/returns/notify";
 import { RETURN_REASONS } from "@/lib/commerce/returns/state";
 import { storeBase } from "@/lib/sites/store-href";
 import type { ReturnRequestFormState } from "./form-state";
@@ -68,7 +68,8 @@ export async function createReturnRequestAction(
   });
   if (!result.ok) return { error: result.error };
 
-  await sendReturnEmail({ storeId: access.storeId, orderId, returnId: result.id, event: "requested" });
+  // Talep kaydı yazıldı; e-posta yanıttan sonra gönderilir (after). Hata talebi etkilemez.
+  await sendReturnEmailAfterResponse({ storeId: access.storeId, orderId, returnId: result.id, event: "requested" });
 
   redirect(detailPath(storeSlug, orderId, access.token, `talep=${result.returnNumber}`));
 }

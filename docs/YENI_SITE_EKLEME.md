@@ -90,6 +90,7 @@ Domaini bağla: Vercel → Project → Domains (www ↔ apex yönlendirmesi dahi
 - Google Search Console mülkü
 - Takip kodları (GA4, Meta, Ads): mağazada admin panelinden, mağaza başına
 - E-posta: mağaza başına `store_email_settings` satırı (admin → Mağaza → Ayarlar → E-posta: gönderen adı/adresi, yanıt adresi, yeni sipariş bildirim adresleri). **Satır yoksa o mağaza adına hiçbir e-posta gönderilmez**; ortam değişkenindeki ya da başka mağazanın adresine düşülmez. Gönderen adresinin alan adı e-posta sağlayıcısında (Resend) doğrulanmış olmalıdır (DKIM/SPF).
+- E-posta başlık şeridi: bütün sipariş e-postalarında logo koyu bir şerit üzerinde durur. Renk bugün her mağaza için nötr `#18181b`'dir (mağaza verisinde "arka plan rengi" alanı yok). **İkinci mağaza eklenirken "E-posta → başlık şeridi rengi" alanı eklenmelidir** (`store_email_settings`'e bir sütun + admin kartında alan; şablon `EmailStore.headerBackground` ile rengi almaya hazır, `lib/commerce/order-emails/service.ts` bugün `null` veriyor). Logonun şerit üzerinde okunduğu yeni mağazada ayrıca kontrol edilir.
 - E-posta sağlayıcı anahtarı (`RESEND_API_KEY`): bugün ortamda TEK anahtar var ve yalnız ilk mağazanın alan adı için yetkili. **Farklı alan adıyla ikinci bir mağaza eklenirken anahtar da mağaza başına tutulmalıdır** (ödeme/kargo anahtarlarıyla aynı desen: yalnız service-role okuyabilen ayrı tablo). Bu yapılmadan ikinci mağazanın e-postaları sağlayıcıda reddedilir.
 - Supabase Auth → URL Configuration → Redirect URLs: `https://<domain>/**`
 - Cloudflare / DNS
