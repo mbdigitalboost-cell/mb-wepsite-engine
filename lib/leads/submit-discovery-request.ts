@@ -23,23 +23,17 @@ export interface SubmitDiscoveryRequestResult {
  * Platform DB before returning anything (lib/cms/connection.ts).
  *
  * The insert is best-effort and never changes this function's success
- * behavior: the console.info line below still always runs (Phase 6 §17:
- * "mevcut console.log davranışını koru"), and a failed/unavailable
- * customer DB (today's actual state — no real Petra Supabase project
- * exists yet) is caught and logged, never thrown, never surfaced to the
- * visitor as an error.
+ * behavior: a failed/unavailable customer DB is caught and logged, never
+ * thrown, never surfaced to the visitor as an error.
+ *
+ * LOG KURALI: sunucu loguna lead içeriği (ad, telefon, e-posta, mesaj)
+ * YAZILMAZ. Eskiden her formda ad/telefon/e-posta console.info ile
+ * loglanıyordu; kaldırıldı. Loga yalnız sonucun kendisi yazılır ("lead
+ * kaydedildi" / kaydedilemedi + veritabanının kısa hata mesajı).
  */
 export async function submitDiscoveryRequest(
   input: DiscoveryRequestInput,
 ): Promise<SubmitDiscoveryRequestResult> {
-  console.info("[petra:discovery-request]", {
-    fullName: input.fullName,
-    phone: input.phone,
-    email: input.email || null,
-    service: input.service ?? null,
-    hasMessage: Boolean(input.message),
-  });
-
   try {
     const client = await getCustomerSupabaseClient("PETRA");
     if (client) {
@@ -52,13 +46,16 @@ export async function submitDiscoveryRequest(
       });
       if (error) {
         console.error("[petra:discovery-request] leads insert failed:", error.message);
+      } else {
+        console.info("[petra:discovery-request] lead kaydedildi");
       }
+    } else {
+      // client === null: müşteri veritabanı bağlı değil. Lead içeriği loga
+      // yazılmadığı için bu durumda lead yalnız bildirim e-postasıyla ulaşır.
+      console.error("[petra:discovery-request] lead kaydedilemedi: müşteri veritabanı bağlantısı yok");
     }
-    // client === null means "Petra Supabase not connected yet" — expected,
-    // ordinary state in this sandbox; the console.info above already
-    // captured the lead, so nothing is lost.
   } catch (err) {
-    console.error("[petra:discovery-request] unexpected error writing to leads:", err);
+    console.error("[petra:discovery-request] unexpected error writing to leads:", err instanceof Error ? err.name : "unknown");
   }
 
   // Best-effort, independent of the Supabase insert above — see

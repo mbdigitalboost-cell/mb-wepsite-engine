@@ -130,3 +130,11 @@ test("gönderen 'Ad <adres>' biçimi: Türkçe karakterli ad ve köşeli parante
     assert.equal(resolveLeadSender(bad), null, bad);
   }
 });
+
+test("form kaydı: sunucu loguna lead içeriği yazılmaz (kaynak denetimi)", () => {
+  const source = readFileSync(new URL("../../lib/leads/submit-discovery-request.ts", import.meta.url), "utf8");
+  const logCalls = source.match(/console\.(info|log|warn|error)\([^;]*;/g) ?? [];
+  assert.ok(logCalls.length > 0);
+  for (const call of logCalls) assert.doesNotMatch(call, /input\b|fullName|phone|email|message\b(?!\))/, call);
+  assert.match(source, /lead kaydedildi/);
+});
